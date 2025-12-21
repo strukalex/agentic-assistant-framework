@@ -561,20 +561,69 @@ This reduces the abstraction burden and lets each framework excel in its domain.
 
 ### Pattern 3: The "Risk-Based Escalation"
 
-**Problem**: How do you balance autonomy with safety, especially given that LLMs can produce confident but incorrect outputs?
+**Problem**: How do you balance autonomy with safety, especially given that LLMs can produce confident but incorrect outputs? The complexity goes beyond binary decisions - approval bias, irreversible actions, and conflicting constraints create significant challenges.
 
-**Solution**: Risk-based escalation policies with optional numeric scoring (Phase 1: simple heuristics; Phase 4: calibrated scoring). Phase 1 acknowledges that LLM confidence scores alone are insufficient predictors of correctness and focuses on action-based risk assessment rather than attempting complex hallucination detection.
+**Solution**: Comprehensive escalation framework addressing action types, timing, and policy conflicts. Phase 1 introduces safe action categories and approval patterns to handle real-world autonomy complexity.
+
+#### Safe Action Categories & Approval Patterns
 
 ```
-Phase 1 (Simple Policy):
-High-risk actions (email, file deletion, purchases): Always require approval
-Low-risk actions (read-only queries, local file access): Auto-execute with logging
-Medium-risk actions (web searches, data analysis): Request approval
+Action Categories (by Reversibility):
+• Reversible (read-only): Auto-execute with logging
+  Examples: Search queries, data retrieval, analysis
+  Pattern: Post-execution logging only
+
+• Reversible with delay: Request approval with time window
+  Examples: Send email, create calendar events, schedule tasks
+  Pattern: Pre-execution approval gate with timeout fallback
+
+• Irreversible: Never auto-execute; always require approval
+  Examples: Delete files, make purchases, send money, modify production systems
+  Pattern: Pre-execution approval mandatory
+
+Approval Patterns:
+• Pre-execution: Approval required BEFORE action (for irreversible/delayed actions)
+• Post-execution: Log action after execution (for reversible actions)
+• Conditional: Approval required only if risk > threshold AND confidence < threshold
+```
+
+#### Addressing Core Problems
+
+**Problem 1: Approval Bias**
+- **Solution**: Analyze approval patterns, not just rates
+- Track: What causes approvals/rejections? Success rates by action type?
+- Policy: If >90% approvals, increase autonomy; if <10% approvals, decrease scope
+- Learning: Agent adapts based on historical approval patterns per user
+
+**Problem 2: Irreversible Actions**
+- **Solution**: Categorize actions by reversibility, apply appropriate approval timing
+- Email: Pre-execution approval (draft shown, user confirms send)
+- File deletion: Pre-execution approval (show what will be deleted)
+- Purchases: Pre-execution approval (show cost breakdown)
+
+**Problem 3: Conflicting Constraints**
+- **Solution**: Workflow-level policy overrides with explicit user consent
+- Pattern: "User instruction conflicts with safety policy - override required"
+- Example: User says "automate daily emails" → System requires explicit confirmation
+- Audit: All overrides logged with justification
+
+#### Phase Progression
+
+```
+Phase 1 (Action-Based Categories):
+Reversible actions: Auto-execute + log
+Reversible w/delay: Approval gate with 5min timeout
+Irreversible: Always require approval
+
+Phase 2 (Learning from Approvals):
+Track approval bias patterns
+Auto-tune thresholds based on user behavior
+Add per-user calibration
 
 Phase 4 (Calibrated Scoring):
-Risk Score > 85% (Low Risk): Execute autonomously, log for audit
-Risk Score 50-85% (Medium Risk): Execute with human approval gate
-Risk Score < 50% (High Risk): Escalate to human, don't execute
+Risk Score > 85% (Low Risk): Auto-execute
+Risk Score 50-85% (Medium Risk): Conditional approval
+Risk Score < 50% (High Risk): Never execute without approval
 
 Stalled (timeout): Retry, then escalate
 Confused (loops): Detect circular reasoning, escalate
@@ -584,13 +633,16 @@ Confused (loops): Detect circular reasoning, escalate
 - **Retrieval strength**: Top-k similarity score margin, number of sources retrieved, recency match
 - **Tool reliability**: Did tools succeed, time out, or return empty/contradictory results?
 - **Validation**: Schema validation passed (Pydantic), required fields present, citations included
-- **Task risk**: "Send email / delete file / spend money" flagged as high-risk → force approval
+- **Historical approval**: What percentage of similar actions were approved?
+- **User calibration**: This user's approval patterns for this action type
+- **Task risk**: Action category (reversible/reversible-with-delay/irreversible) → base risk
 
 **Benefits**:
-- Phase 1: Simple, reliable escalation without complex scoring
-- Phase 4: Learning loop improves risk assessment calibration through observable data
-- Audit trail for compliance
-- High-risk actions always gated by verification, not just score
+- Addresses approval bias through pattern analysis and adaptation
+- Prevents irreversible actions through pre-execution validation
+- Resolves policy conflicts via explicit workflow overrides
+- Provides audit trail for compliance and learning
+- Scales from simple Phase 1 policies to calibrated Phase 4 scoring
 
 ### Pattern 4: The "Memory Query Router"
 
@@ -904,10 +956,13 @@ Execution Trace:
 
 **Success Metric**: Agent references past conversations and documents from single Postgres store; queries resolve in <1 second
 
-#### 1.6 Error Handling & Logging
+#### 1.6 Error Handling & Risk-Based Escalation
 - Try/catch around all LLM calls and tool invocations
 - Structured JSON logging (for parsing and learning)
-- Basic LLM reliability handling: confidence-based escalation acknowledges that LLMs can produce confident but incorrect outputs
+- **Safe Action Categories**: Reversible (auto-execute + log), reversible-with-delay (pre-approval), irreversible (mandatory pre-approval)
+- **Approval Patterns**: Pre-execution gates for risky actions, post-execution logging for safe actions
+- **Approval Bias Protection**: Track approval patterns, adapt autonomy based on user behavior
+- **Conflict Resolution**: Handle policy conflicts with explicit workflow overrides
 - Graceful fallbacks (e.g., if web search fails, use local docs)
 - Phase 1 focuses on action-based risk assessment; advanced hallucination detection deferred to Phase 2+
 
@@ -949,25 +1004,44 @@ memory:
 
 **Success Metric**: Changing config changes behavior; all config validated via Pydantic
 
-#### 1.8 Execution Isolation (Phase 1 Setup for Later Progression)
-- **Phase 1**: In-process execution with error handling
-- **Code Structure**: Prepared for subprocess isolation (Phase 3)
-- **Interface Design**: Agent execution abstracted; can swap in subprocess later
+#### 1.8 Execution Isolation (Phase 1: Security First)
+- **Phase 1**: Subprocess isolation with sandboxing (security first, not Phase 4)
+- **Safe Action Categories**: Reversible (auto-log), reversible-with-delay (pre-approval), irreversible (pre-approval mandatory)
+- **Approval Patterns**: Pre-execution for risky actions, post-execution logging for safe actions
+- **Secret Management**: Environment variables for Phase 1, secure MCP channels for tool credentials
+- **Approval Logging**: All decisions logged with full audit trail from Phase 1
 
 **POC Demo**:
 ```python
-# ExecutionRunner abstraction (framework-agnostic)
+# ExecutionRunner with sandboxing (Phase 1)
 class ExecutionRunner(ABC):
     @abstractmethod
     def run(self, agent: Agent, input: str) -> str: pass
 
-class InProcessRunner(ExecutionRunner):
-    def run(self, agent, input): return agent.execute(input)
+class SandboxedRunner(ExecutionRunner):
+    def run(self, agent, input):
+        # Phase 1: Subprocess isolation prevents crashes
+        return subprocess.run_agent_in_sandbox(agent, input)
 
-# Later: SubprocessRunner, ContainerRunner (inherit same interface)
+# Action categorization drives approval timing
+def execute_with_escalation(agent, action_type, action):
+    if action_type == "reversible":
+        result = execute(action)  # Auto-execute
+        log_approval("auto_approved", result)  # Post-logging
+    elif action_type == "reversible_with_delay":
+        if get_user_approval(action, timeout=300):  # Pre-approval with 5min timeout
+            result = execute(action)
+        else:
+            result = "Action cancelled by timeout"
+    elif action_type == "irreversible":
+        if get_user_approval(action):  # Mandatory pre-approval
+            result = execute(action)
+        else:
+            result = "Action rejected by user"
+    return result
 ```
 
-**Success Metric**: Code structure allows swapping runners without rewriting agent logic
+**Success Metric**: All risky actions require appropriate approval; subprocess isolation prevents system crashes; audit trail complete
 
 #### 1.9 Cost Tracking & Observability Infrastructure
 |- **OpenTelemetry SDK Integration**: Instrument all LLM calls, tool invocations, agent decisions
@@ -1777,9 +1851,14 @@ Agent 2 (on AutoGen) reads from same Vector DB
 ### Isolation Progression
 
 ```
-Phase 1-2:   In-process execution + error handling
-Phase 3:     Subprocess isolation with communication channels
-Phase 4+:    Container isolation (Docker/Kubernetes)
+Phase 1:     Subprocess isolation + sandboxing (security first)
+Phase 2:     Container isolation (Docker) for complex workflows
+Phase 4+:    Kubernetes orchestration for distributed execution
+
+Security Architecture:
+• Phase 1: Subprocess sandboxing prevents runaway agent executions
+• Phase 2: Container isolation adds resource limits and network controls
+• Phase 4+: Kubernetes provides multi-tenant security and scaling
 
 Code abstraction allows swapping without rewrite:
 ExecutionRunner.execute(agent) → works on all layers
@@ -1793,13 +1872,26 @@ Environment Variables:
   WINDMILL_URL
   AUTOGEN_CONFIG
   VECTOR_STORE_URL
-  
+
 Config Files:
   /config/agents.yaml       (agent definitions)
   /config/workflows.yaml    (Windmill workflows)
   /config/autogen.yaml      (AutoGen settings)
   /config/routing.yaml      (query routing rules)
-  
+
+Secret Management for Tool Credentials:
+• Phase 1: Environment variables + file-based secrets (development)
+• Tool Invocation: Secrets passed via secure MCP server channels
+• Audit Trail: Secret access logged (who accessed what, when)
+• Rotation: Automated secret rotation with zero-downtime
+
+Approval Logging for Audit Trails:
+• All approvals/rejections logged with full context
+• Immutable audit log: user, action, decision, timestamp, reasoning
+• Compliance: GDPR/SOC2 audit trails from Phase 1
+• Learning: Approval patterns analyzed for policy tuning
+• Override Tracking: Policy conflicts logged with justification
+
 All validated via Pydantic on startup
 ```
 
