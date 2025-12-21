@@ -34,7 +34,8 @@
 
 *GATE: Must pass before research begins. Re-check after design phase.*
 
-**Source of truth**: `.specify/memory/constitution.md` (v2.0+)
+**Source of truth**: `.specify/memory/constitution.md` (v2.0+)  
+**Project context**: `.specify/memory/project-context.md` (current phase, key decisions, open questions)
 
 ### Constitutional Compliance Checklist (MUST)
 

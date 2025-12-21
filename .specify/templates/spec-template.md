@@ -7,7 +7,8 @@
 
 ## Constitution Constraints *(mandatory)*
 
-**Source of truth**: `.specify/memory/constitution.md` (v2.0+)
+**Source of truth**: `.specify/memory/constitution.md` (v2.0+)  
+**Project context**: `.specify/memory/project-context.md` (current phase, decisions, open questions)
 
 This feature MUST comply with the constitution's non-negotiables. If a requirement
 conflicts with any item below, it MUST be escalated via **Article V (Amendment Process)**.

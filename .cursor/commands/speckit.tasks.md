@@ -26,6 +26,7 @@ You **MUST** consider the user input before proceeding (if not empty).
 2. **Load design documents**: Read from FEATURE_DIR:
    - **Required**: plan.md (tech stack, libraries, structure), spec.md (user stories with priorities)
    - **Optional**: data-model.md (entities), contracts/ (API endpoints), research.md (decisions), quickstart.md (test scenarios)
+   - **Project context**: `.specify/memory/project-context.md` for development workflow guidelines. Ensure the generated task list respects our testing strategies, commit granularities, and definition of done.
    - Note: Not all projects have all documents. Generate tasks based on what's available.
 
 3. **Execute task generation workflow**:

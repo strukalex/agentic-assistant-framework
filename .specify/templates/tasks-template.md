@@ -29,7 +29,8 @@ Any exception MUST be explicitly justified and approved via **Article V (Amendme
 
 ## Constitution-driven cross-cutting requirements *(mandatory)*
 
-**Source of truth**: `.specify/memory/constitution.md` (v2.0+)
+**Source of truth**: `.specify/memory/constitution.md` (v2.0+)  
+**Project context**: `.specify/memory/project-context.md` (current phase, workflow guidelines, blockers)
 
 Include tasks to satisfy these non-negotiables (refer to the cited Articles in task descriptions):
 
