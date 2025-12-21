@@ -939,6 +939,51 @@ class InProcessRunner(ExecutionRunner):
 
 **Success Metric**: Code structure allows swapping runners without rewriting agent logic
 
+#### 1.9 Cost Tracking & Observability Infrastructure
+|- **OpenTelemetry SDK Integration**: Instrument all LLM calls, tool invocations, agent decisions
+|- **Jaeger Backend**: Self-hosted tracing with 100% sampling for Phase 1
+|- **Cost Attribution**: Track costs per workflow, per agent, per LLM call
+|- **Budget Policies**: Per-workflow limits ($5/workflow) with circuit breakers
+|- **Real-Time Dashboards**: Cost monitoring in Windmill UI + custom Grafana dashboards
+
+**POC Demo**:
+```python
+# OpenTelemetry instrumentation example
+from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.exporter.jaeger import JaegerExporter
+
+# Initialize tracing
+trace.set_tracer_provider(TracerProvider())
+jaeger_exporter = JaegerExporter(
+    agent_host_name="localhost",
+    agent_port=14268,
+)
+span_processor = BatchSpanProcessor(jaeger_exporter)
+trace.get_tracer_provider().add_span_processor(span_processor)
+
+# Instrumented agent execution
+@tracer.instrument(name="agent.execute")
+def execute_agent(query: str):
+    with tracer.start_as_current_span("llm_call") as span:
+        span.set_attribute("model", "gpt-4")
+        span.set_attribute("input_tokens", 1500)
+        # ... LLM call ...
+        span.set_attribute("output_tokens", 300)
+        span.set_attribute("cost", 0.045)
+
+    with tracer.start_as_current_span("tool_call") as span:
+        span.set_attribute("tool.name", "@web_search")
+        # ... tool execution ...
+        span.set_attribute("tool.success", True)
+        span.set_attribute("cost", 0.002)
+
+    return response
+```
+
+**Success Metric**: All executions traced with cost attribution; budget policies prevent runaway costs
+
 ---
 
 **Phase 1 POC Demo**: Daily Trending Research System with Real-Time Streaming
@@ -973,37 +1018,53 @@ System streams with risk-based escalation:
 
 **Phase 1 Success Criteria**:
 
-#### Quantitative Metrics:
+#### Quantitative Success Metrics:
 
-**Metric 1: Workflow Reliability**
-- **Target**: ≥95% execution success rate (daily research runs 30 times, ≥28 complete without errors)
-- **Measurement**: Windmill dashboard logs + automated test runner
+**Primary Success Metrics (Must Meet All):**
+
+**Metric 1: Agent Decision Approval Rate**
+- **Target**: ≥80% of agent decisions result in user approval or immediate success without corrections
+- **Measurement**: `(decisions_auto_approved + decisions_with_immediate_success) / total_decisions`
+- **Baseline**: Establish over first 2 weeks; track weekly
+- **Current**: Risk-based escalation policy correlates with fewer user corrections
+
+**Metric 2: Tool Execution Success Rate**
+- **Target**: ≥90% of tool invocations complete successfully (no timeouts, errors, invalid responses)
+- **Measurement**: MCP server response codes + tool-specific validation
+- **Excludes**: Network failures, invalid user input
+- **Current**: MCP servers operational with error handling
+
+**Metric 3: Workflow Completion Rate**
+- **Target**: ≥95% of scheduled workflows complete without manual intervention
+- **Measurement**: Windmill dashboard + custom logging (includes automatic retries)
 - **Current**: Workflows execute on schedule with <5% failure rate
 
-**Metric 2: Risk-Based Escalation Effectiveness**
-- **Target**: Escalation policy reduces unnecessary approvals by 70% (high-risk actions approved 80-100% of time, low-risk actions auto-executed with <20% correction rate)
-- **Measurement**: Collect 50 decisions, measure approval rates vs. risk levels
-- **Current**: Risk-based escalation policy correlates with fewer user corrections and fewer failed tool runs
+**Metric 4: User Task Completion Rate**
+- **Target**: ≥85% of user-initiated tasks complete autonomously (no escalation required)
+- **Measurement**: User feedback + escalation logs
+- **Current**: Escalation policy reduces unnecessary approvals by design
 
-**Metric 3: Memory Freshness**
+**Secondary Quality Metrics:**
+
+**Metric 5: Response Latency (P50)**
+- **Target**: <30 seconds for simple queries, <60 seconds for complex research
+- **Measurement**: OpenTelemetry traces + custom timing instrumentation
+- **Current**: End-to-end system works with real-time streaming
+
+**Metric 6: Memory Query Freshness**
 - **Target**: Vector search returns documents within 1 hour of indexing
 - **Measurement**: Insert doc at T, query at T+1h, measure retrieval latency
 - **Current**: Memory persists and influences future decisions
 
-**Metric 4: End-to-End Latency**
-- **Target**: Research task (search + summarize + format) completes in <30 seconds for simple queries
-- **Measurement**: Benchmark 10 research queries, measure P50 and P95 latency
-- **Current**: End-to-end system works (UI → Workflow → Agent → Memory) with **real-time streaming throughout**
+**Metric 7: Confidence Score Calibration**
+- **Target**: ≥75% correlation between confidence scores and actual user approval rates
+- **Measurement**: Compare confidence predictions against outcomes weekly
+- **Current**: Confidence scoring mechanism implemented
 
-**Metric 5: Code Quality**
-- **Target**: ≥70% test coverage, zero critical security issues
-- **Measurement**: Coverage.py report, security scan (bandit)
-- **Current**: Clean separation of concerns
-
-**Metric 6: Observability Completeness**
-- **Target**: Every agent decision logged with sufficient context for debugging
-- **Measurement**: Random sample 20 decisions, verify full trace reconstructable from logs
-- **Current**: Easily adds new MCP servers without code changes
+**Observability Completeness:**
+- **Target**: 100% of executions have complete OpenTelemetry traces
+- **Measurement**: Trace sampling verification + span completeness checks
+- **Current**: OpenTelemetry SDK integrated with Jaeger backend
 
 #### Qualitative Requirements (Validated by Quantitative Metrics):
 - **Real-time streaming**: Responses stream token-by-token instead of waiting for completion
@@ -1587,11 +1648,14 @@ Rollback plan: Saved Variant A; can revert one command if needed
 - ✅ **Responses stream token-by-token** (no waiting for complete output)
 - ✅ **Live tool execution feedback** shows progress instead of progress bars
 - ✅ **Incremental results display** as they arrive
-- ✅ 5+ distinct use cases run autonomously
-- ✅ Workflows execute on schedule with <5% failure
-- ✅ Risk-based escalation policy reduces unnecessary approvals (high-risk actions require approval, low-risk actions auto-execute)
-- ✅ Memory persists and influences decisions
-- ✅ Clean architecture
+- ✅ **Agent Decision Approval Rate**: ≥80% (decisions auto-approved or immediately successful)
+- ✅ **Tool Execution Success Rate**: ≥90% (successful MCP tool invocations)
+- ✅ **Workflow Completion Rate**: ≥95% (scheduled workflows complete autonomously)
+- ✅ **User Task Completion Rate**: ≥85% (user tasks complete without escalation)
+- ✅ **Response Latency P50**: <30s simple, <60s complex queries
+- ✅ **Memory Query Freshness**: Documents searchable within 1 hour of indexing
+- ✅ **Confidence Score Calibration**: ≥75% correlation with user approval rates
+- ✅ **Observability Completeness**: 100% OpenTelemetry trace coverage with Jaeger
 
 ### Phase 2
 - ✅ AutoGen running alongside Windmill (no conflicts)
@@ -1711,6 +1775,166 @@ E2E Tests:
   ├─ Failure recovery paths
   ├─ Learning loop iterations
 ```
+
+### Observability Architecture
+
+#### Phase 1 Success Metrics (Quantitative Definition)
+
+**Primary Success Metrics:**
+- **Agent Decision Approval Rate**: ≥80% of agent decisions result in user approval or immediate success without corrections
+  - *Measurement*: Track decisions requiring user intervention vs. auto-approved decisions
+  - *Calculation*: `(decisions_auto_approved + decisions_with_immediate_success) / total_decisions`
+  - *Baseline*: Establish baseline over first 2 weeks of Phase 1
+
+- **Tool Execution Success Rate**: ≥90% of tool invocations complete successfully (no timeouts, errors, or invalid responses)
+  - *Measurement*: MCP server response codes + tool-specific validation
+  - *Excludes*: Network failures, invalid user input
+
+- **Workflow Completion Rate**: ≥95% of scheduled workflows complete without manual intervention
+  - *Measurement*: Windmill dashboard + custom logging
+  - *Includes*: Automatic retries and fallbacks
+
+- **User Task Completion Rate**: ≥85% of user-initiated tasks complete autonomously (no escalation required)
+  - *Measurement*: User feedback + escalation logs
+  - *Definition*: Tasks that reach final state without human intervention
+
+**Secondary Quality Metrics:**
+- **Response Latency P50**: <30 seconds for simple queries, <60 seconds for complex research
+- **Memory Query Freshness**: Vector search returns documents within 1 hour of indexing
+- **Streaming Responsiveness**: ≥95% of responses show progress updates within 2 seconds
+
+**Confidence Score Validation:**
+- **Computation Method**: Weighted combination of:
+  - Tool reliability (40%): Success rate of tools used in reasoning chain
+  - Source quality (30%): Recency, authority, and cross-reference strength
+  - Reasoning coherence (20%): Pydantic validation passed + logical consistency checks
+  - Historical performance (10%): Similar past decisions' outcomes
+- **Calibration**: Compare confidence scores against actual user approval rates weekly
+- **Thresholds**: 0-70 (High Risk) → Require approval; 70-90 (Medium Risk) → Log but auto-execute; 90-100 (Low Risk) → Silent execution
+
+#### Distributed Tracing with OpenTelemetry
+
+**Instrumentation Points (Every Call):**
+```
+Trace Hierarchy:
+├── Workflow Execution (Root Span)
+│   ├── Agent Reasoning (Child Span)
+│   │   ├── LLM Call (Grandchild Span)
+│   │   │   ├── Model: gpt-4
+│   │   │   ├── Input Tokens: 1500
+│   │   │   ├── Output Tokens: 300
+│   │   │   ├── Cost: $0.045
+│   │   │   └── Duration: 2.3s
+│   │   ├── Tool Invocation (Grandchild Span)
+│   │   │   ├── Tool: @web_search
+│   │   │   ├── Parameters: {"query": "climate tech trends"}
+│   │   │   ├── Result Count: 23
+│   │   │   ├── Success: true
+│   │   │   └── Duration: 1.8s
+│   │   └── Memory Query (Grandchild Span)
+│   │       ├── Query Type: vector_similarity
+│   │       ├── Results Found: 12
+│   │       ├── Relevance Score: 0.87
+│   │       └── Duration: 0.15s
+│   ├── Risk Assessment (Child Span)
+│   │   ├── Confidence Score: 0.82
+│   │   ├── Escalation Decision: auto_execute
+│   │   └── Risk Factors: ["high_impact_action", "external_api_call"]
+│   └── User Feedback (Child Span)
+│       ├── Approved: true
+│       ├── Corrections Made: 0
+│       └── Feedback Type: implicit_approval
+```
+
+**Span Attributes (Standardized Context):**
+- **Required Attributes**:
+  - `service.name`: "agent-assistant"
+  - `service.version`: Current deployment version
+  - `workflow.id`: Unique workflow execution ID
+  - `agent.id`: Agent archetype + instance ID
+  - `user.id`: Hashed user identifier
+  - `phase`: "phase1", "phase2", etc.
+
+- **Workflow-Level Attributes**:
+  - `workflow.type`: "deterministic", "collaborative", "research"
+  - `workflow.orchestrator`: "windmill", "autogen", "langgraph"
+  - `workflow.duration_ms`: Total execution time
+  - `workflow.success`: true/false
+
+- **Agent-Level Attributes**:
+  - `agent.model`: "gpt-4", "claude-3", "llama-3.1"
+  - `agent.confidence_score`: 0.0-1.0
+  - `agent.risk_level`: "low", "medium", "high"
+  - `agent.tools_used`: ["@web_search", "@document_retrieval"]
+
+- **Tool-Level Attributes**:
+  - `tool.name`: MCP tool identifier
+  - `tool.server`: MCP server name
+  - `tool.success`: true/false
+  - `tool.duration_ms`: Execution time
+  - `tool.error_type`: If failed ("timeout", "validation_error", "network")
+
+**Sampling Strategy:**
+- **Phase 1**: 100% sampling (capture all traces for small-scale debugging)
+  - *Rationale*: Small scale + need full visibility for initial validation
+  - *Storage Impact*: ~10-50MB/day for typical Phase 1 usage
+
+- **Phase 2+**: Adaptive sampling
+  - *Success Traces*: 10% sampling (normal operations)
+  - *Error Traces*: 100% sampling (all failures captured)
+  - *High-Risk Actions*: 100% sampling (compliance/audit)
+  - *New Features*: 100% sampling for first 2 weeks
+
+**Trace Storage & Querying:**
+- **Backend**: Jaeger (self-hosted) for Phase 1-2, consider DataDog/Zipkin for Phase 3+
+- **Retention**: 30 days for Phase 1, 90 days for Phase 2+
+- **Query Interface**: Jaeger UI + custom dashboards for common patterns
+- **Alerting**: Automatic alerts on trace patterns (high error rates, slow responses)
+
+#### Cost Attribution & Tracking
+
+**Cost Tracking Architecture:**
+```
+Cost Dimensions:
+├── Workflow Cost (Aggregate)
+│   ├── Agent Costs (Sum of all agents)
+│   │   ├── LLM Costs (Primary driver)
+│   │   │   ├── Input Token Cost: $0.0015/token
+│   │   │   ├── Output Token Cost: $0.002/token
+│   │   │   └── Model Multiplier: gpt-4 = 1x, claude-3 = 0.8x
+│   │   ├── Tool Costs (Secondary)
+│   │   │   ├── API Call Costs: Search APIs, external services
+│   │   │   ├── Compute Costs: Local processing, vector search
+│   │   │   └── Storage Costs: Vector DB queries, file operations
+│   │   └── Memory Costs (Tertiary)
+│   │       ├── Embedding Costs: $0.0001/1K tokens
+│   │       ├── Retrieval Costs: $0.001/query
+│   │       └── Storage Costs: $0.02/GB/month
+│   └── Infrastructure Costs
+│       ├── Windmill Execution: $0.001/minute
+│       ├── OpenTelemetry: $0.005/GB traces
+│       └── Database Operations: $0.01/GB queries
+```
+
+**Cost Containment Policies:**
+- **Budget Limits**: Per-workflow budgets ($5/workflow, $50/user/day)
+- **Circuit Breakers**: Automatic shutdown if costs exceed thresholds
+- **Cost-Aware Routing**: Prefer cheaper models/tools when quality acceptable
+- **Progressive Escalation**:
+  - Warning at 70% budget used
+  - Approval required at 90% budget used
+  - Shutdown at 100% budget used
+
+**Cost Attribution Implementation:**
+- **Real-Time Tracking**: OpenTelemetry spans include cost calculations
+- **Post-Execution Attribution**: Cost breakdown stored with execution logs
+- **Dashboard Integration**: Windmill UI shows cost per workflow
+- **Audit Trail**: Full cost history for compliance and optimization
+
+**Phase 1 Cost Baselines:**
+- **Typical Research Task**: $0.10-0.50 (LLM calls + 2-3 tool invocations)
+- **Daily Research Workflow**: $2-5/day
+- **Monthly Budget**: $50-150 for evaluation and testing
 
 ---
 
