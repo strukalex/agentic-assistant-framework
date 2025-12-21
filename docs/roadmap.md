@@ -96,13 +96,15 @@ The goal is to keep 80% of work in Levels 1-2, reserving Level 3 for specialized
 
 3. **Human-in-the-Loop by Default**: Risk-based escalation policies, approval gates, and rollback capabilities are built in from Phase 1. Confidence scores are used as policy signals, not correctness guarantees.
 
-4. **Observable Everything**: Every decision, tool call, and reasoning path is logged and visualizable.
+4. **LLM Reliability Assumptions & Mitigations**: LLMs are not perfectly reliable - they hallucinate, fail, and produce confident but incorrect outputs. Phase 1 acknowledges this reality with basic error handling and confidence-based escalation. Advanced failure mode detection (hallucination detection, fallback chains, model switching) is deferred to Phase 2+ when operational patterns are established.
 
-5. **Multi-Storage Memory**: Information flows between vector stores, graphs, relational databases, and documents—all abstracted behind a unified query interface.
+5. **Observable Everything**: Every decision, tool call, and reasoning path is logged and visualizable.
 
-6. **Isolation Progression**: Execution isolation evolves from in-process → subprocess → containerized without architectural changes.
+6. **Multi-Storage Memory**: Information flows between vector stores, graphs, relational databases, and documents—all abstracted behind a unified query interface.
 
-7. **MCP as Universal Standard**: All tool integrations flow through Model Context Protocol, enabling plug-and-play extensions.
+7. **Isolation Progression**: Execution isolation evolves from in-process → subprocess → containerized without architectural changes.
+
+8. **MCP as Universal Standard**: All tool integrations flow through Model Context Protocol, enabling plug-and-play extensions.
 
 ### Architectural Constraints
 
@@ -559,9 +561,9 @@ This reduces the abstraction burden and lets each framework excel in its domain.
 
 ### Pattern 3: The "Risk-Based Escalation"
 
-**Problem**: How do you balance autonomy with safety?
+**Problem**: How do you balance autonomy with safety, especially given that LLMs can produce confident but incorrect outputs?
 
-**Solution**: Risk-based escalation policies with optional numeric scoring (Phase 1: simple heuristics; Phase 4: calibrated scoring)
+**Solution**: Risk-based escalation policies with optional numeric scoring (Phase 1: simple heuristics; Phase 4: calibrated scoring). Phase 1 acknowledges that LLM confidence scores alone are insufficient predictors of correctness and focuses on action-based risk assessment rather than attempting complex hallucination detection.
 
 ```
 Phase 1 (Simple Policy):
@@ -656,6 +658,32 @@ Approval: Review Variant C → Approve → Promote
 
 Rollback: If metrics degrade, revert to Baseline (one command)
 ```
+
+### Pattern 6: LLM Failure Mode Detection & Recovery (Phase 2+)
+
+**Problem**: LLMs fail in predictable ways that confidence scores alone cannot detect - hallucinations, tool failures, and model limitations.
+
+**Solution**: Three-layer failure detection and recovery system introduced in Phase 2+ when operational patterns are established:
+
+**Layer 1: Hallucination Detection (Phase 2)**
+- Fact-checking against retrieved sources (compare agent claims vs. document evidence)
+- Cross-reference validation (multiple sources must corroborate high-confidence claims)
+- Threshold-based flagging (>80% confidence claims require source validation)
+
+**Layer 2: Tool Failure Recovery (Phase 2)**
+- Explicit fallback chains (Tool A timeout → Tool B → Tool C)
+- Timeout policies (10s web search → 30s fallback → escalate)
+- Graceful degradation (full answer → partial answer → "insufficient data" escalation)
+
+**Layer 3: Model Switching & Load Balancing (Phase 2+)**
+- Model health monitoring (rate limits, errors, latency)
+- Automatic failover (GPT-4 fails → Claude-3 → local Ollama)
+- Cost-aware selection (expensive models only when cheaper ones fail)
+
+**Benefits**:
+- Confidence scores become reliable predictors again
+- System degrades gracefully rather than failing catastrophically
+- Learning loops can optimize failure recovery patterns
 
 ---
 
@@ -879,7 +907,9 @@ Execution Trace:
 #### 1.6 Error Handling & Logging
 - Try/catch around all LLM calls and tool invocations
 - Structured JSON logging (for parsing and learning)
+- Basic LLM reliability handling: confidence-based escalation acknowledges that LLMs can produce confident but incorrect outputs
 - Graceful fallbacks (e.g., if web search fails, use local docs)
+- Phase 1 focuses on action-based risk assessment; advanced hallucination detection deferred to Phase 2+
 
 **POC Demo**:
 ```
@@ -1014,6 +1044,17 @@ System streams with risk-based escalation:
   ✅ Continuing synthesis... "Error correction improvements show..."
   🧠 Agent learns: User prefers depth over breadth
   💾 Memory updated for future quantum queries
+
+User (Friday):
+  "What's the current market cap of Tesla?"
+
+System demonstrates basic LLM reliability handling:
+  🔍 Searching financial data sources... Found 12 articles
+  📊 Analyzing market data... "Tesla market cap appears to be $650B"
+  ⚠️ Low Confidence (65%): "Market data shows variation; recent fluctuations detected. Approve analysis?"
+  (System acknowledges LLM confidence limitations and escalates uncertain claims)
+  User approves → Final response: "Based on recent data, Tesla market cap is approximately $650B"
+  💾 Confidence patterns logged for future calibration
 ```
 
 **Phase 1 Success Criteria**:
@@ -1060,6 +1101,11 @@ System streams with risk-based escalation:
 - **Target**: ≥75% correlation between confidence scores and actual user approval rates
 - **Measurement**: Compare confidence predictions against outcomes weekly
 - **Current**: Confidence scoring mechanism implemented
+
+**Metric 8: LLM Error Recovery Rate**
+- **Target**: ≥80% of LLM and tool failures recover without user intervention
+- **Measurement**: Failed calls that succeed via retry/fallback vs. require escalation
+- **Current**: Basic error handling with confidence-based escalation; advanced failure detection deferred to Phase 2+
 
 **Observability Completeness:**
 - **Target**: 100% of executions have complete OpenTelemetry traces
@@ -1756,6 +1802,29 @@ Config Files:
   
 All validated via Pydantic on startup
 ```
+
+### LLM Failure Handling Architecture (Phase 2+)
+
+**Timeout Policies** (Phase 2):
+- Tool timeouts: 10s (fast), 30s (slow), 120s (complex)
+- Model timeouts: 60s per call, 3 retries before failover
+- Workflow timeouts: 300s total, then escalate
+
+**Fallback Chains** (Phase 2):
+- Search: Web API → Local docs → Human escalation
+- Analysis: Primary model → Secondary model → Simplified analysis
+- Memory: Vector DB → Relational DB → Error state
+
+**Hallucination Detection Rules** (Phase 2):
+- Claims >80% confidence require source validation
+- Financial data always fact-checked against authoritative sources
+- Contradictory sources trigger human review
+
+**Model Selection Strategy** (Phase 2+):
+- Default: GPT-4 (quality primary)
+- On failure: Claude-3 (cost-effective backup)
+- On rate limit: Local Ollama (unlimited but slower)
+- Cost threshold: <$0.10/call triggers cheaper model selection
 
 ### Testing Strategy
 
