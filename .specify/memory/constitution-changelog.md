@@ -23,7 +23,7 @@
 - Article II.B: Removed phase markers from Decision Pattern table
 - Article II.C: "Phase 1 Baseline" confidence thresholds → "Baseline Configuration"
 - Article II.E: "Multi-Storage Memory (Phase 3 Foundation)" → "Multi-Storage Memory Abstraction"
-- Article II.F: Removed (Isolation Progression was phase-specific implementation detail)
+- Article II.F: "Isolation Progression" → "Isolation & Safety Boundaries" (replaced phase-specific progression with maturity-triggered rules)
 - Article II.G: "Tool Gap Detection & Self-Extension (Phase 4+)" → "Tool Gap Detection & Self-Extension"
 - Article III.F: Security section - removed phase progression; replaced with maturity triggers
 - Article IV: "Failure Mode Detection & Recovery (Phase 2+)" → "Failure Mode Detection & Recovery"
@@ -33,13 +33,12 @@
 
 - Article VII: Deferred Decisions (Phase 2+) - removed entirely (constitutions define what IS decided, not what might be)
 - Article VIII: Alignment with Roadmap - phases are not constitutional concerns
-- Appendix B: Quick Reference – Article to Phase Mapping
+- Appendix B: Quick Reference – Article to Phase Mapping (phase-specific, no longer applicable)
 - Appendix C: Maturity-Triggered Expansions - removed (still deferred decisions in disguise)
-- Appendix B (Technology Rationale Summary) - removed excessive justification content
 
 ### Added Sections
 
-- Article II.F: Isolation & Safety Boundaries (replaces old II.F with maturity-triggered rules)
+_(None - all changes were modifications or removals)_
 
 ### Template Updates
 
@@ -58,6 +57,6 @@
 
 - Trimmed excessive rationale text throughout (multi-bullet justifications → one-sentence summaries)
 - Removed "Why This Matters" sections from principles
-- Removed Appendix B (Technology Rationale Summary) - justification content moved out of constitution
+- Removed Technology Rationale Summary appendix (excessive justification content; moved out of constitution)
 - Changed table headers from "Rationale" to "Use Case" where appropriate
 

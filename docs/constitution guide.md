@@ -1,6 +1,4 @@
-<img src="https://r2cdn.perplexity.ai/pplx-full-logo-primary-dark%402x.png" style="height:64px;margin-right:32px"/>
-
-# can you investigate github spec kit and generate a comprehensive report on what should be in the constitution.md, what dhouldn't be there, etc. This will serve as a guiding document to determine if consitution.md aligns to best practices.
+# Constitution Guide: Best Practices for `constitution.md`
 
 Based on the investigation of the GitHub Spec Kit and its Spec-Driven Development (SDD) methodology, here is a comprehensive report on the `constitution.md` file.
 
