@@ -69,7 +69,7 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 
 **Decision:** Python 3.11+ with asynchronous support (asyncio)
 
-**Rationale:** Agent frameworks (Pydantic AI, LangGraph) are Python-native. Python ecosystem dominates LLM agent development. 3.11+ provides performance improvements and native structural pattern matching.
+**Rationale:** Python-native agent frameworks (Pydantic AI, LangGraph) and mature asyncio ecosystem.
 
 **Enforcement:** All orchestration, agent logic, and core backend MUST use Python. No runtime language switching.
 
@@ -81,7 +81,7 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 
 **Selection Criteria (Pattern-to-Framework Mapping):**
 
-| Workflow Pattern | Orchestrator | Rationale |
+| Workflow Pattern | Orchestrator | Use Case |
 |---|---|---|
 | Linear pipeline (fetch → process → store) | Windmill | DAG execution, visual builder, enterprise observability |
 | Conditional branching (if X then Y else Z) | Windmill | Built-in branching with easy visualization |
@@ -91,10 +91,10 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 | Exploratory agent-to-agent conversations | AutoGen | Collaborative reasoning via agent chat protocols |
 
 **Usage Rules:**
-- **Windmill** (v1.200+): For stateful task orchestration, scheduled tasks, deterministic data pipelines. Provides enterprise-grade observability (execution history, Prometheus metrics, dependency visualization), 13x performance vs. Airflow, resource isolation per workflow, visual + code-backed workflows.
-- **LangGraph** (v1.0+): For complex reasoning requiring loops, branching, or multi-step state machines. Deployed as Python library; instantiated within Windmill workflow steps where cyclical reasoning is required. Integration pattern: LangGraph executes *inside* a Windmill workflow step, not as competing orchestrator.
-- **CrewAI**: Use ONLY when role-based multi-agent collaboration patterns are required (e.g., specialized agent teams with defined roles communicating to solve complex tasks). Deploy as Windmill workflow nodes.
-- **AutoGen**: Use ONLY for exploratory conversational multi-agent patterns requiring agent-to-agent negotiation and collaborative reasoning.
+- **Windmill** (v1.200+): Stateful task orchestration, scheduled tasks, deterministic data pipelines. Deploy as primary orchestrator.
+- **LangGraph** (v1.0+): Complex reasoning requiring loops, branching, or multi-step state machines. Deploy as Python library inside Windmill workflow steps.
+- **CrewAI**: Use ONLY for role-based multi-agent collaboration patterns. Deploy as Windmill workflow nodes.
+- **AutoGen**: Use ONLY for exploratory conversational multi-agent patterns requiring agent-to-agent negotiation.
 
 **Explicit Non-Usage:**
 - **NOT:** LangChain as primary framework. Use LangChain core only for specialized MCP integrations where necessary due to existing ecosystem tooling.
@@ -107,13 +107,7 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 
 **Use Case:** Atomic agent unit; single focused capability (e.g., Researcher, Analyst, CodeReviewer)
 
-**Rationale:**
-- Type-safe by design; Pydantic validation reduces runtime surprises
-- Minimal boilerplate: agents defined in ~20 lines with `@tool` decorators
-- Model-agnostic: single interface supports OpenAI, Anthropic, local Ollama
-- MCP-compatible: native support for Model Context Protocol tool discovery
-- Human-in-the-loop: built-in tool approval and confidence mechanics
-- FastAPI-style DX: developers familiar with structured validation frameworks move quickly
+**Rationale:** Type-safe, minimal boilerplate, model-agnostic, MCP-compatible agent framework.
 
 **Key Constraint:** Pydantic AI is the *atomic unit*, not the system orchestrator. Orchestration happens in Windmill/LangGraph. Multiple Pydantic AI agents are composed via Windmill or LangGraph workflows.
 
@@ -211,11 +205,7 @@ MCP Servers: Execute actual API calls
    - Tool availability and health
    - Execution metrics (token counts, latency)
 
-**Rationale for Composite:**
-- Open WebUI excels at streaming chat with real-time agent reasoning
-- Windmill provides live workflow visualization
-- One tool for everything compromises everywhere
-- UI layer is *not* the orchestration layer; system runs independently via APIs
+**Rationale:** Specialized components (Open WebUI for chat, Windmill for workflow visualization) provide better UX than single monolithic UI.
 
 **Alternative Evaluation Trigger:** If authentication/moderation requirements change (e.g., enterprise SSO, multi-tenant isolation), evaluate LibreChat as secondary option for comparison.
 
@@ -223,11 +213,7 @@ MCP Servers: Execute actual API calls
 
 **Default Production Model:** Claude 3.5 Sonnet (Anthropic)
 
-**Rationale:**
-- Balanced for reasoning, code, and long context (200K tokens)
-- Preferred in agent reasoning benchmarks vs. GPT-4
-- Strong at refusing unsafe tool calls; aligns with human-in-the-loop safety goals
-- Cost-effective for high-volume agent tasks
+**Rationale:** Balanced reasoning/code performance, long context (200K tokens), strong safety alignment, cost-effective at scale.
 
 **Fallback / Comparison Models:**
 - **OpenAI GPT-4 Turbo:** For tasks requiring maximum code generation quality
@@ -264,12 +250,6 @@ MCP Servers: Execute actual API calls
 - Observable execution (logs + traces for debugging)
 
 **Validation:** A vertical slice is complete when a user can input a task, the system reasons and executes tools, and a response is delivered with full audit trail.
-
-**Why This Matters:**
-- No "infrastructure layer done, agents layer next" delays
-- Feedback and learning on *full system* behavior, not isolated components
-- Easier to identify integration gaps early
-- Faster path to operational learning loops
 
 ### II.B Principle: Pluggable Orchestration
 
@@ -590,19 +570,6 @@ If ANY gate fails, escalate to tech lead before proceeding.
 
 ---
 
-## Appendix B: Technology Rationale Summary
-
-**Why These Choices Over Alternatives:**
-
-| Decision | Alternative | Why We Chose | Difference |
-|----------|-------------|--------------|-----------|
-| **Pydantic AI over LangChain** | LangChain | Type-safe, minimal boilerplate, MCP-native, FastAPI-style DX | LangChain: sprawling integrations, heavier abstraction |
-| **LangGraph over AutoGen (for state machines)** | AutoGen | Fine-grained state control, OpenAI-compatible tool-calling, streaming | AutoGen: best for conversational multi-agent; use when pattern requires agent negotiation |
-| **Windmill over Airflow** | Airflow | 13x faster execution, visual UI + code-backed, built-in observability, resource isolation | Airflow: optimized for batch; Windmill excels at real-time agent orchestration |
-| **PostgreSQL + pgvector over Pinecone** | Pinecone | Single source of truth, no vendor lock-in, hybrid search (semantic + SQL), lower cost baseline | Pinecone: specialized; evaluate when vector storage exceeds 10M embeddings (maturity trigger) |
-| **Open WebUI over LibreChat** | LibreChat | Pipeline-based flexibility, native Ollama support, simpler setup | LibreChat: stronger auth/multi-provider; revisit when enterprise SSO required |
-| **Claude 3.5 Sonnet over GPT-4** | GPT-4 | Better reasoning on agent tasks, longer context, cost-effective at scale | GPT-4: maximize code quality; use for specialized benchmarks or when Claude fails |
-| **Python 3.11+ over TypeScript** | TypeScript | Agent frameworks are Python-native; asyncio ecosystem mature | TypeScript: consider if UI complexity demands separate backend language |
 
 ---
 
