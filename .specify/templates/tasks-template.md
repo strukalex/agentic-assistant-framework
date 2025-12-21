@@ -29,16 +29,16 @@ Any exception MUST be explicitly justified and approved via **Article V (Amendme
 
 ## Constitution-driven cross-cutting requirements *(mandatory)*
 
-**Source of truth**: `.specify/memory/constitution.md`
+**Source of truth**: `.specify/memory/constitution.md` (v2.0+)
 
 Include tasks to satisfy these non-negotiables (refer to the cited Articles in task descriptions):
 
-- **Article I — Technology stack**: Python 3.11+, Windmill + LangGraph, Pydantic AI, PostgreSQL+pgvector, MCP, Open WebUI, Claude 3.5 Sonnet (default Phase 1)
+- **Article I — Technology stack**: Python 3.11+, pattern-driven orchestration (Windmill/LangGraph/CrewAI/AutoGen per Article I.B), Pydantic AI, PostgreSQL+pgvector with memory abstraction, MCP, Open WebUI, Claude 3.5 Sonnet (default)
 - **Article II — Architectural principles (all 7)**:
   - Human-in-the-loop by default (risk-based approvals; irreversible actions never auto-execute)
   - Observable everything (OpenTelemetry traces for decisions/tool calls/approvals)
-  - Pluggable orchestration (framework-per-pattern; avoid lock-in)
-  - Isolation progression (phase-appropriate execution isolation)
+  - Pluggable orchestration (framework-agnostic agent code; no direct DB driver imports)
+  - Isolation & safety boundaries (maturity-triggered per Appendix C)
   - Others as stated in the constitution
 - **Article III — Operational standards**:
   - Async I/O for DB/tool calls

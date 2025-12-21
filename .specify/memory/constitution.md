@@ -1,12 +1,65 @@
-# Personal AI Assistant System: Project Constitution v1.0
+<!--
+═══════════════════════════════════════════════════════════════════════════════
+SYNC IMPACT REPORT
+═══════════════════════════════════════════════════════════════════════════════
+
+VERSION CHANGE: v1.0 → v2.0 (MAJOR)
+
+RATIONALE FOR MAJOR BUMP:
+- Fundamental governance model change: phase-specific rules → conditional principles
+- All Articles rewritten to be lifecycle-immutable
+- Removed Article VII (Deferred Decisions) - replaced with conditional usage patterns
+- Removed Article VIII (Roadmap Alignment) - phases are implementation concerns, not constitutional
+- Removed Appendix B (Phase Mapping) - no longer applicable
+
+MODIFIED PRINCIPLES:
+- Article I.B: "Orchestration Framework: Phase 1–2 Baseline" → "Orchestration Framework: Pattern-Driven Selection"
+- Article I.D: "Memory Layer: PostgreSQL-First (Phase 1–2)" → "Memory Layer: PostgreSQL-First Architecture"
+- Article I.F: "UI Layer" - removed phase-specific references (e.g., "React Flow Phase 2")
+- Article I.G: "Primary LLM Provider (Phase 1)" → "Primary LLM Provider"
+- Article I.H: Removed phase references (e.g., "Fallback to Windmill; single-node Phase 1")
+- Article II.A: Removed "Phase 1 Vertical Slice" concrete example; replaced with pattern
+- Article II.B: Removed phase markers from Decision Pattern table
+- Article II.C: "Phase 1 Baseline" confidence thresholds → "Baseline Configuration"
+- Article II.E: "Multi-Storage Memory (Phase 3 Foundation)" → "Multi-Storage Memory Abstraction"
+- Article II.F: Removed (Isolation Progression was phase-specific implementation detail)
+- Article II.G: "Tool Gap Detection & Self-Extension (Phase 4+)" → "Tool Gap Detection & Self-Extension"
+- Article III.F: Security section - removed phase progression; replaced with maturity triggers
+- Article IV: "Failure Mode Detection & Recovery (Phase 2+)" → "Failure Mode Detection & Recovery"
+- Article V.C: Removed "Ratification Schedule" (phase-bound)
+
+REMOVED SECTIONS:
+- Article VII: Deferred Decisions (Phase 2+) - replaced with conditional patterns in Article I
+- Article VIII: Alignment with Roadmap - phases are not constitutional concerns
+- Appendix B: Quick Reference – Article to Phase Mapping
+
+ADDED SECTIONS:
+- Article II.F: Isolation & Safety Boundaries (replaces old II.F with maturity-triggered rules)
+- Appendix D: Maturity-Triggered Expansions (replaces old Article VII deferred decisions)
+
+TEMPLATES REQUIRING UPDATES:
+✅ .specify/templates/plan-template.md - Constitution Check section updated
+✅ .specify/templates/spec-template.md - Constitution Constraints section updated
+✅ .specify/templates/tasks-template.md - Constitution-driven requirements section updated
+⚠ .specify/templates/commands/*.md - Review for outdated phase-specific references
+
+FOLLOW-UP TODOS:
+- Review all existing specs/plans/tasks for phase-specific language that now conflicts
+- Update command files to reference conditional patterns instead of phase gates
+- Consider adding ADR documenting the v1.0→v2.0 migration rationale
+
+═══════════════════════════════════════════════════════════════════════════════
+-->
+
+# Personal AI Assistant System: Project Constitution v2.0
 
 ## Executive Summary
 
-This constitution establishes the **immutable architectural rules** and **non-negotiable technology stack** for the Personal AI Assistant System (PAIAS). It serves as the persistent source of truth for all AI agents, developers, and technical decisions across all phases of implementation. Changes to this constitution require cross-functional review and documented rationale.
+This constitution establishes the **immutable architectural rules** and **non-negotiable technology stack** for the Personal AI Assistant System (PAIAS). It serves as the persistent source of truth for all AI agents, developers, and technical decisions across the entire system lifecycle. Changes to this constitution require cross-functional review and documented rationale per Article V.
 
-**Applicable Phases:** Phases 1–5 (and beyond)  
-**Last Updated:** December 20, 2025  
-**Status:** Frozen for Phase 1 Development
+**Ratification Date:** 2025-12-20  
+**Last Amended:** 2025-12-21  
+**Status:** Active
 
 ---
 
@@ -14,63 +67,64 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 
 ### I.A Language & Runtime
 
-**Decision:** Python 3.11+ with asynchronous support (asyncio)  
-**Rationale:** Agent frameworks (Pydantic AI, LangGraph) are Python-native. Python ecosystem dominates LLM agent development. 3.11+ provides performance improvements and native structural pattern matching.  
-**Enforcement:** All orchestration, agent logic, and core backend use Python. No runtime language switching between phases.  
+**Decision:** Python 3.11+ with asynchronous support (asyncio)
+
+**Rationale:** Agent frameworks (Pydantic AI, LangGraph) are Python-native. Python ecosystem dominates LLM agent development. 3.11+ provides performance improvements and native structural pattern matching.
+
+**Enforcement:** All orchestration, agent logic, and core backend MUST use Python. No runtime language switching.
+
 **CI Gate:** Linter checks `python_version >= "3.11"`
 
-### I.B Orchestration Framework: Phase 1–2 Baseline
+### I.B Orchestration Framework: Pattern-Driven Selection
 
-**Primary Orchestrator (Phase 1–2):** Windmill + LangGraph Hybrid  
+**Hybrid Orchestration:** Windmill + LangGraph
 
-#### Windmill (Stateful Task Orchestration)
-- **Version:** Latest stable (v1.200+)
-- **Use Case:** DAG-style workflows, scheduled tasks, deterministic data pipelines
-- **Installation:** Docker/Kubernetes in production
-- **Rationale:** 
-  - Enterprise-grade observability out of box (execution history, Prometheus metrics, dependency visualization)
-  - 13x performance vs. Airflow; sub-second step execution
-  - Resource isolation per workflow; prevents runaway agent tasks from crashing system
-  - Visual code flexibility: workflows written as YAML or Python, auto-generates UI
-  - Built-in AI copilot for flow generation
+**Selection Criteria (Pattern-to-Framework Mapping):**
 
-#### LangGraph (Complex Reasoning & Loops)
-- **Version:** Latest stable (1.0+)
-- **Use Case:** Workflows requiring cyclical reasoning, branching, loops, multi-step state machines
-- **Deployment:** As Python library; instantiated within Windmill workflow steps
-- **Rationale:**
-  - Functional API with explicit state management—full control over agent thinking
-  - Designed for OpenAI-compatible tool-calling format
-  - Streaming support for token-by-token output to UI
-  - Solves Windmill's gap: rigid DAG execution → LangGraph handles complex reasoning inside workflow nodes
-- **Integration Pattern:** LangGraph executes *inside* a Windmill workflow step, not as a competing orchestrator
+| Workflow Pattern | Orchestrator | Rationale |
+|---|---|---|
+| Linear pipeline (fetch → process → store) | Windmill | DAG execution, visual builder, enterprise observability |
+| Conditional branching (if X then Y else Z) | Windmill | Built-in branching with easy visualization |
+| Cyclical reasoning (retry until success) | LangGraph | Explicit state machine, supports loops and backtracking |
+| Adaptive multi-step with backtracking | LangGraph | Node-based reasoning with conditional edges |
+| Role-based multi-agent teams | CrewAI | Native conversation patterns; role specialization (Sales, Engineering) |
+| Exploratory agent-to-agent conversations | AutoGen | Collaborative reasoning via agent chat protocols |
 
-#### Explicit Non-Usage Boundaries:
-- **NOT:** LangChain as primary framework. Use LangChain core only for specialized MCP integrations where necessary.
-- **NOT:** CrewAI in Phase 1. Reserved for Phase 3 multi-agent collaboration (role-based crews as Windmill workflow nodes).
-- **NOT:** AutoGen in Phase 1. Introduced Phase 2 for parallel evaluation against Windmill.
+**Usage Rules:**
+- **Windmill** (v1.200+): For stateful task orchestration, scheduled tasks, deterministic data pipelines. Provides enterprise-grade observability (execution history, Prometheus metrics, dependency visualization), 13x performance vs. Airflow, resource isolation per workflow, visual + code-backed workflows.
+- **LangGraph** (v1.0+): For complex reasoning requiring loops, branching, or multi-step state machines. Deployed as Python library; instantiated within Windmill workflow steps where cyclical reasoning is required. Integration pattern: LangGraph executes *inside* a Windmill workflow step, not as competing orchestrator.
+- **CrewAI**: Use ONLY when role-based multi-agent collaboration patterns are required (e.g., specialized agent teams with defined roles communicating to solve complex tasks). Deploy as Windmill workflow nodes.
+- **AutoGen**: Use ONLY for exploratory conversational multi-agent patterns requiring agent-to-agent negotiation and collaborative reasoning.
+
+**Explicit Non-Usage:**
+- **NOT:** LangChain as primary framework. Use LangChain core only for specialized MCP integrations where necessary due to existing ecosystem tooling.
+
+**Integration Pattern:** LangGraph executes *inside* Windmill workflow steps; CrewAI and AutoGen integrate as Windmill workflow nodes. Windmill remains the primary orchestration layer.
 
 ### I.C Agent Building Block: Pydantic AI
 
-**Version:** Latest stable (1.0+)  
-**Use Case:** Atomic agent unit; single focused capability (e.g., Researcher, Analyst, CodeReviewer)  
+**Version:** Latest stable (1.0+)
+
+**Use Case:** Atomic agent unit; single focused capability (e.g., Researcher, Analyst, CodeReviewer)
+
 **Rationale:**
 - Type-safe by design; Pydantic validation reduces runtime surprises
-- Minimal boilerplate: agents defined in 20 lines with `@tool` decorators
+- Minimal boilerplate: agents defined in ~20 lines with `@tool` decorators
 - Model-agnostic: single interface supports OpenAI, Anthropic, local Ollama
 - MCP-compatible: native support for Model Context Protocol tool discovery
 - Human-in-the-loop: built-in tool approval and confidence mechanics
 - FastAPI-style DX: developers familiar with structured validation frameworks move quickly
 
-**Key Constraint:** Pydantic AI is the *atomic unit*, not the system orchestrator. Orchestration happens in Windmill/LangGraph. Multiple Pydantic AI agents composed via Windmill or LangGraph workflows.
+**Key Constraint:** Pydantic AI is the *atomic unit*, not the system orchestrator. Orchestration happens in Windmill/LangGraph. Multiple Pydantic AI agents are composed via Windmill or LangGraph workflows.
 
-### I.D Memory Layer: PostgreSQL-First (Phase 1–2)
+### I.D Memory Layer: PostgreSQL-First Architecture
 
 **Primary Database:** PostgreSQL 15+ with pgvector extension  
 **ORM:** SQLAlchemy 2.0+ with async support  
-**Vector Store:** pgvector (in-database); no separate vector database required for Phase 1–2  
+**Vector Store:** pgvector (in-database)
 
-#### Data Architecture:
+**Data Architecture:**
+
 1. **Relational + Document Memory (PostgreSQL)**
    - JSONB columns for raw document content and metadata (source, tags, permissions)
    - Temporal tracking: `created_at`, `updated_at`, optional `valid_from`/`valid_to` for audit trails
@@ -82,25 +136,39 @@ This constitution establishes the **immutable architectural rules** and **non-ne
    - Indexing: IVFFLAT or HNSW for sub-second queries at scale
    - Hybrid search: combine semantic similarity with traditional SQL filters
 
-3. **Cache Layer (Phase 2, Optional)**
-   - Redis for frequent retrieval results; PostgreSQL remains authoritative
-   - LRU/TTL-based invalidation
+3. **Cache Layer (Maturity-Triggered)**
+   - **Trigger:** When query patterns show >70% repeat retrieval within 1-hour windows OR when p95 query latency exceeds 200ms
+   - **Implementation:** Redis for frequent retrieval results; PostgreSQL remains authoritative
+   - **Invalidation:** LRU/TTL-based; cache misses fall through to PostgreSQL
 
-4. **Phase 3+ Multi-Storage Upgrade Path**
-   - LlamaIndex for orchestration across multiple storage backends
-   - Neo4j (optional) for relationship reasoning and entity-centric queries
-   - Minio/S3 (optional) for large binary/document versioning
-   - Consistency management and cross-store synchronization deferred to Phase 3
+4. **Multi-Storage Expansion (Maturity-Triggered)**
+   - **Trigger:** When relationship queries (graph traversal) exceed 30% of query volume OR when vector storage exceeds 10M embeddings
+   - **Options:**
+     - LlamaIndex for orchestration across multiple storage backends
+     - Neo4j for relationship reasoning and entity-centric queries
+     - Pinecone/Weaviate for specialized vector operations at scale
+     - Minio/S3 for large binary/document versioning
+   - **Migration Path:** Abstract memory interface ensures storage upgrades don't break agents
 
-**Non-Negotiable:** PostgreSQL is source of truth for all writes in Phase 1–2. No eventual consistency workarounds.
+**Non-Negotiable:** PostgreSQL is source of truth for all writes. No eventual consistency workarounds at the persistence layer.
+
+**Query Router Pattern (Semantic vs. Relational):**
+```
+Query Type                        → Storage
+"Find similar documents"          → pgvector semantic search
+"What happened on date X?"        → SQL temporal filters
+"Recall conversation about Y"     → pgvector + session time range
+"Relationship between X and Y"    → Neo4j (if graph expansion triggered)
+"Summarize Q4 financial data"     → Relational DB structured query
+```
 
 ### I.E Tool Integration: Model Context Protocol (MCP)
 
 **Standard:** Model Context Protocol (MCP)  
 **Deployment:** MCP servers act as universal bridge between agents and external systems  
-**Tool Discovery:** All tools listed via MCP's `list_resources` and `list_tools` patterns  
+**Tool Discovery:** All tools listed via MCP's `list_resources` and `list_tools` patterns
 
-#### Pre-Built MCP Ecosystem:
+**Pre-Built MCP Ecosystem:**
 - Data Access: Filesystem, GitHub, Google Drive, Notion, databases
 - External APIs: OpenWeather, financial data, news, social media
 - Execution: Bash, HTTP, scheduled tasks
@@ -119,7 +187,7 @@ Agent: "Use filesystem for local docs, googledrive for shared"
 MCP Servers: Execute actual API calls
 ```
 
-**No Hardcoded Integrations:** Every tool flows through MCP. No agent-specific API clients except MCP adapters.
+**No Hardcoded Integrations:** Every tool MUST flow through MCP. No agent-specific API clients except MCP adapters.
 
 ### I.F UI Layer: Composite Strategy
 
@@ -132,7 +200,7 @@ MCP Servers: Execute actual API calls
    - Session persistence; human-in-the-loop approval buttons for risk-based escalation
    - Docker deployment; OpenAI API compatible
 
-2. **Workflow Visualization:** Windmill's Built-in Graph Viewer + React Flow (Phase 2)
+2. **Workflow Visualization:** Windmill's Built-in Graph Viewer + React Flow (when custom visualization needs arise)
    - Visual workflow builder
    - Real-time execution tracking
    - Dependency visualization
@@ -149,11 +217,12 @@ MCP Servers: Execute actual API calls
 - One tool for everything compromises everywhere
 - UI layer is *not* the orchestration layer; system runs independently via APIs
 
-**Non-UI Choice:** LibreChat as secondary option (Phase 2) for comparison if different auth/moderation needs emerge. Not Phase 1.
+**Alternative Evaluation Trigger:** If authentication/moderation requirements change (e.g., enterprise SSO, multi-tenant isolation), evaluate LibreChat as secondary option for comparison.
 
-### I.G Primary LLM Provider (Phase 1)
+### I.G Primary LLM Provider
 
-**Default Production Model:** Claude 3.5 Sonnet (Anthropic)  
+**Default Production Model:** Claude 3.5 Sonnet (Anthropic)
+
 **Rationale:**
 - Balanced for reasoning, code, and long context (200K tokens)
 - Preferred in agent reasoning benchmarks vs. GPT-4
@@ -161,8 +230,8 @@ MCP Servers: Execute actual API calls
 - Cost-effective for high-volume agent tasks
 
 **Fallback / Comparison Models:**
-- OpenAI GPT-4 Turbo: for tasks requiring maximum code generation quality
-- Local Ollama (Phase 1): for on-premises privacy requirements; use Llama 2 (13B/70B) or Mistral 7B as baseline
+- **OpenAI GPT-4 Turbo:** For tasks requiring maximum code generation quality
+- **Local Ollama:** For on-premises privacy requirements; use Llama 2 (13B/70B) or Mistral 7B as baseline
 
 **Non-Negotiable:** Model agnostic at *agent level* via Pydantic AI. Can swap providers without rewriting agent logic.
 
@@ -176,8 +245,8 @@ MCP Servers: Execute actual API calls
 | **Linting** | Ruff + Black | Latest | Python 3.11+ compatible; 10x faster than flake8 |
 | **Async Database** | asyncpg (PostgreSQL driver) | 0.30+ | Non-blocking DB I/O; required for async agents |
 | **Observability** | OpenTelemetry + Logfire | Latest | Traces all agent decisions; integrates with Langfuse/Datadog |
-| **Task Scheduling** | APScheduler | 3.10+ | Fallback to Windmill; single-node Phase 1 |
-| **Document Loading** | Unstructured + PyPDF2 | Latest | Phase 1: basic PDF/DOCX parsing; LlamaParse Phase 3 |
+| **Task Scheduling** | APScheduler | 3.10+ | Cron-style scheduling when Windmill not required |
+| **Document Loading** | Unstructured + PyPDF2 | Latest | Basic PDF/DOCX parsing; LlamaParse for complex layouts when accuracy demands it |
 
 ---
 
@@ -185,14 +254,16 @@ MCP Servers: Execute actual API calls
 
 ### II.A Principle: Vertical-Slice Delivery
 
-**Definition:** Every phase delivers a complete end-to-end system, not layers in isolation.
+**Definition:** Every delivery increment MUST provide a complete end-to-end system, not layers in isolation.
 
-**Phase 1 Vertical Slice:**
-- Simple Chat UI (Open WebUI)
-- Single Workflow Engine (Windmill)
-- One ReAct Agent (Pydantic AI)
-- Basic Memory (PostgreSQL + pgvector)
-- User can input task → Agent reasons → Tools execute → Response delivered
+**Minimum Viable Vertical Slice:**
+- User interaction layer (chat UI or API endpoint)
+- Orchestration logic (workflow or agent reasoning)
+- At least one functional agent with tool access
+- Persistent memory (read + write capability)
+- Observable execution (logs + traces for debugging)
+
+**Validation:** A vertical slice is complete when a user can input a task, the system reasons and executes tools, and a response is delivered with full audit trail.
 
 **Why This Matters:**
 - No "infrastructure layer done, agents layer next" delays
@@ -202,7 +273,7 @@ MCP Servers: Execute actual API calls
 
 ### II.B Principle: Pluggable Orchestration
 
-**Definition:** Framework choice (Windmill, LangGraph, AutoGen, CrewAI) decouples from agent definitions and tool ecosystem.
+**Definition:** Framework choice (Windmill, LangGraph, AutoGen, CrewAI) MUST decouple from agent definitions and tool ecosystem.
 
 **Shared Abstraction Across Frameworks:**
 - Agent definitions (Pydantic AI + @tool decorators)
@@ -210,21 +281,13 @@ MCP Servers: Execute actual API calls
 - Memory backends (PostgreSQL)
 - Telemetry schema (OpenTelemetry)
 
-**Decision Pattern (Framework Selection):**
-| Workflow Pattern | Best Tool | Reason |
-|---|---|---|
-| Linear pipeline (fetch → process → store) | Windmill | DAG execution, visual builder |
-| Conditional branching (if X then Y else Z) | Windmill | Built-in branching, easy visualization |
-| Cyclical reasoning (retry until success) | LangGraph | Explicit state machine, supports loops |
-| Adaptive multi-step with backtracking | LangGraph | Node-based reasoning with conditional edges |
-| Role-based multi-agent teams | CrewAI (Phase 3) | Native conversation patterns; Sales Agent, Engineering Agent patterns |
-| Exploratory conversations | AutoGen (Phase 2) | Agent-to-Agent chat; collaborative reasoning |
+**Decision Router:** Planning documents MUST reference Article I.B pattern-to-framework mapping to justify orchestrator selection. No framework lock-in without documented pattern mismatch.
 
-**Implementation:** Decision router in `planning-template.md` explicitly references Article II.B to gate framework selection.
+**Implementation Requirement:** Agents written once; deployable across multiple orchestration frameworks with minimal adapter code.
 
 ### II.C Principle: Human-in-the-Loop by Default
 
-**Definition:** Risk-based escalation policies, approval gates, and rollback capabilities built into Phase 1.
+**Definition:** Risk-based escalation policies, approval gates, and rollback capabilities MUST be present before production deployment.
 
 **Action Categories by Reversibility:**
 
@@ -243,14 +306,16 @@ MCP Servers: Execute actual API calls
    - Examples: Delete files, make purchases, send money, modify production systems
    - Gate: Pre-execution approval mandatory (no timeout)
 
-**Confidence Thresholds (Phase 1 Baseline):**
+**Baseline Confidence Thresholds:**
 - Confidence ≥ 85%: Auto-execute reversible actions; log all
 - Confidence 50–85%: Conditional approval for reversible-with-delay
 - Confidence < 50%: Escalate to human; never execute irreversible without explicit approval
 
+**Tuning:** Confidence thresholds MAY be adjusted based on operational data (false positive/negative rates), but irreversible actions MUST always require human approval regardless of confidence.
+
 ### II.D Principle: Observable Everything
 
-**Definition:** Every decision, tool call, reasoning path, and approval is logged and visualizable.
+**Definition:** Every decision, tool call, reasoning path, and approval MUST be logged and visualizable.
 
 **Mandatory Telemetry:**
 - **Execution Capture:** Agent decision context (task, model, tools considered)
@@ -265,36 +330,42 @@ MCP Servers: Execute actual API calls
 - Secondary: PostgreSQL audit tables for human-in-the-loop decisions
 - Visualization: Custom React dashboard + Windmill execution UI
 
-### II.E Principle: Multi-Storage Memory (Phase 3 Foundation)
+**Retention:** Minimum 30 days; no automatic deletion of approval audit trails.
 
-**Phase 1–2:** PostgreSQL single source of truth  
-**Phase 3+ Readiness:** Abstract memory interface so storage upgrades don't break agents
+### II.E Principle: Multi-Storage Memory Abstraction
 
-**Query Router Pattern (Semantic vs. Relational):**
+**Definition:** Memory interfaces MUST abstract storage implementation so backend upgrades don't break agents.
+
+**Current Baseline:** PostgreSQL single source of truth (see Article I.D)
+
+**Future-Ready Pattern:** When multi-storage expansion is triggered (see Appendix D), agents interact through abstract memory interface:
+```python
+memory.semantic_search(query="user intent", top_k=10)  # Routes to pgvector or Pinecone
+memory.graph_query(entity="Person", relation="works_with")  # Routes to PostgreSQL or Neo4j
+memory.temporal_query(date_range="2024-Q4")  # Routes to PostgreSQL
 ```
-Query Type                        → Storage
-"Find similar documents"          → pgvector semantic search
-"What happened on date X?"        → SQL temporal filters
-"Recall conversation about Y"     → pgvector + session time range
-"Relationship between X and Y"    → Neo4j (Phase 3)
-"Summarize Q4 financial data"     → Relational DB structured query
-```
 
-### II.F Principle: Isolation Progression
+**No Direct Coupling:** Agent code MUST NOT import database-specific drivers (e.g., `psycopg2`, `neo4j.GraphDatabase`) directly. All persistence flows through memory abstraction layer.
 
-**Definition:** Execution isolation evolves phase-by-phase without architectural rework.
+### II.F Principle: Isolation & Safety Boundaries
 
-| Phase | Isolation Model | Safety Level |
-|-------|---|---|
-| **Phase 1** | In-process; controlled via Pydantic validation + confidence gates | Medium |
-| **Phase 2** | Subprocess per agent; resource limits (CPU, memory) per workflow | Medium-High |
-| **Phase 3** | Containerized agents; Windmill per-workflow resource limits | High |
-| **Phase 4** | Kubernetes pods; multi-region failover; secrets management | Enterprise |
-| **Phase 5** | Distributed execution; agent mesh with service isolation | Maximum |
+**Definition:** Execution isolation MUST evolve based on maturity triggers without requiring agent code rewrites.
 
-**No Rework Required:** Same agent code runs in all isolation models due to async/await design.
+**Maturity-Triggered Isolation Levels:**
 
-### II.G Principle: Tool Gap Detection & Self-Extension (Phase 4+)
+| Trigger Condition | Isolation Model | Implementation |
+|---|---|---|
+| **Development / Single User** | In-process execution | Pydantic validation + confidence gates |
+| **Multi-User / Concurrent Workflows** | Subprocess per agent | Resource limits (CPU, memory) per workflow |
+| **Production / Untrusted Code Execution** | Containerized agents | Windmill per-workflow resource limits; Docker isolation |
+| **Enterprise / Multi-Tenant** | Kubernetes pods | Multi-region failover; secrets management; network policies |
+| **High-Security / Distributed** | Agent mesh | Service isolation; zero-trust networking; runtime attestation |
+
+**No Rework Required:** Same agent code runs in all isolation models due to async/await design and abstract interfaces.
+
+### II.G Principle: Tool Gap Detection & Self-Extension
+
+**Definition:** When operational, the system MUST detect missing tool capabilities and facilitate extension.
 
 **Pattern:**
 1. **Scout Agent:** Attempts task with current tool registry; detects missing capabilities
@@ -303,7 +374,12 @@ Query Type                        → Storage
 4. **Human Approval Gate:** Code review and security validation
 5. **Automated Deployment:** Approved tools deployed; MCP registries updated; Scout re-runs
 
-**Phase 1–2 Constraint:** Manual tool development. Self-extension deferred to Phase 4 when operational patterns are stable.
+**Maturity Trigger:** Self-extension enabled when:
+- Tool failure rate due to missing capabilities exceeds 10% of tasks
+- Manual tool development turnaround exceeds 48 hours on average
+- Operational patterns have stabilized (90-day baseline established)
+
+**Until Trigger Met:** Manual tool development only.
 
 ---
 
@@ -320,7 +396,7 @@ Query Type                        → Storage
 **Test Types Required:**
 1. **Unit Tests:** Individual functions in isolation; no external services
 2. **Integration Tests:** Agent + tool calls; MCP server interactions
-3. **Workflow Tests:** Windmill DAG execution; state transitions
+3. **Workflow Tests:** Orchestrator execution; state transitions
 4. **Regression Tests:** Critical paths (human-in-the-loop escalation, approval flows)
 5. **Safety Tests:** Irreversible actions always escalate; confidence thresholds respected
 
@@ -339,7 +415,7 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 ### III.B Async Best Practices
 
 **Non-Negotiable:**
-- All I/O operations (database, MCP calls, external APIs) must be async
+- All I/O operations (database, MCP calls, external APIs) MUST be async
 - No blocking calls in orchestration layer; use `asyncio.run()` only at entry points
 - Connection pools configured for async drivers (asyncpg for PostgreSQL)
 - Streaming responses for long-running tasks (LangGraph + Open WebUI)
@@ -347,7 +423,7 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 ### III.C Observability & Tracing
 
 **Required Instrumentation (OpenTelemetry):**
-- Agent reasoning: trace each step in LangGraph node execution
+- Agent reasoning: trace each step in orchestrator execution
 - Tool calls: span per MCP server interaction
 - Database queries: span per async query with query time and result count
 - Approvals: trace escalation decision + human response time
@@ -357,8 +433,8 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 ### III.D Database Migrations
 
 **Tool:** Alembic (SQLAlchemy migration framework)  
-**Non-Negotiable:** All schema changes via migrations; no raw SQL in production code  
-**Testing:** Migration up + down tested in CI; rollback capability verified  
+**Non-Negotiable:** All schema changes MUST use migrations; no raw SQL in production code  
+**Testing:** Migration up + down tested in CI; rollback capability verified
 
 ### III.E Documentation Standards
 
@@ -370,20 +446,26 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 
 ### III.F Security & Secrets
 
-**Secret Management:**
-- **Phase 1:** Environment variables (development only)
-- **Phase 2+:** HashiCorp Vault or AWS Secrets Manager
-- **Tool Credentials:** Passed via secure MCP server channels; never hardcoded
-- **Audit Trail:** All secret access logged; who accessed what, when
+**Secret Management Maturity Levels:**
+
+| Maturity Stage | Secret Storage | Trigger Condition |
+|---|---|---|
+| **Development** | Environment variables (`.env` files) | Local development only; never committed |
+| **Production Single-Tenant** | HashiCorp Vault or AWS Secrets Manager | Multi-user deployment; API keys shared across users |
+| **Production Multi-Tenant** | Per-tenant secret isolation + rotation | Customer data separation required by compliance |
+
+**Tool Credentials:**
+- Passed via secure MCP server channels; never hardcoded in agent code
+- All secret access logged: who accessed what, when
 
 **API Keys:**
 - LLM API keys: environment variables in `.env` (never committed)
-- MCP tool credentials: Vault-managed
-- Database credentials: Vault-managed with automatic rotation
+- MCP tool credentials: Vault-managed when production maturity reached
+- Database credentials: Vault-managed with automatic rotation when production maturity reached
 
 ---
 
-## Article IV: Failure Mode Detection & Recovery (Phase 2+)
+## Article IV: Failure Mode Detection & Recovery
 
 ### IV.A LLM Reliability Assumptions
 
@@ -392,23 +474,33 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 - Confidence scores alone cannot detect all failure modes
 - Timeout and rate-limit errors occur; need graceful fallback
 
-**Phase 1 Approach:** Basic error handling + confidence-based escalation  
-**Phase 2+ Approach:** Three-layer failure detection (below)
+**Mandatory Baseline:** Basic error handling + confidence-based escalation (Article II.C)
 
-### IV.B Layer 1: Hallucination Detection (Phase 2)
+**Enhanced Detection Layers (Maturity-Triggered):**
 
+### IV.B Layer 1: Hallucination Detection
+
+**Trigger:** When user correction rate exceeds 15% of agent responses
+
+**Implementation:**
 - **Fact-Checking:** Compare agent claims against retrieved sources; flag unsupported assertions
 - **Cross-Reference Validation:** High-confidence claims require corroboration from 2+ sources
-- **Threshold:** 80% confidence claims flagged for human review
+- **Threshold:** 80%+ confidence claims flagged for human review if unsupported
 
-### IV.C Layer 2: Tool Failure Recovery (Phase 2)
+### IV.C Layer 2: Tool Failure Recovery
 
+**Trigger:** When tool timeout/failure rate exceeds 5% of tool calls
+
+**Implementation:**
 - **Explicit Fallback Chains:** Tool A times out → Tool B → Tool C
 - **Timeout Policies:** 10s web search; 30s complex query; escalate if exceeded
 - **Graceful Degradation:** Full answer → Partial answer → Insufficient data (escalate)
 
-### IV.D Layer 3: Model Switching (Phase 2)
+### IV.D Layer 3: Model Switching
 
+**Trigger:** When single-model failure rate exceeds 10% or cost per task exceeds budget thresholds
+
+**Implementation:**
 - **Health Monitoring:** Rate limits, errors, latency per model
 - **Automatic Failover:** GPT-4 fails → Claude-3 → local Ollama
 - **Cost-Aware Selection:** Expensive models only when cheaper ones fail
@@ -424,13 +516,18 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 **Approval Process:**
 1. **Proposal:** Pull request with documented rationale
 2. **Review:** Cross-functional approval (tech lead, PM, principal engineer)
-3. **Impact Analysis:** Which phases affected? Agent code changes required?
+3. **Impact Analysis:** What breaks? What code changes required? Migration path?
 4. **Vote:** 2/3 majority required for approval
 5. **Merged:** Documented in commit message with reference to Articles affected
 
+**Version Bumping:**
+- **MAJOR:** Backward incompatible governance/principle removals or redefinitions
+- **MINOR:** New principle/section added or materially expanded guidance
+- **PATCH:** Clarifications, wording, typo fixes, non-semantic refinements
+
 **Immutable Constraints:**
-- Cannot change non-negotiable tech stack without Phase N+1 rearchitecture
-- Cannot weaken human-in-the-loop principles in Phase 1–2
+- Cannot change non-negotiable tech stack without rearchitecture proposal + migration plan
+- Cannot weaken human-in-the-loop principles (Article II.C)
 - Cannot reduce test coverage thresholds below 80%
 
 ### V.B Principle Clarifications
@@ -442,85 +539,38 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 2. **Single tech lead approval** (fast-track)
 3. **Merged** with "CLARIFICATION" in commit message
 
-### V.C Ratification Schedule
-
-- **Phase 1:** Constitution frozen; no changes except clarifications
-- **Phase 2:** Minor amendments allowed (e.g., test coverage threshold increases)
-- **Phase 3+:** Annual review with full amendment process
+**Version Bump:** PATCH increment only.
 
 ---
 
-## Article VI: Gating Checklist (Planning Phase Gates)
+## Article VI: Gating Checklist (Planning & Implementation Gates)
 
-**All planning must reference this constitution.** The `plan-template.md` includes gates:
+**All planning MUST reference this constitution.** Templates include automated gates:
 
 ```markdown
 ## Constitutional Compliance Checklist
 
 - [ ] **Article I: Tech Stack** – Does this plan use approved frameworks?
-  - [ ] Orchestration: Windmill or LangGraph? (approved for this pattern)
-  - [ ] Agent: Pydantic AI with @tool decorators?
+  - [ ] Python 3.11+?
+  - [ ] Orchestration: Pattern-to-framework mapping followed (Article I.B)?
+  - [ ] Agents: Pydantic AI with @tool decorators?
   - [ ] Memory: PostgreSQL with async access?
-  - [ ] Tools: All via MCP?
+  - [ ] Tools: All via MCP (no hardcoded integrations)?
 
-- [ ] **Article II: Principles** – Respects vertical-slice, pluggable orchestration, human-in-the-loop?
-  - [ ] Irreversible actions gated by approval?
-  - [ ] Observable: telemetry instrumented?
+- [ ] **Article II: Principles** – Respects all 7 principles?
+  - [ ] Vertical slice deliverable?
+  - [ ] Pluggable orchestration (framework-agnostic agent code)?
+  - [ ] Human-in-the-loop for irreversible actions?
+  - [ ] Observable: telemetry instrumented (Article II.D)?
+  - [ ] Memory abstraction (no direct DB driver imports in agents)?
 
 - [ ] **Article III: Standards** – Meets testing, observability, async requirements?
-  - [ ] Tests: 80% coverage target?
+  - [ ] Tests: 80% coverage target enforced?
   - [ ] Async: All I/O non-blocking?
   - [ ] Instrumentation: OpenTelemetry spans?
 
 If ANY gate fails, escalate to tech lead before proceeding.
 ```
-
----
-
-## Article VII: Deferred Decisions (Phase 2+)
-
-**These technology choices remain open for Phase 2+ evaluation and are NOT frozen:**
-
-- **Vector Store Evolution:** Phase 1 uses pgvector; Phase 3 may introduce Pinecone, Weaviate, or other specialized stores
-- **Secondary Orchestrator:** AutoGen introduced Phase 2 for parallel evaluation; not locked in yet
-- **Multi-Agent Framework:** CrewAI evaluated Phase 3 for role-based teams; not committed yet
-- **LLM Provider Lock-In:** Pydantic AI remains model-agnostic; can swap OpenAI ↔ Anthropic ↔ Ollama without code changes
-- **Graph Database:** Neo4j considered Phase 3+ for relationship reasoning; deferred if not needed
-- **Cache Layer:** Redis introduced Phase 2 as optional optimization; not mandatory Phase 1
-
-**Rationale:** Vertical-slice delivery requires baseline decisions (Articles I–VI). Future phases have option space for optimization and competitive evaluation.
-
----
-
-## Article VIII: Alignment with Roadmap
-
-### Phase 1 Compliance
-✅ Vertical-slice: UI + Workflow + Agent + Memory  
-✅ Windmill + LangGraph orchestration  
-✅ Pydantic AI agent framework  
-✅ PostgreSQL primary memory  
-✅ MCP tool integration  
-✅ Open WebUI chat interface  
-✅ Human-in-the-loop escalation (Article II.C)  
-✅ Observable everything (Article II.D)  
-✅ 80% test coverage (Article III.A)  
-
-### Phase 2 Compatibility
-✅ AutoGen added as *parallel* orchestrator; doesn't replace Windmill  
-✅ Agent Factory patterns (shared agent definitions)  
-✅ Multi-framework evaluation (framework-per-pattern strategy)  
-✅ Failure detection (Article IV)  
-
-### Phase 3+ Flexibility
-✅ LlamaIndex for multi-storage memory  
-✅ CrewAI for role-based teams (as Windmill workflow nodes)  
-✅ Graph database optional upgrade  
-✅ Semantic routing rules (Article II.E)  
-
-### No Contradictions
-- Constitution does NOT override roadmap phases
-- Constitution establishes *floor*, not ceiling (roadmap can exceed baseline)
-- Roadmap deferred decisions remain deferred (Article VII); constitution doesn't freeze them
 
 ---
 
@@ -536,37 +586,49 @@ If ANY gate fails, escalate to tech lead before proceeding.
 | **Pluggable Orchestration** | Framework choice decouples from agent definitions and tool ecosystem |
 | **Audit Trail** | Complete log of human decisions, approvals, and system actions |
 | **OpenTelemetry** | Standard for traces, metrics, logs; enables observability across all layers |
+| **Maturity Trigger** | Operational metric threshold that activates advanced features (e.g., cache layer, multi-storage) |
 
 ---
 
-## Appendix B: Quick Reference – Article to Phase Mapping
-
-| Article | Phase 1 | Phase 2 | Phase 3+ |
-|---------|--------|--------|---------|
-| **Tech Stack** | Frozen ✓ | Frozen ✓ | Frozen ✓ |
-| **Principles** | Frozen ✓ | Frozen ✓ | Frozen ✓ |
-| **Operational Std** | Frozen ✓ | Tighter | Tighter |
-| **Failure Detection** | Basic | Enhanced | Advanced |
-| **Deferred Decisions** | Baseline locked | Some open | Evaluate Phase 3+ |
-| **Amendment** | Clarifications only | Minor amendments | Full process |
-
----
-
-## Appendix C: Technology Rationale Summary
+## Appendix B: Technology Rationale Summary
 
 **Why These Choices Over Alternatives:**
 
 | Decision | Alternative | Why We Chose | Difference |
 |----------|-------------|--------------|-----------|
-| **Pydantic AI over LangChain** | LangChain | Type-safe, minimal boilerplate, MCP-native, FastAPI-style DX | LangChain: sprawling integrations, heavier abstraction; we defer to Phase 3 |
-| **LangGraph over AutoGen (Phase 1)** | AutoGen | Fine-grained state control, OpenAI-compatible tool-calling, streaming | AutoGen: best for conversational multi-agent; reserved Phase 2 |
-| **Windmill over Airflow** | Airflow | 13x faster execution, visual UI + code-backed, built-in observability, resource isolation | Airflow: optimized for batch; overkill for Phase 1 agent tasks |
-| **PostgreSQL + pgvector over Pinecone** | Pinecone | Single source of truth, no vendor lock-in, hybrid search (semantic + SQL), lower cost Phase 1 | Pinecone: specialized; evaluate Phase 3 if scale justifies separate store |
-| **Open WebUI over LibreChat** | LibreChat | Pipeline-based flexibility, native Ollama support, simpler setup Phase 1 | LibreChat: stronger auth/multi-provider; revisit Phase 2 for enterprise needs |
-| **Claude 3.5 Sonnet over GPT-4** | GPT-4 | Better reasoning on agent tasks, longer context, cost-effective at scale | GPT-4: maximize code quality; use for specialized Phase 2 benchmark |
-| **Python 3.11+ over TypeScript** | TypeScript | Agent frameworks are Python-native; asyncio ecosystem mature; no Node.js async story for pgvector | TypeScript: consider Phase 2 if UI complexity justifies separate backend |
+| **Pydantic AI over LangChain** | LangChain | Type-safe, minimal boilerplate, MCP-native, FastAPI-style DX | LangChain: sprawling integrations, heavier abstraction |
+| **LangGraph over AutoGen (for state machines)** | AutoGen | Fine-grained state control, OpenAI-compatible tool-calling, streaming | AutoGen: best for conversational multi-agent; use when pattern requires agent negotiation |
+| **Windmill over Airflow** | Airflow | 13x faster execution, visual UI + code-backed, built-in observability, resource isolation | Airflow: optimized for batch; Windmill excels at real-time agent orchestration |
+| **PostgreSQL + pgvector over Pinecone** | Pinecone | Single source of truth, no vendor lock-in, hybrid search (semantic + SQL), lower cost baseline | Pinecone: specialized; evaluate when vector storage exceeds 10M embeddings (maturity trigger) |
+| **Open WebUI over LibreChat** | LibreChat | Pipeline-based flexibility, native Ollama support, simpler setup | LibreChat: stronger auth/multi-provider; revisit when enterprise SSO required |
+| **Claude 3.5 Sonnet over GPT-4** | GPT-4 | Better reasoning on agent tasks, longer context, cost-effective at scale | GPT-4: maximize code quality; use for specialized benchmarks or when Claude fails |
+| **Python 3.11+ over TypeScript** | TypeScript | Agent frameworks are Python-native; asyncio ecosystem mature | TypeScript: consider if UI complexity demands separate backend language |
 
 ---
 
-**Frozen for Phase 1: December 20, 2025**  
-**Next Review: End of Phase 1 Development**
+## Appendix C: Maturity-Triggered Expansions
+
+**Replacements for "Deferred Decisions" (Old Article VII):**
+
+These expansions are constitutional—rules exist now—but *activation* depends on operational triggers, not arbitrary phase numbers.
+
+| Expansion | Trigger Condition | Implementation Path |
+|-----------|------------------|-------------------|
+| **Cache Layer (Redis)** | >70% repeat queries within 1hr OR p95 latency >200ms | Add Redis; PostgreSQL remains authoritative; LRU/TTL invalidation |
+| **Multi-Storage (Neo4j/Pinecone)** | Graph queries >30% volume OR vector storage >10M embeddings | Abstract memory interface (already required); add storage backends via LlamaIndex |
+| **AutoGen Integration** | Conversational multi-agent pattern required (agent negotiation) | Deploy AutoGen as Windmill workflow node (Article I.B) |
+| **CrewAI Integration** | Role-based multi-agent teams required (specialized agent roles) | Deploy CrewAI as Windmill workflow node (Article I.B) |
+| **Tool Self-Extension** | Tool failure >10% due to missing capabilities OR manual turnaround >48hrs | Enable scout/builder agent pattern (Article II.G) |
+| **Hallucination Detection** | User correction rate >15% | Implement fact-checking + cross-reference validation (Article IV.B) |
+| **Tool Failure Recovery** | Tool timeout/failure rate >5% | Implement fallback chains + graceful degradation (Article IV.C) |
+| **Model Switching** | Single-model failure rate >10% OR cost exceeds budget | Implement health monitoring + automatic failover (Article IV.D) |
+| **Enterprise Isolation** | Multi-tenant requirement OR untrusted code execution | Upgrade to containerized agents or Kubernetes pods (Article II.F) |
+| **Enterprise Secrets** | Multi-user production deployment | Migrate from `.env` to HashiCorp Vault or AWS Secrets Manager (Article III.F) |
+
+**Rationale:** These are not "future decisions"—they are *conditional rules that apply now*. Implementation timing depends on measurable operational triggers, not arbitrary roadmap phases.
+
+---
+
+**Ratified:** 2025-12-20  
+**Last Amended:** 2025-12-21  
+**Next Review:** When Article V.A amendment proposal submitted or maturity triggers activate new expansions

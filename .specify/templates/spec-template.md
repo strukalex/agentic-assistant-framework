@@ -7,22 +7,22 @@
 
 ## Constitution Constraints *(mandatory)*
 
-**Source of truth**: `.specify/memory/constitution.md`
+**Source of truth**: `.specify/memory/constitution.md` (v2.0+)
 
-This feature MUST comply with the constitution’s non-negotiables. If a requirement
+This feature MUST comply with the constitution's non-negotiables. If a requirement
 conflicts with any item below, it MUST be escalated via **Article V (Amendment Process)**.
 
 - **Technology stack (Article I)**:
   - **Python 3.11+**
-  - **Orchestration**: Windmill + LangGraph (hybrid; LangGraph inside Windmill steps)
+  - **Orchestration**: Pattern-driven selection (Article I.B)—Windmill for DAG/linear workflows, LangGraph for cyclical reasoning, CrewAI for role-based teams, AutoGen for agent negotiation
   - **Agents**: Pydantic AI (atomic agent unit)
-  - **Memory**: PostgreSQL 15+ + pgvector (PostgreSQL is source of truth in Phase 1–2)
+  - **Memory**: PostgreSQL 15+ + pgvector (PostgreSQL is source of truth; memory abstraction layer required)
   - **Tools**: MCP-only integrations (no hardcoded tool clients)
   - **UI**: Open WebUI for chat interaction
-  - **Default model (Phase 1)**: Claude 3.5 Sonnet (model-agnostic agents via Pydantic AI)
-- **Architectural principles (Article II)**: All 7 principles apply (vertical-slice, pluggable orchestration, human-in-the-loop, observable everything, multi-storage foundation, isolation progression, tool self-extension deferred).
+  - **Default model**: Claude 3.5 Sonnet (model-agnostic agents via Pydantic AI)
+- **Architectural principles (Article II)**: All 7 principles apply (vertical-slice, pluggable orchestration, human-in-the-loop, observable everything, multi-storage abstraction, isolation & safety boundaries, tool gap detection).
 - **Quality gates (Article III)**: Testing is required; CI enforces **≥ 80% coverage**.
-- **Deferred decisions (Article VII)**: Do not “decide” Phase 2+/Phase 3+ deferred items inside this spec unless amended via Article V.
+- **Maturity-triggered expansions (Appendix C)**: Evaluate triggers when feature creates operational load (e.g., cache layer when query patterns show >70% repeat retrieval; multi-storage when graph queries exceed 30% volume).
 
 ## User Scenarios & Testing *(mandatory)*
 

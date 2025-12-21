@@ -22,9 +22,9 @@
 **Storage**: PostgreSQL 15+ + pgvector *(Article I.D)*  
 **Tool Integration**: Model Context Protocol (MCP) *(Article I.E; no hardcoded integrations)*  
 **UI Layer**: Open WebUI *(Article I.F)*  
-**Primary LLM (Phase 1)**: Claude 3.5 Sonnet *(Article I.G)*  
+**Primary LLM**: Claude 3.5 Sonnet *(Article I.G)*  
 **Testing**: pytest + pytest-cov; **minimum 80% coverage** *(Article III.A)*  
-**Target Platform**: Linux server (Phase 1 baseline)  
+**Target Platform**: Linux server (baseline)  
 **Project Type**: Web/service backend with chat UI integration *(Open WebUI + API; see Constitution Article I.F)*  
 **Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
 **Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
@@ -32,37 +32,34 @@
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
+*GATE: Must pass before research begins. Re-check after design phase.*
 
-**Source of truth**: `.specify/memory/constitution.md`
+**Source of truth**: `.specify/memory/constitution.md` (v2.0+)
 
 ### Constitutional Compliance Checklist (MUST)
 
-- [ ] **Article I — Non-Negotiable Technology Stack**: Implementation uses the frozen stack:
+- [ ] **Article I — Non-Negotiable Technology Stack**: Implementation uses the approved stack:
   - [ ] **Python 3.11+**
-  - [ ] **Orchestration**: Windmill + LangGraph (LangGraph runs inside Windmill steps where applicable)
+  - [ ] **Orchestration**: Pattern-driven selection (Article I.B)—Windmill for DAG/linear workflows, LangGraph for cyclical reasoning, CrewAI for role-based teams, AutoGen for agent negotiation
   - [ ] **Agents**: Pydantic AI as the atomic agent unit (orchestration remains Windmill/LangGraph)
-  - [ ] **Memory**: PostgreSQL + pgvector (PostgreSQL is source of truth for Phase 1–2 writes)
+  - [ ] **Memory**: PostgreSQL + pgvector (PostgreSQL is source of truth; memory abstraction layer required)
   - [ ] **Tools**: MCP-only tool discovery/execution (no hardcoded tool clients)
   - [ ] **UI**: Open WebUI for chat interaction
-  - [ ] **Primary model (Phase 1)**: Claude 3.5 Sonnet (agent-level model-agnostic via Pydantic AI)
+  - [ ] **Primary model**: Claude 3.5 Sonnet (agent-level model-agnostic via Pydantic AI)
 
 - [ ] **Article II — Architectural Principles (all 7)**: Plan explicitly respects:
-  - [ ] Vertical-slice delivery
-  - [ ] Pluggable orchestration (framework-per-pattern; avoid lock-in)
+  - [ ] Vertical-slice delivery (end-to-end system deliverable)
+  - [ ] Pluggable orchestration (framework-agnostic agent code)
   - [ ] Human-in-the-loop by default (risk-based approvals; irreversible actions never auto-execute)
   - [ ] Observable everything (trace tool calls, decisions, approvals, costs)
-  - [ ] Multi-storage memory foundation (Phase 1–2: PostgreSQL-first; future-ready interfaces)
-  - [ ] Isolation progression (phase-by-phase; no rework required)
-  - [ ] Tool gap detection & self-extension deferred until Phase 4+
+  - [ ] Multi-storage memory abstraction (no direct DB driver imports in agent code)
+  - [ ] Isolation & safety boundaries (maturity-triggered; async-compatible)
+  - [ ] Tool gap detection & self-extension (maturity-triggered per Appendix C)
 
 - [ ] **Article III — Operational Standards**:
-  - [ ] Tests + CI enforce **≥ 80% coverage** (no “tests optional” plans)
+  - [ ] Tests + CI enforce **≥ 80% coverage** (no "tests optional" plans)
   - [ ] Async I/O for DB, MCP calls, external APIs (no blocking in orchestration layer)
   - [ ] OpenTelemetry instrumentation for agent reasoning + tool calls + approvals
-
-- [ ] **Article VII — Deferred Decisions**:
-  - [ ] Any choices listed as deferred remain deferred in this plan/spec unless amended via Article V
 
 ### If any gate fails
 
