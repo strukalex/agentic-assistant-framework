@@ -5,6 +5,25 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+## Constitution Constraints *(mandatory)*
+
+**Source of truth**: `.specify/memory/constitution.md`
+
+This feature MUST comply with the constitution’s non-negotiables. If a requirement
+conflicts with any item below, it MUST be escalated via **Article V (Amendment Process)**.
+
+- **Technology stack (Article I)**:
+  - **Python 3.11+**
+  - **Orchestration**: Windmill + LangGraph (hybrid; LangGraph inside Windmill steps)
+  - **Agents**: Pydantic AI (atomic agent unit)
+  - **Memory**: PostgreSQL 15+ + pgvector (PostgreSQL is source of truth in Phase 1–2)
+  - **Tools**: MCP-only integrations (no hardcoded tool clients)
+  - **UI**: Open WebUI for chat interaction
+  - **Default model (Phase 1)**: Claude 3.5 Sonnet (model-agnostic agents via Pydantic AI)
+- **Architectural principles (Article II)**: All 7 principles apply (vertical-slice, pluggable orchestration, human-in-the-loop, observable everything, multi-storage foundation, isolation progression, tool self-extension deferred).
+- **Quality gates (Article III)**: Testing is required; CI enforces **≥ 80% coverage**.
+- **Deferred decisions (Article VII)**: Do not “decide” Phase 2+/Phase 3+ deferred items inside this spec unless amended via Article V.
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--

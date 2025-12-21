@@ -17,12 +17,15 @@
   the iteration process.
 -->
 
-**Language/Version**: [e.g., Python 3.11, Swift 5.9, Rust 1.75 or NEEDS CLARIFICATION]  
-**Primary Dependencies**: [e.g., FastAPI, UIKit, LLVM or NEEDS CLARIFICATION]  
-**Storage**: [if applicable, e.g., PostgreSQL, CoreData, files or N/A]  
-**Testing**: [e.g., pytest, XCTest, cargo test or NEEDS CLARIFICATION]  
-**Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
-**Project Type**: [single/web/mobile - determines source structure]  
+**Language/Version**: Python 3.11+ *(non-negotiable; see Constitution Article I.A)*  
+**Primary Dependencies**: Windmill + LangGraph + Pydantic AI *(Article I.B–I.C)*; FastAPI + Pydantic *(Article I.H)*  
+**Storage**: PostgreSQL 15+ + pgvector *(Article I.D)*  
+**Tool Integration**: Model Context Protocol (MCP) *(Article I.E; no hardcoded integrations)*  
+**UI Layer**: Open WebUI *(Article I.F)*  
+**Primary LLM (Phase 1)**: Claude 3.5 Sonnet *(Article I.G)*  
+**Testing**: pytest + pytest-cov; **minimum 80% coverage** *(Article III.A)*  
+**Target Platform**: Linux server (Phase 1 baseline)  
+**Project Type**: Web/service backend with chat UI integration *(Open WebUI + API; see Constitution Article I.F)*  
 **Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
 **Constraints**: [domain-specific, e.g., <200ms p95, <100MB memory, offline-capable or NEEDS CLARIFICATION]  
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
@@ -31,7 +34,39 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Source of truth**: `.specify/memory/constitution.md`
+
+### Constitutional Compliance Checklist (MUST)
+
+- [ ] **Article I — Non-Negotiable Technology Stack**: Implementation uses the frozen stack:
+  - [ ] **Python 3.11+**
+  - [ ] **Orchestration**: Windmill + LangGraph (LangGraph runs inside Windmill steps where applicable)
+  - [ ] **Agents**: Pydantic AI as the atomic agent unit (orchestration remains Windmill/LangGraph)
+  - [ ] **Memory**: PostgreSQL + pgvector (PostgreSQL is source of truth for Phase 1–2 writes)
+  - [ ] **Tools**: MCP-only tool discovery/execution (no hardcoded tool clients)
+  - [ ] **UI**: Open WebUI for chat interaction
+  - [ ] **Primary model (Phase 1)**: Claude 3.5 Sonnet (agent-level model-agnostic via Pydantic AI)
+
+- [ ] **Article II — Architectural Principles (all 7)**: Plan explicitly respects:
+  - [ ] Vertical-slice delivery
+  - [ ] Pluggable orchestration (framework-per-pattern; avoid lock-in)
+  - [ ] Human-in-the-loop by default (risk-based approvals; irreversible actions never auto-execute)
+  - [ ] Observable everything (trace tool calls, decisions, approvals, costs)
+  - [ ] Multi-storage memory foundation (Phase 1–2: PostgreSQL-first; future-ready interfaces)
+  - [ ] Isolation progression (phase-by-phase; no rework required)
+  - [ ] Tool gap detection & self-extension deferred until Phase 4+
+
+- [ ] **Article III — Operational Standards**:
+  - [ ] Tests + CI enforce **≥ 80% coverage** (no “tests optional” plans)
+  - [ ] Async I/O for DB, MCP calls, external APIs (no blocking in orchestration layer)
+  - [ ] OpenTelemetry instrumentation for agent reasoning + tool calls + approvals
+
+- [ ] **Article VII — Deferred Decisions**:
+  - [ ] Any choices listed as deferred remain deferred in this plan/spec unless amended via Article V
+
+### If any gate fails
+
+- Document the violation in this plan (with rationale + mitigation) and follow **Article V** amendment/approval process before proceeding.
 
 ## Project Structure
 
