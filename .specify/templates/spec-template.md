@@ -18,7 +18,7 @@ conflicts with any item below, it MUST be escalated via **Article V (Amendment P
   - **Agents**: Pydantic AI (atomic agent unit)
   - **Memory**: PostgreSQL 15+ + pgvector (PostgreSQL is source of truth; memory abstraction layer required)
   - **Tools**: MCP-only integrations (no hardcoded tool clients)
-  - **UI**: Open WebUI for chat interaction
+  - **UI**: LibreChat for chat interaction
   - **Default model**: Claude 3.5 Sonnet (model-agnostic agents via Pydantic AI)
 - **Architectural principles (Article II)**: All 7 principles apply (vertical-slice, pluggable orchestration, human-in-the-loop, observable everything, multi-storage abstraction, isolation & safety boundaries, tool gap detection).
 - **Quality gates (Article III)**: Testing is required; CI enforces **≥ 80% coverage**.

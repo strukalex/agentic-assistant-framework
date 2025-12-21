@@ -14,4 +14,4 @@ The system implements a **Composite UI** and **Hybrid Orchestration** strategy, 
 *   ⚙️ **Orchestration:** **Windmill** handles durable, long-running workflows, while **LangGraph** manages complex cyclical reasoning loops.
 *   💾 **Memory:** **PostgreSQL** with **pgvector** serves as the single source of truth for both relational data and semantic vector search.
 *   🔌 **Integrations:** The **Model Context Protocol (MCP)** standardizes how agents connect to external tools (Filesystem, Google Drive, GitHub), preventing vendor lock-in.
-*   👀 **User Interface:** A composite layer using **Open WebUI** for streaming chat interactions and Windmill for real-time workflow visualization.
+*   👀 **User Interface:** A composite layer using **LibreChat** for streaming chat interactions and Windmill for real-time workflow visualization.

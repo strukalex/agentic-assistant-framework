@@ -332,7 +332,7 @@ MCP Servers handle the actual API calls
 │              │                      │
 │  Chat View   │  Graph View          │
 │              │  (Workflow DAGs)     │
-│  (Open WebUI │                      │
+│  (LibreChat  │                      │
 │   or custom) │  (Windmill           │
 │              │   or React Flow)     │
 │              │                      │
@@ -344,7 +344,7 @@ MCP Servers handle the actual API calls
 
 **Component Selection**:
 
-1. **Chat Interaction**: Open WebUI or LibreChat
+1. **Chat Interaction**: LibreChat
    - Conversational interface with **real-time streaming responses**
    - **Token-by-token rendering** of agent responses (no waiting for complete output)
    - **Live tool execution feedback**: Shows "Searching... 45 sources found → Ranking by relevance → Synthesizing..." instead of progress bars
@@ -364,7 +364,7 @@ MCP Servers handle the actual API calls
    - Execution metrics
 
 **Why Composite?**
-- Open WebUI excels at **streaming chat interfaces** with real-time agent reasoning and tool execution feedback
+- LibreChat excels at **streaming chat interfaces** with real-time agent reasoning and tool execution feedback
 - Windmill provides **live workflow visualization** with real-time execution tracking
 - One tool for everything = compromises everywhere (no single tool handles both streaming chat + workflow graphs + agent state visualization)
 
@@ -894,7 +894,7 @@ Complete response with citations
 **Success Metric**: 3+ MCP servers active; tools composed sequentially and conditionally
 
 #### 1.4 Composite UI - Phase 1 Minimal
-- **Chat Interface**: CLI for testing (upgrade to Open WebUI in Phase 2)
+- **Chat Interface**: CLI for testing (upgrade to LibreChat in Phase 2)
 - **Workflow Viewer**: Embed Windmill dashboard (iframe)
 - **Agent State Viewer**: JSON output showing execution trace
 
@@ -1345,7 +1345,7 @@ Decision Output: "Use AutoGen for this investigation task"
 **Success Metric**: Clear decision rules provided; team can choose framework confidently
 
 #### 2.6 Enhanced UI - Chat + Graph Views
-- Upgrade chat to Open WebUI or LibChat
+- Upgrade chat to LibreChat
 - Embed Windmill workflow graphs
 - React Flow for visual orchestration editing (optional)
 - Real-time execution tracking

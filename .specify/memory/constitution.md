@@ -134,7 +134,7 @@ MCP Servers: Execute actual API calls
 
 **Not a Single Tool; Multiple Specialized Components:**
 
-1. **Chat Interaction:** Open WebUI
+1. **Chat Interaction:** LibreChat
    - Conversational interface with real-time streaming responses
    - Token-by-token rendering; shows "Searching... 45 sources → Ranking → Synthesizing..."
    - Incremental result display; live tool execution feedback
@@ -152,9 +152,7 @@ MCP Servers: Execute actual API calls
    - Tool availability and health
    - Execution metrics (token counts, latency)
 
-**Rationale:** Specialized components (Open WebUI for chat, Windmill for workflow visualization) provide better UX than single monolithic UI.
-
-**Alternative Evaluation Trigger:** If authentication/moderation requirements change (e.g., enterprise SSO, multi-tenant isolation), evaluate LibreChat as secondary option for comparison.
+**Rationale:** Specialized components (LibreChat for chat, Windmill for workflow visualization) provide better UX than single monolithic UI.
 
 ### I.G Primary LLM Provider
 
@@ -345,7 +343,7 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 - All I/O operations (database, MCP calls, external APIs) MUST be async
 - No blocking calls in orchestration layer; use `asyncio.run()` only at entry points
 - Connection pools configured for async drivers (asyncpg for PostgreSQL)
-- Streaming responses for long-running tasks (LangGraph + Open WebUI)
+- Streaming responses for long-running tasks (LangGraph + LibreChat)
 
 ### III.C Observability & Tracing
 
