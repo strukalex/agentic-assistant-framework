@@ -54,7 +54,7 @@
   - [ ] Observable everything (trace tool calls, decisions, approvals, costs)
   - [ ] Multi-storage memory abstraction (no direct DB driver imports in agent code)
   - [ ] Isolation & safety boundaries (maturity-triggered; async-compatible)
-  - [ ] Tool gap detection & self-extension (maturity-triggered per Appendix C)
+  - [ ] Tool gap detection & self-extension (maturity-triggered per Article II.G)
 
 - [ ] **Article III — Operational Standards**:
   - [ ] Tests + CI enforce **≥ 80% coverage** (no "tests optional" plans)

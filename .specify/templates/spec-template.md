@@ -22,7 +22,6 @@ conflicts with any item below, it MUST be escalated via **Article V (Amendment P
   - **Default model**: Claude 3.5 Sonnet (model-agnostic agents via Pydantic AI)
 - **Architectural principles (Article II)**: All 7 principles apply (vertical-slice, pluggable orchestration, human-in-the-loop, observable everything, multi-storage abstraction, isolation & safety boundaries, tool gap detection).
 - **Quality gates (Article III)**: Testing is required; CI enforces **≥ 80% coverage**.
-- **Maturity-triggered expansions (Appendix C)**: Evaluate triggers when feature creates operational load (e.g., cache layer when query patterns show >70% repeat retrieval; multi-storage when graph queries exceed 30% volume).
 
 ## User Scenarios & Testing *(mandatory)*
 

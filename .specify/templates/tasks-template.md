@@ -38,7 +38,7 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
   - Human-in-the-loop by default (risk-based approvals; irreversible actions never auto-execute)
   - Observable everything (OpenTelemetry traces for decisions/tool calls/approvals)
   - Pluggable orchestration (framework-agnostic agent code; no direct DB driver imports)
-  - Isolation & safety boundaries (maturity-triggered per Appendix C)
+  - Isolation & safety boundaries (maturity-triggered per Article II.F)
   - Others as stated in the constitution
 - **Article III — Operational standards**:
   - Async I/O for DB/tool calls

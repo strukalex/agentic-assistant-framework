@@ -8,7 +8,7 @@ VERSION CHANGE: v1.0 → v2.0 (MAJOR)
 RATIONALE FOR MAJOR BUMP:
 - Fundamental governance model change: phase-specific rules → conditional principles
 - All Articles rewritten to be lifecycle-immutable
-- Removed Article VII (Deferred Decisions) - replaced with conditional usage patterns
+- Removed Article VII (Deferred Decisions) - removed entirely (no deferred decisions in constitution)
 - Removed Article VIII (Roadmap Alignment) - phases are implementation concerns, not constitutional
 - Removed Appendix B (Phase Mapping) - no longer applicable
 
@@ -29,13 +29,13 @@ MODIFIED PRINCIPLES:
 - Article V.C: Removed "Ratification Schedule" (phase-bound)
 
 REMOVED SECTIONS:
-- Article VII: Deferred Decisions (Phase 2+) - replaced with conditional patterns in Article I
+- Article VII: Deferred Decisions (Phase 2+) - removed entirely (constitutions define what IS decided, not what might be)
 - Article VIII: Alignment with Roadmap - phases are not constitutional concerns
 - Appendix B: Quick Reference – Article to Phase Mapping
+- Appendix C: Maturity-Triggered Expansions - removed (still deferred decisions in disguise)
 
 ADDED SECTIONS:
 - Article II.F: Isolation & Safety Boundaries (replaces old II.F with maturity-triggered rules)
-- Appendix D: Maturity-Triggered Expansions (replaces old Article VII deferred decisions)
 
 TEMPLATES REQUIRING UPDATES:
 ✅ .specify/templates/plan-template.md - Constitution Check section updated
@@ -606,29 +606,6 @@ If ANY gate fails, escalate to tech lead before proceeding.
 
 ---
 
-## Appendix C: Maturity-Triggered Expansions
-
-**Replacements for "Deferred Decisions" (Old Article VII):**
-
-These expansions are constitutional—rules exist now—but *activation* depends on operational triggers, not arbitrary phase numbers.
-
-| Expansion | Trigger Condition | Implementation Path |
-|-----------|------------------|-------------------|
-| **Cache Layer (Redis)** | >70% repeat queries within 1hr OR p95 latency >200ms | Add Redis; PostgreSQL remains authoritative; LRU/TTL invalidation |
-| **Multi-Storage (Neo4j/Pinecone)** | Graph queries >30% volume OR vector storage >10M embeddings | Abstract memory interface (already required); add storage backends via LlamaIndex |
-| **AutoGen Integration** | Conversational multi-agent pattern required (agent negotiation) | Deploy AutoGen as Windmill workflow node (Article I.B) |
-| **CrewAI Integration** | Role-based multi-agent teams required (specialized agent roles) | Deploy CrewAI as Windmill workflow node (Article I.B) |
-| **Tool Self-Extension** | Tool failure >10% due to missing capabilities OR manual turnaround >48hrs | Enable scout/builder agent pattern (Article II.G) |
-| **Hallucination Detection** | User correction rate >15% | Implement fact-checking + cross-reference validation (Article IV.B) |
-| **Tool Failure Recovery** | Tool timeout/failure rate >5% | Implement fallback chains + graceful degradation (Article IV.C) |
-| **Model Switching** | Single-model failure rate >10% OR cost exceeds budget | Implement health monitoring + automatic failover (Article IV.D) |
-| **Enterprise Isolation** | Multi-tenant requirement OR untrusted code execution | Upgrade to containerized agents or Kubernetes pods (Article II.F) |
-| **Enterprise Secrets** | Multi-user production deployment | Migrate from `.env` to HashiCorp Vault or AWS Secrets Manager (Article III.F) |
-
-**Rationale:** These are not "future decisions"—they are *conditional rules that apply now*. Implementation timing depends on measurable operational triggers, not arbitrary roadmap phases.
-
----
-
 **Ratified:** 2025-12-20  
 **Last Amended:** 2025-12-21  
-**Next Review:** When Article V.A amendment proposal submitted or maturity triggers activate new expansions
+**Next Review:** When Article V.A amendment proposal submitted
