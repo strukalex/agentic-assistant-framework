@@ -268,7 +268,6 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 - [X] T092 [P] Run Black formatter on src/ and tests/ directories for consistent code style
 - [X] T093 [P] Verify test coverage is ≥ 80% with pytest --cov=src --cov-fail-under=80 per Article III.A
 - [X] T094 [P] Add additional unit tests for edge cases (empty query string, dimension mismatch, connection errors) to reach 80%+ coverage per edge cases in spec.md
-- [X] T095 [P] Create quickstart validation script that runs through quickstart.md steps and verifies expected outputs
 - [X] T097 [P] Add concurrency test in tests/integration/ - verify 10 simultaneous sessions without deadlocks per SC-010
 
 **Checkpoint**: All polish tasks complete - project is production-ready for Phase 1
