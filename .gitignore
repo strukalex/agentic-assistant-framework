@@ -1,1 +1,35 @@
 .specstory/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+ENV/
+env/
+*.egg-info/
+dist/
+build/
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Environment and secrets
+.env
+.env.*
+
+# Tooling
+.ruff_cache/
+.mypy_cache/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

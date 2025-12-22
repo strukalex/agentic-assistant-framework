@@ -15,3 +15,52 @@ The system implements a **Composite UI** and **Hybrid Orchestration** strategy, 
 *   💾 **Memory:** **PostgreSQL** with **pgvector** serves as the single source of truth for both relational data and semantic vector search.
 *   🔌 **Integrations:** The **Model Context Protocol (MCP)** standardizes how agents connect to external tools (Filesystem, Google Drive, GitHub), preventing vendor lock-in.
 *   👀 **User Interface:** A composite layer using **Streamlit** (Phase 1-2) for streaming chat interactions and Windmill for real-time workflow visualization. Production UI (LibreChat or React/Next.js) planned for Phase 3+.
+
+## Core Foundation & Memory Layer (Phase 1)
+
+This repository now includes the Phase 1 memory layer feature, built around Python 3.11, SQLModel, asyncpg, pgvector, and OpenTelemetry. The implementation is container-first and ships with Docker Compose for PostgreSQL + Jaeger.
+
+### Quickstart
+
+```bash
+# Clone & enter repo
+git clone <repository-url>
+cd agentic-assistant-framework
+
+# Set up virtual environment
+python3.11 -m venv venv
+source venv/bin/activate  # Windows: venv\\Scripts\\activate
+
+# Install dependencies
+pip install -e .[dev]
+
+# Copy environment defaults
+cp .env.example .env
+
+# Launch infra (PostgreSQL + Jaeger)
+docker-compose up -d
+
+# Run tests with coverage gate
+pytest
+```
+
+### Project Structure (Phase 1)
+
+```
+src/
+  core/          # config, telemetry, memory manager (async)
+  models/        # SQLModel + Pydantic models
+tests/
+  unit/          # unit tests (models, telemetry)
+  integration/   # database + trace integration tests
+  fixtures/      # shared fixtures and sample data
+alembic/
+  versions/      # migration scripts
+docker-compose.yml  # PostgreSQL + Jaeger for local dev
+```
+
+### Operational Notes
+
+- Minimum Python version: 3.11
+- Coverage gate: 80% enforced via `pytest --cov=src --cov-fail-under=80`
+- All DB operations must be async and traced (OpenTelemetry → Jaeger)

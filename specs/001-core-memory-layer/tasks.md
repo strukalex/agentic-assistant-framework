@@ -43,14 +43,14 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Purpose**: Project initialization and Docker infrastructure
 
-- [ ] T001 Create Python project structure with src/, tests/, alembic/ directories per plan.md
-- [ ] T002 Create pyproject.toml with dependencies: SQLModel 0.0.14+, asyncpg 0.30+, Pydantic 2.0+, opentelemetry-sdk 1.20+, opentelemetry-exporter-otlp 1.20+, alembic 1.13+, pytest 7.0+, pytest-asyncio 0.21+, pytest-cov 4.0+
-- [ ] T003 [P] Create docker-compose.yml with PostgreSQL 15 (ankane/pgvector image) and Jaeger all-in-one services per FR-021, FR-022
-- [ ] T004 [P] Create .env.example with DATABASE_URL, OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME, VECTOR_DIMENSION, HNSW_EF_SEARCH per research.md section 6
-- [ ] T005 [P] Create .gitignore with Python, .env, __pycache__, htmlcov/, .pytest_cache/ entries
-- [ ] T006 [P] Create README.md with project overview, setup instructions, quick start commands
-- [ ] T007 [P] Configure pytest.ini with asyncio_mode = auto and coverage settings (--cov-fail-under=80) per Article III.A
-- [ ] T008 [P] Configure pyproject.toml with Ruff + Black + mypy settings per constitution Article I.H
+ - [X] T001 Create Python project structure with src/, tests/, alembic/ directories per plan.md
+ - [X] T002 Create pyproject.toml with dependencies: SQLModel 0.0.14+, asyncpg 0.30+, Pydantic 2.0+, opentelemetry-sdk 1.20+, opentelemetry-exporter-otlp 1.20+, alembic 1.13+, pytest 7.0+, pytest-asyncio 0.21+, pytest-cov 4.0+
+ - [X] T003 [P] Create docker-compose.yml with PostgreSQL 15 (ankane/pgvector image) and Jaeger all-in-one services per FR-021, FR-022
+ - [X] T004 [P] Create .env.example with DATABASE_URL, OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME, VECTOR_DIMENSION, HNSW_EF_SEARCH per research.md section 6
+ - [X] T005 [P] Create .gitignore with Python, .env, __pycache__, htmlcov/, .pytest_cache/ entries
+ - [X] T006 [P] Create README.md with project overview, setup instructions, quick start commands
+ - [X] T007 [P] Configure pytest.ini with asyncio_mode = auto and coverage settings (--cov-fail-under=80) per Article III.A
+ - [X] T008 [P] Configure pyproject.toml with Ruff + Black + mypy settings per constitution Article I.H
 
 **Checkpoint**: Project structure and Docker infrastructure ready
 
@@ -62,19 +62,19 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T009 Create src/core/__init__.py (empty module initialization)
-- [ ] T010 Create src/models/__init__.py (empty module initialization)
-- [ ] T011 Create tests/unit/__init__.py (empty module initialization)
-- [ ] T012 Create tests/integration/__init__.py (empty module initialization)
-- [ ] T013 Create tests/fixtures/__init__.py (empty module initialization)
-- [ ] T014 [P] Implement Pydantic Settings configuration in src/core/config.py per research.md section 6 with database_url, otel_endpoint, vector_dimension, hnsw_ef_search
-- [ ] T015 [P] Initialize OpenTelemetry SDK in src/core/telemetry.py with TracerProvider, OTLPSpanExporter, BatchSpanProcessor per research.md section 3
-- [ ] T016 [P] Create @trace_memory_operation decorator in src/core/telemetry.py with span attributes (operation.type, operation.success, db.system) per FR-016, FR-017
-- [ ] T017 [P] Create MessageRole enum in src/models/message.py with values (USER, ASSISTANT, SYSTEM) per data-model.md
-- [ ] T018 [P] Create RiskLevel enum in src/models/common.py with values (REVERSIBLE, REVERSIBLE_WITH_DELAY, IRREVERSIBLE) per data-model.md
-- [ ] T019 Initialize Alembic in alembic/ directory with alembic init per research.md section 5
-- [ ] T020 Configure alembic/env.py for async SQLAlchemy engine with asyncpg driver per research.md section 5
-- [ ] T021 Create tests/fixtures/conftest.py with pytest fixtures for async database session, Docker Compose service waits per research.md section 9
+- [X] T009 Create src/core/__init__.py (empty module initialization)
+- [X] T010 Create src/models/__init__.py (empty module initialization)
+- [X] T011 Create tests/unit/__init__.py (empty module initialization)
+- [X] T012 Create tests/integration/__init__.py (empty module initialization)
+- [X] T013 Create tests/fixtures/__init__.py (empty module initialization)
+- [X] T014 [P] Implement Pydantic Settings configuration in src/core/config.py per research.md section 6 with database_url, otel_endpoint, vector_dimension, hnsw_ef_search
+- [X] T015 [P] Initialize OpenTelemetry SDK in src/core/telemetry.py with TracerProvider, OTLPSpanExporter, BatchSpanProcessor per research.md section 3
+- [X] T016 [P] Create @trace_memory_operation decorator in src/core/telemetry.py with span attributes (operation.type, operation.success, db.system) per FR-016, FR-017
+- [X] T017 [P] Create MessageRole enum in src/models/message.py with values (USER, ASSISTANT, SYSTEM) per data-model.md
+- [X] T018 [P] Create RiskLevel enum in src/models/common.py with values (REVERSIBLE, REVERSIBLE_WITH_DELAY, IRREVERSIBLE) per data-model.md
+- [X] T019 Initialize Alembic in alembic/ directory with alembic init per research.md section 5
+- [X] T020 Configure alembic/env.py for async SQLAlchemy engine with asyncpg driver per research.md section 5
+- [X] T021 Create tests/fixtures/conftest.py with pytest fixtures for async database session, Docker Compose service waits per research.md section 9
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
