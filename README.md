@@ -45,6 +45,11 @@ docker-compose up -d
 pytest
 ```
 
+### Updating packages
+
+Use information from:
+`pip list --outdated`
+
 ### Project Structure (Phase 1)
 
 ```
