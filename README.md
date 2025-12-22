@@ -41,6 +41,11 @@ cp .env.example .env
 # Launch infra (PostgreSQL + Jaeger)
 docker-compose up -d
 
+# TESTING
+
+# Add the project root to PYTHONPATH
+export PYTHONPATH="$PWD/src:$PYTHONPATH"
+
 # Run tests with coverage gate
 pytest
 ```
