@@ -215,3 +215,24 @@ async def test_traces_emitted_for_memory_operations(db_engine: AsyncEngine) -> N
 
     assert "memory.store_message" in span_names
     assert "memory.semantic_search" in span_names
+
+
+@pytest.mark.asyncio
+async def test_concurrent_sessions_do_not_deadlock(db_engine: AsyncEngine) -> None:
+    manager = MemoryManager(engine=db_engine)
+    session_ids = [uuid4() for _ in range(10)]
+
+    async def _write_session(session_id):
+        messages = [f"{session_id}-m{i}" for i in range(3)]
+        for index, content in enumerate(messages):
+            role = MessageRole.USER.value if index % 2 == 0 else MessageRole.ASSISTANT.value
+            await manager.store_message(session_id, role, content)
+        history = await manager.get_conversation_history(session_id, limit=5)
+        return session_id, messages, history
+
+    results = await asyncio.gather(*(_write_session(session_id) for session_id in session_ids))
+
+    for session_id, expected_messages, history in results:
+        assert len(history) == len(expected_messages)
+        assert all(message.session_id == session_id for message in history)
+        assert [message.content for message in history] == expected_messages

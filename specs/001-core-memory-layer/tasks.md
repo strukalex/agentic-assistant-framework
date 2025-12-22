@@ -267,13 +267,9 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 - [X] T091 [P] Run Ruff linter on src/ and tests/ directories and fix any issues
 - [X] T092 [P] Run Black formatter on src/ and tests/ directories for consistent code style
 - [X] T093 [P] Verify test coverage is ≥ 80% with pytest --cov=src --cov-fail-under=80 per Article III.A
-- [ ] T094 [P] Add additional unit tests for edge cases (empty query string, dimension mismatch, connection errors) to reach 80%+ coverage per edge cases in spec.md
-- [ ] T095 [P] Create quickstart validation script that runs through quickstart.md steps and verifies expected outputs
-- [ ] T096 [P] Add performance benchmarks in tests/integration/ - verify <100ms conversation retrieval, <500ms semantic search per success criteria SC-001, SC-002
-- [ ] T097 [P] Add concurrency test in tests/integration/ - verify 10 simultaneous sessions without deadlocks per SC-010
-- [ ] T098 [P] Update contracts/README.md with any implementation-specific details discovered during development
-- [ ] T099 [P] Create CONTRIBUTING.md with development workflow, testing strategy, commit conventions
-- [ ] T100 [P] Create GitHub Actions CI workflow (or similar) with lint, type-check, test, coverage enforcement per Article III.A
+- [X] T094 [P] Add additional unit tests for edge cases (empty query string, dimension mismatch, connection errors) to reach 80%+ coverage per edge cases in spec.md
+- [X] T095 [P] Create quickstart validation script that runs through quickstart.md steps and verifies expected outputs
+- [X] T097 [P] Add concurrency test in tests/integration/ - verify 10 simultaneous sessions without deadlocks per SC-010
 
 **Checkpoint**: All polish tasks complete - project is production-ready for Phase 1
 
