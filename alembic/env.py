@@ -1,3 +1,27 @@
+"""
+Alembic Migration Environment Configuration
+
+This script is executed every time you run an Alembic command (e.g., `alembic upgrade head`,
+`alembic revision --autogenerate`). It configures how Alembic connects to your database
+and runs migrations.
+
+Key responsibilities:
+- Loads database configuration from your application settings
+- Configures SQLModel metadata for autogeneration (comparing models vs. database schema)
+- Provides two execution modes:
+  * Online mode: Creates async database connection and applies migrations directly
+  * Offline mode: Generates SQL scripts without connecting to database (for manual deployment)
+
+Components:
+- get_url(): Retrieves database URL from application settings
+- run_migrations_offline(): Generates SQL scripts without database connection
+- run_migrations_online(): Connects to database via AsyncEngine and runs migrations in transaction
+- do_run_migrations(): Helper that configures context and executes migration operations
+
+The conditional at the bottom determines which mode to use based on how Alembic was invoked.
+You can customize this file to add logging, connection pooling, or multi-database support.
+"""
+
 from __future__ import annotations
 
 import asyncio
