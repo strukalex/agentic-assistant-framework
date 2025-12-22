@@ -38,14 +38,25 @@ class Message(SQLModel, table=True):
     role: MessageRole = Field(
         sa_column=Column(SAEnum(MessageRole, name="message_role"), nullable=False)
     )
-    content: str = Field(sa_column=Column(String, nullable=False))
+    content: str = Field(
+        sa_column=Column(String, nullable=False),
+        min_length=1,
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
     metadata_: dict = Field(
         default_factory=dict,
         sa_column=Column(JSONB, nullable=True, default=dict),
     )
 
-    @field_validator("content")
+    @field_validator("role", mode="before")
+    @classmethod
+    def validate_role(cls, value: str | MessageRole) -> MessageRole:
+        try:
+            return value if isinstance(value, MessageRole) else MessageRole(value)
+        except ValueError as exc:
+            raise ValueError("Invalid message role") from exc
+
+    @field_validator("content", mode="before")
     @classmethod
     def validate_content(cls, value: str) -> str:
         cleaned = value.strip() if value else ""

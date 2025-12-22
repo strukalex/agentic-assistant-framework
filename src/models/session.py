@@ -18,7 +18,11 @@ class Session(SQLModel, table=True):
         default_factory=uuid4,
         sa_column=Column(PGUUID(as_uuid=True), primary_key=True),
     )
-    user_id: str = Field(sa_column=Column(String(255), nullable=False, index=True))
+    user_id: str = Field(
+        sa_column=Column(String(255), nullable=False, index=True),
+        min_length=1,
+        max_length=255,
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
     metadata_: dict = Field(
@@ -26,7 +30,7 @@ class Session(SQLModel, table=True):
         sa_column=Column(JSONB, nullable=True, default=dict),
     )
 
-    @field_validator("user_id")
+    @field_validator("user_id", mode="before")
     @classmethod
     def validate_user_id(cls, value: str) -> str:
         cleaned = value.strip() if value else ""

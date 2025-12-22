@@ -63,6 +63,7 @@ class MemoryManager:
             if session_obj is None:
                 session_obj = Session(id=session_id, user_id=DEFAULT_USER_ID)
                 db.add(session_obj)
+                await db.flush()  # persist session so FK insert below succeeds
             else:
                 session_obj.updated_at = datetime.utcnow()
 

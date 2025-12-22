@@ -6,25 +6,16 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
-from sqlmodel import SQLModel
 
 from src.core.memory import MemoryManager
 from src.models.message import Message, MessageRole
 from src.models.session import Session
 
 
-async def _reset_schema(db_engine: AsyncEngine) -> None:
-    """Drop and recreate tables to ensure isolation between integration tests."""
-    async with db_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-        await conn.run_sync(SQLModel.metadata.create_all)
-
-
 @pytest.mark.asyncio
 async def test_store_message_persists_and_auto_creates_session(
     db_engine: AsyncEngine, db_session: AsyncSession
 ) -> None:
-    await _reset_schema(db_engine)
     manager = MemoryManager(engine=db_engine)
 
     session_id = uuid4()
@@ -49,7 +40,6 @@ async def test_store_message_persists_and_auto_creates_session(
 async def test_get_conversation_history_respects_limit_and_order(
     db_engine: AsyncEngine, db_session: AsyncSession
 ) -> None:
-    await _reset_schema(db_engine)
     manager = MemoryManager(engine=db_engine)
     session_id = uuid4()
     other_session_id = uuid4()

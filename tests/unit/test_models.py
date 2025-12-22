@@ -22,7 +22,12 @@ def test_session_generates_ids_and_defaults() -> None:
 
 def test_session_rejects_empty_user_id() -> None:
     with pytest.raises(ValidationError):
-        Session(user_id="")
+        Session.model_validate({"user_id": ""})
+
+
+def test_session_rejects_overlong_user_id() -> None:
+    with pytest.raises(ValidationError):
+        Session.model_validate({"user_id": "x" * 256})
 
 
 def test_session_metadata_column_uses_jsonb() -> None:
@@ -32,12 +37,12 @@ def test_session_metadata_column_uses_jsonb() -> None:
 
 def test_message_enforces_role_enum() -> None:
     with pytest.raises(ValidationError):
-        Message(session_id=uuid4(), role="invalid", content="hello")
+        Message.model_validate({"session_id": uuid4(), "role": "invalid", "content": "hello"})
 
 
 def test_message_rejects_empty_content() -> None:
     with pytest.raises(ValidationError):
-        Message(session_id=uuid4(), role=MessageRole.USER, content=" ")
+        Message.model_validate({"session_id": uuid4(), "role": MessageRole.USER, "content": " "})
 
 
 def test_message_has_foreign_key_to_sessions() -> None:
