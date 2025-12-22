@@ -178,7 +178,7 @@ Use Alembic (Constitution Article III.D) to manage schema:
 
 - **Language:** Python 3.11+ with asyncio (Constitution Article I.A)
 - **Database Driver:** `asyncpg` for async PostgreSQL access
-- **ORM:** SQLAlchemy 2.0 async
+- **ORM:** SQLModel
 - **Testing:** 80%+ coverage with pytest (Constitution Article III.A)
 - **Type Safety:** Strict mypy checks on all Pydantic models
 
