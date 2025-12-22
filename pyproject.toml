@@ -9,21 +9,23 @@ description = "Core foundation and memory layer for PAIAS"
 authors = [{ name = "PAIAS Team" }]
 requires-python = ">=3.11"
 dependencies = [
-  "sqlmodel>=0.0.14",
+  "sqlmodel>=0.0.24",
   "asyncpg>=0.30",
   "pydantic>=2.0",
   "pydantic-settings>=2.0",
-  "pgvector>=0.2.5",
-  "opentelemetry-sdk>=1.20",
-  "opentelemetry-exporter-otlp>=1.20",
-  "alembic>=1.13",
+  "pgvector>=0.3.0",
+  "opentelemetry-sdk>=1.40",
+  "opentelemetry-exporter-otlp>=1.40",
+  "alembic>=1.14",
 ]
-optional-dependencies.dev = [
-  "ruff>=0.6.0",
-  "black>=24.0.0",
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.13.0",
+  "black>=24.10.0",
   "mypy>=1.10.0",
   "pytest>=7.0",
-  "pytest-asyncio>=0.21",
+  "pytest-asyncio>=1.2.0",
   "pytest-cov>=4.0",
 ]
 
