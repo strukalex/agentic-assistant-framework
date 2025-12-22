@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Global test fixtures for async database setup.
 
@@ -6,8 +8,6 @@ Provides:
 - db_session: function-scoped AsyncSession with automatic rollback for isolation.
 """
 pytest_plugins = ["tests.fixtures.conftest"]
-
-from __future__ import annotations
 
 import asyncio
 import logging
