@@ -1,4 +1,37 @@
-# Personal AI Assistant System: Project Constitution v2.0
+<!--
+Sync Impact Report
+==================
+Version Change: v2.0 → v2.1
+Amendment Date: 2025-12-21
+Amendment Type: MINOR (materially expanded UI technology guidance with phased approach)
+
+Modified Sections:
+- Article I.F: UI Layer: Composite Strategy → User Interface Technology
+  - OLD: Mandated LibreChat for chat interaction across all phases
+  - NEW: Streamlit for Phase 1-2 (velocity), production UI (LibreChat/React) for Phase 3+ (scale)
+  - Rationale: Phase 1-2 prioritizes rapid prototyping and architecture validation; production polish deferred to Phase 3
+
+Added Guidance:
+- Phased UI strategy: Streamlit → LibreChat/React/Windmill Native Apps
+- Decision criteria for Phase 3 UI evaluation
+- Constraint: UI must call Windmill via API (no direct agent calls)
+
+Dependent Files Updated:
+- ✅ .specify/memory/project-context.md (Section 3: Added UI decision rationale)
+- ✅ docs/roadmap.md (Phase 1.4: Made Streamlit explicit; Phase 2.6: Updated UI deliverables; Phase 3.7: Added UI evaluation)
+
+Templates Requiring Updates:
+- ⚠️ .specify/templates/spec-template.md: Review if UI technology selection needs to be added to constitutional compliance checklist
+- ⚠️ .specify/templates/plan-template.md: Review if phased UI approach should be referenced in planning guidelines
+
+Follow-Up TODOs:
+- None (all critical updates complete)
+
+Commit Message Suggestion:
+docs: amend constitution to v2.1 (phased UI strategy: Streamlit for Phase 1-2, production UI for Phase 3+)
+-->
+
+# Personal AI Assistant System: Project Constitution v2.1
 
 ## Executive Summary
 
@@ -38,8 +71,8 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 | Exploratory agent-to-agent conversations | AutoGen | Collaborative reasoning via agent chat protocols |
 
 **Usage Rules:**
-- **Windmill** (v1.200+): Stateful task orchestration, scheduled tasks, deterministic data pipelines. Deploy as primary orchestrator.
-- **LangGraph** (v1.0+): Complex reasoning requiring loops, branching, or multi-step state machines. Deploy as Python library inside Windmill workflow steps.
+- **Windmill**: Stateful task orchestration, scheduled tasks, deterministic data pipelines. Deploy as primary orchestrator.
+- **LangGraph**: Complex reasoning requiring loops, branching, or multi-step state machines. Deploy as Python library inside Windmill workflow steps.
 - **CrewAI**: Use ONLY for role-based multi-agent collaboration patterns. Deploy as Windmill workflow nodes.
 - **AutoGen**: Use ONLY for exploratory conversational multi-agent patterns requiring agent-to-agent negotiation.
 
@@ -130,29 +163,40 @@ MCP Servers: Execute actual API calls
 
 **No Hardcoded Integrations:** Every tool MUST flow through MCP. No agent-specific API clients except MCP adapters.
 
-### I.F UI Layer: Composite Strategy
+### I.F User Interface Technology
 
-**Not a Single Tool; Multiple Specialized Components:**
+**Phase 1-2 (Proof-of-Concept UI):**
 
-1. **Chat Interaction:** LibreChat
-   - Conversational interface with real-time streaming responses
-   - Token-by-token rendering; shows "Searching... 45 sources → Ranking → Synthesizing..."
-   - Incremental result display; live tool execution feedback
-   - Session persistence; human-in-the-loop approval buttons for risk-based escalation
-   - Docker deployment; OpenAI API compatible
+- **Framework:** Streamlit
+- **Version:** Latest stable (1.30+)
+- **Rationale:** 
+  - Python-native: No JavaScript build chain; same developer builds agents and UI
+  - Rapid prototyping: Deploy working chat interface in hours, not days
+  - Native streaming support: `st.write_stream()` handles token-by-token output with zero boilerplate
+  - Decoupled architecture: Forces clean API contract between UI and Windmill workflows (proves headless design)
+  - Observability-friendly: Trivial to render OpenTelemetry logs and Windmill step updates in real-time
 
-2. **Workflow Visualization:** Windmill's Built-in Graph Viewer + React Flow (when custom visualization needs arise)
-   - Visual workflow builder
-   - Real-time execution tracking
-   - Dependency visualization
+- **Constraint:** UI MUST call Windmill workflows via API/webhook (no direct agent calls). All business logic remains in orchestration layer.
 
-3. **System State Dashboard:** Custom React component or CoreUI template
-   - Agent status (running, waiting, complete)
-   - Memory statistics (vector store size, graph complexity)
-   - Tool availability and health
-   - Execution metrics (token counts, latency)
+- **Migration Trigger:** When Phase 2 success metrics are met AND multi-user demand requires production-grade UI features (authentication, session management, approval widgets)
 
-**Rationale:** Specialized components (LibreChat for chat, Windmill for workflow visualization) provide better UX than single monolithic UI.
+**Phase 3+ (Production UI):**
+
+- **Framework:** React/Next.js OR LibreChat (decision pending Phase 2 evaluation)
+- **Decision Criteria:**
+  - **LibreChat** if: Polished chat UX prioritized; willing to build OpenAI-proxy adapter for Windmill integration
+  - **Custom React/Next.js** if: Full control over approval workflows, native Windmill integration, custom dashboards required
+  - **Windmill Native Apps** if: Zero-infrastructure deployment prioritized over chat-specific UX patterns
+
+- **Requirements:** Must support human-in-the-loop approval widgets, real-time streaming, observability dashboards, multi-user authentication
+
+**Composite Visualization Strategy (All Phases):**
+
+1. **Chat Interface:** Streamlit (Phase 1-2) → LibreChat or React (Phase 3+)
+2. **Workflow Visualization:** Windmill's built-in graph viewer + React Flow (optional custom overlays)
+3. **System State Dashboard:** Streamlit sidebar (Phase 1-2) → Custom React component (Phase 3+)
+
+**Rationale:** Streamlit optimizes Phase 1-2 velocity (prove architecture works); production UI optimizes Phase 3+ scale (polish and multi-user features).
 
 ### I.G Primary LLM Provider
 
@@ -178,6 +222,7 @@ MCP Servers: Execute actual API calls
 | **Observability** | OpenTelemetry + Logfire | Latest | Traces all agent decisions; integrates with Langfuse/Datadog |
 | **Task Scheduling** | APScheduler | 3.10+ | Cron-style scheduling when Windmill not required |
 | **Document Loading** | Unstructured + PyPDF2 | Latest | Basic PDF/DOCX parsing; LlamaParse for complex layouts when accuracy demands it |
+| **UI (Phase 1-2)** | Streamlit | 1.30+ | Python-native rapid prototyping; native streaming support; observability dashboards |
 
 ---
 
@@ -343,7 +388,7 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 - All I/O operations (database, MCP calls, external APIs) MUST be async
 - No blocking calls in orchestration layer; use `asyncio.run()` only at entry points
 - Connection pools configured for async drivers (asyncpg for PostgreSQL)
-- Streaming responses for long-running tasks (LangGraph + LibreChat)
+- Streaming responses for long-running tasks (LangGraph + Streamlit for Phase 1-2; production UI for Phase 3+)
 
 ### III.C Observability & Tracing
 
@@ -520,4 +565,5 @@ If ANY gate fails, escalate to tech lead before proceeding.
 
 **Ratified:** 2025-12-20  
 **Last Amended:** 2025-12-21  
+**Version:** v2.1  
 **Next Review:** When Article V.A amendment proposal submitted

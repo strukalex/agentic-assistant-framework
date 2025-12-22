@@ -893,15 +893,47 @@ Complete response with citations
 
 **Success Metric**: 3+ MCP servers active; tools composed sequentially and conditionally
 
-#### 1.4 Composite UI - Phase 1 Minimal
-- **Chat Interface**: CLI for testing (upgrade to LibreChat in Phase 2)
-- **Workflow Viewer**: Embed Windmill dashboard (iframe)
-- **Agent State Viewer**: JSON output showing execution trace
+#### 1.4 Simple Chat UI (Streamlit)
+- **Chat Interface**: Streamlit app accepting user research topics
+- **Backend Connection**: Calls Windmill "DailyTrendingResearch" workflow via webhook/API
+- **Real-Time Streaming**: Display intermediate "Thought Process" logs as they arrive using `st.write_stream()`
+- **History Sidebar**: Read past sessions from PostgreSQL `chat_session` and `chat_message` tables
+- **Technology**: Streamlit (per Constitution Article I.F)
+- **Constraint**: UI is a thin client; all agent logic and orchestration remains in Windmill workflows
 
 **POC Demo**:
+```python
+# streamlit_app.py (simplified example)
+import streamlit as st
+import requests
+
+st.title("Research Assistant")
+
+query = st.text_input("Enter research topic:")
+if st.button("Research"):
+    # Call Windmill workflow via webhook
+    response = requests.post(
+        "http://windmill/webhook/daily_research",
+        json={"query": query},
+        stream=True
+    )
+    
+    # Stream results in real-time
+    st.write_stream(response.iter_lines(decode_unicode=True))
+    
+# Sidebar: Show execution history from PostgreSQL
+with st.sidebar:
+    st.header("Recent Searches")
+    # Query PostgreSQL for chat_session history
+    sessions = fetch_recent_sessions()
+    for session in sessions:
+        st.write(f"• {session.created_at}: {session.topic}")
+```
+
+**UI Layout**:
 ```
 ┌─────────────────────────────┐
-│ Research Assistant Chat     │
+│ Research Assistant          │
 ├─────────────────────────────┤
 │ > Research climate tech     │
 │ 🔍 Searching...             │
@@ -915,11 +947,11 @@ Complete response with citations
 │ ...and renewable energy...  │
 │ ✅ Complete (87% confidence)│
 │                             │
-│ [View Workflow] [View Logs] │
+│ [View in Windmill] [Logs]   │
 └─────────────────────────────┘
 ```
 
-**Success Metric**: User can observe full execution flow (query → agent reasoning → tool calls → response)
+**Success Metric**: User can observe full execution flow (query → agent reasoning → tool calls → response); Streamlit calls Windmill API successfully; streaming displays progress in real-time
 
 #### 1.5 Basic Memory (PostgreSQL-Only)
 - **Single Source of Truth**: PostgreSQL with pgvector + JSONB + relational tables
@@ -1344,27 +1376,32 @@ Decision Output: "Use AutoGen for this investigation task"
 
 **Success Metric**: Clear decision rules provided; team can choose framework confidently
 
-#### 2.6 Enhanced UI - Chat + Graph Views
-- Upgrade chat to LibreChat
-- Embed Windmill workflow graphs
-- React Flow for visual orchestration editing (optional)
-- Real-time execution tracking
+#### 2.6 Enhanced UI - Streamlit Refinements
+- **Streamlit Enhancements**: Add multi-session support, workflow selection dropdown, approval button widgets
+- **Workflow Visualization**: Embed Windmill workflow graphs in Streamlit iframe
+- **Agent State Tracking**: Display agent archetype, tools used, confidence scores in real-time
+- **Observability Integration**: Render OpenTelemetry traces and Jaeger links in sidebar
+- **Note**: LibreChat/React migration deferred to Phase 3 (see deliverable 3.7)
 
 **POC Demo**:
 ```
-Dashboard Layout:
+Streamlit Dashboard Layout:
 ┌─────────────────────────────────────┐
+│ [Workflow: Daily Research ▼]        │
 │    Conversation View                │
 │  (Agent reasoning, user approval)   │
 ├──────────────┬──────────────────────┤
-│              │                      │
-│  Chat Area   │  Workflow DAG View   │
-│              │  (Click to inspect)  │
-│              │                      │
+│              │  Sidebar:            │
+│  Chat Area   │  • Session History   │
+│  (Streaming) │  • Agent Status      │
+│              │  • Tool Calls        │
+│  [Approve?]  │  • Confidence: 87%   │
+│  [Yes] [No]  │  [View in Windmill]  │
+│              │  [Jaeger Trace]      │
 └──────────────┴──────────────────────┘
 ```
 
-**Success Metric**: User can observe agent reasoning and workflow execution in parallel
+**Success Metric**: User can observe agent reasoning and workflow execution in parallel; approval buttons functional; Streamlit remains sufficient for Phase 2 evaluation goals
 
 #### 2.7 Runtime Agent Instantiation
 - API endpoint to create/delete agents at runtime
@@ -1647,6 +1684,55 @@ Future queries: All three stores now agree
 ```
 
 **Success Metric**: Conflicts detected and resolved; no stale inconsistencies in responses
+
+#### 3.7 UI Technology Evaluation
+
+**Trigger:** Phase 2 completion + multi-user demand
+
+**Objective:** Evaluate production UI alternatives and select final framework for Phase 3+ deployment
+
+**Options to Evaluate:**
+
+1. **LibreChat**: Full-featured, self-hosted ChatGPT alternative
+   - **Pros**: Polished chat UX, multi-user authentication, conversation management, session persistence, model switching UI
+   - **Cons**: Requires OpenAI-proxy adapter for Windmill integration; less control over custom approval widgets; complex deployment
+   - **Best For**: Teams prioritizing chat experience over custom workflow visualization
+
+2. **Custom React/Next.js**: Purpose-built for PAIAS
+   - **Pros**: Full control over UI/UX, native Windmill API integration, custom approval widgets, observability dashboards, type-safe with TypeScript
+   - **Cons**: Higher development cost (4-6 weeks), requires frontend expertise, maintenance burden
+   - **Best For**: Teams needing tight integration with Windmill workflows and custom human-in-the-loop patterns
+
+3. **Windmill Native Apps**: Embedded in orchestration platform
+   - **Pros**: Zero infrastructure, unified admin experience, automatic auth integration, instant deployment
+   - **Cons**: Limited chat UX patterns, less flexibility for custom components, vendor lock-in
+   - **Best For**: Teams prioritizing operational simplicity over UX polish
+
+**Decision Criteria:**
+
+- **Approval Workflow Complexity**: How often do agents require human-in-the-loop interventions? (High frequency → Custom React)
+- **User Base Size**: Single user vs. team vs. organization? (Organization → LibreChat or Custom React)
+- **Development Resources**: Frontend expertise available? (No → Windmill Native Apps)
+- **Phase 2 User Feedback**: What did users complain about most in Streamlit? (Chat history? Approval flows? Observability?)
+
+**POC Approach:**
+
+```
+Week 1-2: Build minimal LibreChat integration
+  └─ OpenAI-proxy adapter translating LibreChat → Windmill webhook
+
+Week 3-4: Build minimal React prototype
+  └─ Native Windmill API client with streaming + approval buttons
+
+Week 5: Compare side-by-side
+  ├─ User testing with 3-5 representative workflows
+  ├─ Measure: Setup time, feature completeness, user satisfaction
+  └─ Decision: Select winning approach
+
+Week 6: Document decision and migration plan
+```
+
+**Success Metric:** Clear decision documented with rationale; migration path from Streamlit defined; Phase 3 UI development ready to begin
 
 ---
 

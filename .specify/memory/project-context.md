@@ -46,6 +46,15 @@ This section records *why* decisions were made, providing context for future pha
 - **Decision (Agents)**: **Pydantic AI** was selected as the agent building block.
   - **Rationale**: It enforces type safety, is model-agnostic, and is natively compatible with MCP. It defines the "atomic unit" of capability, separating the agent's logic from the system's orchestration layer. 
 
+- **Decision (UI)**: **Streamlit** was chosen for Phase 1-2 instead of LibreChat or Windmill Native Apps.
+  - **Rationale**: 
+    - Python-native: No JavaScript build chain required for Phase 1 velocity
+    - Streaming-ready: Native `st.write_stream` handles token-by-token output with zero complexity
+    - Decoupled: Forces us to build a clean API contract between UI and Windmill workflows, proving the backend is truly headless
+    - Observability-friendly: Easy to render OpenTelemetry logs and Windmill step updates in real-time sidebars
+  - **Trade-off**: Streamlit is not production-grade for multi-user scenarios (lacks robust auth, session isolation). Migration to React/Next.js or LibreChat planned for Phase 3 when multi-user demand justifies the investment.
+  - **Constitutional Reference**: Added as Article I.F (User Interface Technology)
+
 ---
 
 ## 4. Open Questions & Blockers (To Be Resolved in Phase 1)
