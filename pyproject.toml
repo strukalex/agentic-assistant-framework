@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "paias-memory-layer"
+name = "paias"
 version = "0.1.0"
-description = "Core foundation and memory layer for PAIAS"
+description = "Personal AI Assistant System - Phase 1 vertical slice"
 authors = [{ name = "PAIAS Team" }]
 requires-python = ">=3.11"
 dependencies = [

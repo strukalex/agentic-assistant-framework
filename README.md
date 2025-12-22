@@ -32,7 +32,7 @@ pyenv install 3.11.14
 python -m venv venv
 source venv/bin/activate  # Windows: venv\\Scripts\\activate
 
-# Install dependencies
+# Install the project in editable mode with all development dependencies
 pip install -e .[dev]
 
 # Copy environment defaults
