@@ -90,22 +90,22 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T022 [P] [US1] Create unit test for Session model validation in tests/unit/test_models.py - test UUID generation, user_id validation, metadata_ JSONB field
-- [ ] T023 [P] [US1] Create unit test for Message model validation in tests/unit/test_models.py - test role enum, content not empty, foreign key to session
-- [ ] T024 [P] [US1] Create integration test for store_message in tests/integration/test_database.py - test message persistence with auto-session creation per research.md section 8
-- [ ] T025 [P] [US1] Create integration test for get_conversation_history in tests/integration/test_database.py - test retrieval limit, chronological order, session isolation per spec.md acceptance scenarios
+- [X] T022 [P] [US1] Create unit test for Session model validation in tests/unit/test_models.py - test UUID generation, user_id validation, metadata_ JSONB field
+- [X] T023 [P] [US1] Create unit test for Message model validation in tests/unit/test_models.py - test role enum, content not empty, foreign key to session
+- [X] T024 [P] [US1] Create integration test for store_message in tests/integration/test_database.py - test message persistence with auto-session creation per research.md section 8
+- [X] T025 [P] [US1] Create integration test for get_conversation_history in tests/integration/test_database.py - test retrieval limit, chronological order, session isolation per spec.md acceptance scenarios
 
 ### Implementation for User Story 1
 
-- [ ] T026 [P] [US1] Create Session SQLModel in src/models/session.py with fields (id UUID, user_id str, created_at datetime, updated_at datetime, metadata_ JSONB) per data-model.md table definition
-- [ ] T027 [P] [US1] Create Message SQLModel in src/models/message.py with fields (id UUID, session_id UUID FK, role MessageRole enum, content str, created_at datetime, metadata_ JSONB) per data-model.md table definition
-- [ ] T028 [US1] Initialize async database engine in src/core/memory.py using asyncpg with connection string from config per research.md section 2
-- [ ] T029 [US1] Create async session factory in src/core/memory.py with AsyncSession, expire_on_commit=False per research.md section 2
-- [ ] T030 [US1] Implement MemoryManager.store_message method in src/core/memory.py with auto-session creation, input validation, OpenTelemetry span per contracts/README.md and research.md section 8
-- [ ] T031 [US1] Implement MemoryManager.get_conversation_history method in src/core/memory.py with session_id filter, limit parameter, chronological ordering per contracts/README.md and FR-007
-- [ ] T032 [US1] Add Pydantic field validators for Message.content (non-empty) and Session.user_id (max 255 chars) per data-model.md validation rules
-- [ ] T033 [US1] Add OpenTelemetry span attributes to store_message (session_id, role, content_length, has_metadata) per FR-017
-- [ ] T034 [US1] Add OpenTelemetry span attributes to get_conversation_history (session_id, limit, result_count) per FR-017
+- [X] T026 [P] [US1] Create Session SQLModel in src/models/session.py with fields (id UUID, user_id str, created_at datetime, updated_at datetime, metadata_ JSONB) per data-model.md table definition
+- [X] T027 [P] [US1] Create Message SQLModel in src/models/message.py with fields (id UUID, session_id UUID FK, role MessageRole enum, content str, created_at datetime, metadata_ JSONB) per data-model.md table definition
+- [X] T028 [US1] Initialize async database engine in src/core/memory.py using asyncpg with connection string from config per research.md section 2
+- [X] T029 [US1] Create async session factory in src/core/memory.py with AsyncSession, expire_on_commit=False per research.md section 2
+- [X] T030 [US1] Implement MemoryManager.store_message method in src/core/memory.py with auto-session creation, input validation, OpenTelemetry span per contracts/README.md and research.md section 8
+- [X] T031 [US1] Implement MemoryManager.get_conversation_history method in src/core/memory.py with session_id filter, limit parameter, chronological ordering per contracts/README.md and FR-007
+- [X] T032 [US1] Add Pydantic field validators for Message.content (non-empty) and Session.user_id (max 255 chars) per data-model.md validation rules
+- [X] T033 [US1] Add OpenTelemetry span attributes to store_message (session_id, role, content_length, has_metadata) per FR-017
+- [X] T034 [US1] Add OpenTelemetry span attributes to get_conversation_history (session_id, limit, result_count) per FR-017
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - agents can store and retrieve conversation history
 
