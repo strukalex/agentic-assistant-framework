@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   postgres:
-    image: ankane/pgvector:latest
+    image: pgvector/pgvector:pg17  # Use official pgvector image with PostgreSQL 17
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
