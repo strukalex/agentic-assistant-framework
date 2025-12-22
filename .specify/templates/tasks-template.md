@@ -34,7 +34,7 @@ Any exception MUST be explicitly justified and approved via **Article V (Amendme
 
 Include tasks to satisfy these non-negotiables (refer to the cited Articles in task descriptions):
 
-- **Article I — Technology stack**: Python 3.11+, pattern-driven orchestration (Windmill/LangGraph/CrewAI/AutoGen per Article I.B), Pydantic AI, PostgreSQL+pgvector with memory abstraction, MCP, LibreChat, Claude 3.5 Sonnet (default)
+- **Article I — Technology stack**: Python 3.11+, pattern-driven orchestration (Windmill/LangGraph/CrewAI/AutoGen per Article I.B), Pydantic AI, PostgreSQL+pgvector with memory abstraction, MCP, Streamlit (Phase 1-2) / React/Next.js OR LibreChat (Phase 3+), Claude 3.5 Sonnet (default)
 - **Article II — Architectural principles (all 7)**:
   - Human-in-the-loop by default (risk-based approvals; irreversible actions never auto-execute)
   - Observable everything (OpenTelemetry traces for decisions/tool calls/approvals)
