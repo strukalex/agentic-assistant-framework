@@ -21,7 +21,7 @@ async def test_trace_memory_operation_records_success_span() -> None:
     result = await sample()
     assert result == "ok"
 
-    await trace.get_tracer_provider().force_flush()
+    trace.get_tracer_provider().force_flush()
     spans = exporter.get_finished_spans()
     assert spans, "expected at least one span"
     span = spans[-1]
@@ -45,7 +45,7 @@ async def test_trace_memory_operation_records_failure_span() -> None:
     with pytest.raises(RuntimeError):
         await failing()
 
-    await trace.get_tracer_provider().force_flush()
+    trace.get_tracer_provider().force_flush()
     spans = exporter.get_finished_spans()
     assert spans, "expected span even on error"
     span = spans[-1]

@@ -19,7 +19,20 @@ def _alembic_config() -> alembic.config.Config:
     return config
 
 
+async def _reset_database() -> None:
+    """Drop known objects to ensure migrations start from a clean slate."""
+    engine = create_async_engine(settings.database_url, pool_pre_ping=True)
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP TABLE IF EXISTS messages CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS documents CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS sessions CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS alembic_version CASCADE"))
+        await conn.execute(text("DROP EXTENSION IF EXISTS vector CASCADE"))
+    await engine.dispose()
+
+
 async def _upgrade_head(config: alembic.config.Config) -> None:
+    await _reset_database()
     await asyncio.to_thread(alembic.command.downgrade, config, "base")
     await asyncio.to_thread(alembic.command.upgrade, config, "head")
 

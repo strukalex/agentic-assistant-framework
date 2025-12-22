@@ -204,7 +204,7 @@ async def test_traces_emitted_for_memory_operations(db_engine: AsyncEngine) -> N
         metadata_filters={"category": "trace"},
     )
 
-    await trace.get_tracer_provider().force_flush()
+    trace.get_tracer_provider().force_flush()
     span_names = [span.name for span in exporter.get_finished_spans()]
 
     assert "memory.store_message" in span_names
