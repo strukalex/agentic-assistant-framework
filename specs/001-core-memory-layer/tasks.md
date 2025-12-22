@@ -260,13 +260,13 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T087 [P] Create comprehensive README.md in repository root with architecture overview, setup instructions, quickstart commands per quickstart.md
-- [ ] T088 [P] Add docstrings to all MemoryManager methods with full parameter descriptions, return types, raises exceptions per contracts/README.md
-- [ ] T089 [P] Add type hints to all functions and methods per Article III.A (mypy strict mode)
-- [ ] T090 [P] Run mypy strict type checking on src/ directory and fix any errors
-- [ ] T091 [P] Run Ruff linter on src/ and tests/ directories and fix any issues
-- [ ] T092 [P] Run Black formatter on src/ and tests/ directories for consistent code style
-- [ ] T093 [P] Verify test coverage is ≥ 80% with pytest --cov=src --cov-fail-under=80 per Article III.A
+- [X] T087 [P] Create comprehensive README.md in repository root with architecture overview, setup instructions, quickstart commands per quickstart.md
+- [X] T088 [P] Add docstrings to all MemoryManager methods with full parameter descriptions, return types, raises exceptions per contracts/README.md
+- [X] T089 [P] Add type hints to all functions and methods per Article III.A (mypy strict mode)
+- [X] T090 [P] Run mypy strict type checking on src/ directory and fix any errors
+- [X] T091 [P] Run Ruff linter on src/ and tests/ directories and fix any issues
+- [X] T092 [P] Run Black formatter on src/ and tests/ directories for consistent code style
+- [X] T093 [P] Verify test coverage is ≥ 80% with pytest --cov=src --cov-fail-under=80 per Article III.A
 - [ ] T094 [P] Add additional unit tests for edge cases (empty query string, dimension mismatch, connection errors) to reach 80%+ coverage per edge cases in spec.md
 - [ ] T095 [P] Create quickstart validation script that runs through quickstart.md steps and verifies expected outputs
 - [ ] T096 [P] Add performance benchmarks in tests/integration/ - verify <100ms conversation retrieval, <500ms semantic search per success criteria SC-001, SC-002

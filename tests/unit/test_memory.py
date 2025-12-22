@@ -39,4 +39,3 @@ async def test_store_message_rejects_empty_content_before_db_call() -> None:
 def test_engine_property_exposes_engine_instance() -> None:
     manager = MemoryManager()
     assert manager.engine is not None
-

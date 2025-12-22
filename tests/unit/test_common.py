@@ -63,4 +63,3 @@ def test_approval_request_confidence_and_risk_level() -> None:
             parameters={"to": "user@example.com"},
             requires_immediate_approval=False,
         )
-

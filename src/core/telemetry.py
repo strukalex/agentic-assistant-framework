@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import wraps
-from typing import Any, Awaitable, Callable, Optional, TypeVar
+from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
@@ -28,7 +28,9 @@ def _create_default_exporter() -> SpanExporter:
     """
     if settings.otel_exporter_otlp_endpoint == "memory":
         return InMemorySpanExporter()
-    return OTLPSpanExporter(endpoint=settings.otel_exporter_otlp_endpoint, insecure=True)
+    return OTLPSpanExporter(
+        endpoint=settings.otel_exporter_otlp_endpoint, insecure=True
+    )
 
 
 def _init_tracer_provider(exporter: Optional[SpanExporter] = None) -> None:
@@ -61,7 +63,7 @@ def set_span_exporter(exporter: SpanExporter) -> SpanExporter:
     global _exporter_override, _provider_initialized, _active_exporter
     _exporter_override = exporter
     if _provider_initialized:
-        provider = trace.get_tracer_provider()
+        provider = cast(TracerProvider, trace.get_tracer_provider())
         provider.add_span_processor(BatchSpanProcessor(exporter))
         _active_exporter = exporter
     else:
@@ -75,7 +77,9 @@ def get_active_span_exporter() -> Optional[SpanExporter]:
     return _active_exporter
 
 
-def trace_memory_operation(operation_name: str) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
+def trace_memory_operation(
+    operation_name: str,
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
     """
     Decorator to create a span around async memory operations with standard attributes.
     """
@@ -92,7 +96,9 @@ def trace_memory_operation(operation_name: str) -> Callable[[Callable[..., Await
                     result = await func(*args, **kwargs)
                     span.set_attribute("operation.success", True)
                     return result
-                except Exception as exc:  # pragma: no cover - re-raised for caller handling
+                except (
+                    Exception
+                ) as exc:  # pragma: no cover - re-raised for caller handling
                     span.set_attribute("operation.success", False)
                     span.record_exception(exc)
                     raise
@@ -100,4 +106,3 @@ def trace_memory_operation(operation_name: str) -> Callable[[Callable[..., Await
         return wrapper
 
     return decorator
-

@@ -4,10 +4,11 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from pydantic import field_validator
 from pgvector.sqlalchemy import Vector
+from pydantic import field_validator
 from sqlalchemy import Column, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Field, SQLModel
 
 from src.core.config import settings
@@ -58,8 +59,9 @@ class Document(SQLModel, table=True):
         if value is None:
             return None
         if len(value) != settings.vector_dimension:
-            raise ValueError(f"Embedding must be {settings.vector_dimension}-dimensional")
+            raise ValueError(
+                f"Embedding must be {settings.vector_dimension}-dimensional"
+            )
         if not all(isinstance(x, (int, float)) for x in value):
             raise ValueError("Embedding must contain only numeric values")
         return value
-

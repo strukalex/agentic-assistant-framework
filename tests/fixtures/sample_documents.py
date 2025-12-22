@@ -17,7 +17,8 @@ class SampleDocument:
 
 def generate_sample_documents(count: int = 110) -> list[SampleDocument]:
     """
-    Produce a deterministic list of sample documents with varied metadata and embeddings.
+    Produce a deterministic list of sample documents with varied metadata and
+    embeddings.
     """
     documents: list[SampleDocument] = []
     for idx in range(count):
@@ -31,10 +32,12 @@ def generate_sample_documents(count: int = 110) -> list[SampleDocument]:
         documents.append(
             SampleDocument(
                 id=uuid4(),
-                content=f"Sample document {idx} about async patterns {metadata['category']}",
+                content=(
+                    f"Sample document {idx} about async patterns "
+                    f"{metadata['category']}"
+                ),
                 metadata=metadata,
                 embedding=embedding,
             )
         )
     return documents
-

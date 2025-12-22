@@ -107,7 +107,9 @@ async def test_temporal_query_filters_by_date_range(
         update(Document).where(Document.id == old_doc_id).values(created_at=old_date)
     )
     await db_session.execute(
-        update(Document).where(Document.id == recent_doc_id).values(created_at=recent_date)
+        update(Document)
+        .where(Document.id == recent_doc_id)
+        .values(created_at=recent_date)
     )
     await db_session.commit()
 
@@ -129,7 +131,9 @@ async def test_temporal_query_rejects_invalid_range(db_engine: AsyncEngine) -> N
 
 
 @pytest.mark.asyncio
-async def test_semantic_search_supports_combined_filters(db_engine: AsyncEngine) -> None:
+async def test_semantic_search_supports_combined_filters(
+    db_engine: AsyncEngine,
+) -> None:
     manager = MemoryManager(engine=db_engine)
     now = datetime.utcnow()
     yesterday = now - timedelta(days=1)
@@ -196,7 +200,9 @@ async def test_traces_emitted_for_memory_operations(db_engine: AsyncEngine) -> N
     session_id = uuid4()
     await manager.store_message(session_id, MessageRole.USER.value, "traced message")
     await manager.store_document(
-        content="Traced doc", metadata={"category": "trace"}, embedding=[0.1] * settings.vector_dimension
+        content="Traced doc",
+        metadata={"category": "trace"},
+        embedding=[0.1] * settings.vector_dimension,
     )
     await manager.semantic_search(
         query_embedding=[0.1] * settings.vector_dimension,
@@ -209,4 +215,3 @@ async def test_traces_emitted_for_memory_operations(db_engine: AsyncEngine) -> N
 
     assert "memory.store_message" in span_names
     assert "memory.semantic_search" in span_names
-

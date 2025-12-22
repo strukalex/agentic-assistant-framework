@@ -43,14 +43,17 @@ async def _downgrade_base(config: alembic.config.Config) -> None:
 
 async def _table_exists(engine, table_name: str) -> bool:
     async with engine.connect() as conn:
-        result = await conn.execute(text("SELECT to_regclass(:tbl)"), {"tbl": f"public.{table_name}"})
+        result = await conn.execute(
+            text("SELECT to_regclass(:tbl)"), {"tbl": f"public.{table_name}"}
+        )
         return result.scalar() is not None
 
 
 async def _get_extension_version(engine, extension: str) -> str | None:
     async with engine.connect() as conn:
         result = await conn.execute(
-            text("SELECT extversion FROM pg_extension WHERE extname=:name"), {"name": extension}
+            text("SELECT extversion FROM pg_extension WHERE extname=:name"),
+            {"name": extension},
         )
         return result.scalar_one_or_none()
 
@@ -87,4 +90,3 @@ async def test_pgvector_extension_enabled() -> None:
     await engine.dispose()
 
     assert vector_version is not None
-

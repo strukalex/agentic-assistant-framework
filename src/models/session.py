@@ -5,7 +5,8 @@ from uuid import UUID, uuid4
 
 from pydantic import field_validator
 from sqlalchemy import Column, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Field, SQLModel
 
 
@@ -39,4 +40,3 @@ class Session(SQLModel, table=True):
         if len(cleaned) > 255:
             raise ValueError("user_id must be at most 255 characters")
         return cleaned
-

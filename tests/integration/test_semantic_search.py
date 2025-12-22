@@ -4,11 +4,13 @@ import pytest
 
 from src.core.config import settings
 from src.core.memory import MemoryManager
-from src.models.document import Document
 
 
 def _embedding(value: float) -> list[float]:
-    """Helper to create a configured-dimension embedding with the first element set to value."""
+    """
+    Helper to create a configured-dimension embedding with the first element set
+    to value.
+    """
     return [value] + [0.0] * (settings.vector_dimension - 1)
 
 
@@ -74,4 +76,3 @@ async def test_semantic_search_returns_empty_for_no_matches(db_engine) -> None:
     )
 
     assert results == []
-

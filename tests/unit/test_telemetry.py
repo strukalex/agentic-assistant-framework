@@ -51,4 +51,3 @@ async def test_trace_memory_operation_records_failure_span() -> None:
     span = spans[-1]
     assert span.attributes["operation.type"] == "failing_op"
     assert span.attributes["operation.success"] is False
-

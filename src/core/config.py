@@ -4,8 +4,9 @@ Defines a typed Settings object backed by environment variables (and .env files)
 for database, observability, and vector-search related parameters.
 """
 
-
-from __future__ import annotations  # Allow postponed evaluation of annotations (Python typing nicety)
+from __future__ import (
+    annotations,
+)  # Allow postponed evaluation of annotations (Python typing nicety)
 
 from pydantic import Field  # Used to declare typed fields with metadata and validation
 from pydantic_settings import (

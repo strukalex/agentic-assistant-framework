@@ -1,4 +1,48 @@
 .git
+.gitignore
+.specstory/
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+
+# Virtual environments and local tooling
+.venv/
+venv/
+ENV/
+env/
+
+# Build and distribution artifacts
+build/
+dist/
+*.egg-info/
+htmlcov/
+coverage/
+
+# Environment and secrets
+.env
+.env.*
+
+# Logs and editor cruft
+*.log
+*.log.*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker-related
+Dockerfile*
+docker-compose*.yml
+
+# Frontend/node (if present)
+node_modules/
+.git
 .dockerignore
 .gitignore
 __pycache__/

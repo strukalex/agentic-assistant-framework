@@ -46,4 +46,3 @@ async def docker_services_ready(db_engine):
     async with db_engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
     return True
-

@@ -5,8 +5,10 @@ from enum import Enum
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import Column, Enum as SAEnum, ForeignKey, String
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
+from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Field, SQLModel
 
 
@@ -42,7 +44,9 @@ class Message(SQLModel, table=True):
         sa_column=Column(String, nullable=False),
         min_length=1,
     )
-    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False, index=True)
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, nullable=False, index=True
+    )
     metadata_: dict = Field(
         default_factory=dict,
         sa_column=Column(JSONB, nullable=True, default=dict),
@@ -63,4 +67,3 @@ class Message(SQLModel, table=True):
         if not cleaned:
             raise ValueError("Message content cannot be empty")
         return cleaned
-

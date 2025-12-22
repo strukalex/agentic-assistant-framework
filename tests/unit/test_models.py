@@ -39,12 +39,16 @@ def test_session_metadata_column_uses_jsonb() -> None:
 
 def test_message_enforces_role_enum() -> None:
     with pytest.raises(ValidationError):
-        Message.model_validate({"session_id": uuid4(), "role": "invalid", "content": "hello"})
+        Message.model_validate(
+            {"session_id": uuid4(), "role": "invalid", "content": "hello"}
+        )
 
 
 def test_message_rejects_empty_content() -> None:
     with pytest.raises(ValidationError):
-        Message.model_validate({"session_id": uuid4(), "role": MessageRole.USER, "content": " "})
+        Message.model_validate(
+            {"session_id": uuid4(), "role": MessageRole.USER, "content": " "}
+        )
 
 
 def test_message_has_foreign_key_to_sessions() -> None:
@@ -90,4 +94,3 @@ def test_document_allows_null_embedding() -> None:
 def test_document_metadata_column_uses_jsonb() -> None:
     column = Document.__table__.c.metadata_
     assert isinstance(column.type, JSONB)
-
