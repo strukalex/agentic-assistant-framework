@@ -100,7 +100,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 OTEL_SERVICE_NAME=paias-memory-layer
 OTEL_SAMPLING_RATE=1.0
 
-# Vector Search Configuration
+# Vector Search Configuration (configurable; default for OpenAI Ada-002)
 VECTOR_DIMENSION=1536
 HNSW_EF_SEARCH=40
 ```

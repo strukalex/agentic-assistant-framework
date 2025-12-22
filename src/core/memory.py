@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from datetime import datetime
+from time import perf_counter
 from typing import Optional
 from uuid import UUID
 
 from opentelemetry import trace
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.core.config import settings
 from src.core.telemetry import trace_memory_operation
+from src.models.document import Document
 from src.models.message import Message, MessageRole
 from src.models.session import Session
 
@@ -35,6 +37,18 @@ class MemoryManager:
 
     def _get_span(self):
         return trace.get_current_span()
+
+    def _validate_embedding(self, embedding: Optional[list[float]]) -> Optional[list[float]]:
+        if embedding is None:
+            return None
+        if len(embedding) != settings.vector_dimension:
+            raise ValueError(
+                f"Embedding must match configured dimension {settings.vector_dimension} "
+                f"for model {settings.embedding_model_name}"
+            )
+        if not all(isinstance(x, (int, float)) for x in embedding):
+            raise ValueError("Embedding must contain only numeric values")
+        return embedding
 
     def _coerce_role(self, role: str | MessageRole) -> MessageRole:
         if isinstance(role, MessageRole):
@@ -82,6 +96,7 @@ class MemoryManager:
         span.set_attribute("role", message_role.value)
         span.set_attribute("content_length", len(cleaned_content))
         span.set_attribute("has_metadata", bool(metadata))
+        span.set_attribute("db.statement", "INSERT messages (with optional session creation)")
 
         return message.id
 
@@ -107,8 +122,76 @@ class MemoryManager:
         span.set_attribute("session_id", str(session_id))
         span.set_attribute("limit", limit)
         span.set_attribute("result_count", len(messages))
+        span.set_attribute("db.statement", str(stmt))
 
         return messages
+
+    @trace_memory_operation("store_document")
+    async def store_document(
+        self,
+        content: str,
+        metadata: Optional[dict] = None,
+        embedding: Optional[list[float]] = None,
+    ) -> UUID:
+        cleaned_content = content.strip() if content else ""
+        if not cleaned_content:
+            raise ValueError("Document content cannot be empty")
+
+        validated_embedding = self._validate_embedding(embedding)
+
+        async with self._session_factory() as db:
+            document = Document(
+                content=cleaned_content,
+                metadata_=metadata or {},
+                embedding=validated_embedding,
+            )
+            db.add(document)
+            await db.commit()
+            await db.refresh(document)
+
+        span = self._get_span()
+        span.set_attribute("content_length", len(cleaned_content))
+        span.set_attribute("has_embedding", validated_embedding is not None)
+        span.set_attribute("metadata_keys", len((metadata or {}).keys()))
+        span.set_attribute("db.statement", "INSERT documents")
+
+        return document.id
+
+    @trace_memory_operation("semantic_search")
+    async def semantic_search(
+        self,
+        query_embedding: list[float],
+        top_k: int = 10,
+        metadata_filters: Optional[dict] = None,
+    ) -> list[Document]:
+        if top_k <= 0:
+            raise ValueError("top_k must be greater than 0")
+        validated_embedding = self._validate_embedding(query_embedding)
+
+        conditions = []
+        if metadata_filters:
+            for key, value in metadata_filters.items():
+                conditions.append(Document.metadata_[key].astext == str(value))
+
+        stmt = select(Document)
+        if conditions:
+            stmt = stmt.where(and_(*conditions))
+        stmt = stmt.order_by(Document.embedding.cosine_distance(validated_embedding)).limit(top_k)
+
+        start_time = perf_counter()
+        async with self._session_factory() as db:
+            result = await db.execute(stmt)
+            documents = list(result.scalars().all())
+        duration_ms = (perf_counter() - start_time) * 1000
+
+        span = self._get_span()
+        span.set_attribute("top_k", top_k)
+        span.set_attribute("filter_count", len(metadata_filters or {}))
+        span.set_attribute("result_count", len(documents))
+        span.set_attribute("query_time_ms", round(duration_ms, 4))
+        span.set_attribute("db.statement", str(stmt))
+
+        return documents
 
     @property
     def engine(self) -> AsyncEngine:

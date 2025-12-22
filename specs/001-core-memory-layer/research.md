@@ -14,7 +14,7 @@ This document consolidates research findings for implementing the Core Foundatio
 
 ### Decision
 
-Use SQLModel 0.0.14+ with custom SQLAlchemy Column for pgvector types.
+Use SQLModel 0.0.14+ with custom SQLAlchemy Column for pgvector types. Dimension is read from settings (`vector_dimension`) with default 1536 (OpenAI Ada-002), so switching models only requires config + migration.
 
 ### Rationale
 

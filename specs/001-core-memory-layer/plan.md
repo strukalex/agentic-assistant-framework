@@ -9,7 +9,7 @@
 
 This feature establishes the foundational data persistence and observability infrastructure for the PAIAS Phase 1 vertical slice. It includes:
 
-1. **PostgreSQL + pgvector database schema** for sessions, messages, and documents with 1536-dimensional vector embeddings
+1. **PostgreSQL + pgvector database schema** for sessions, messages, and documents with configurable vector embeddings (default 1536 for OpenAI Ada-002)
 2. **MemoryManager abstraction layer** providing async methods for storing/retrieving conversation history and semantic document search
 3. **Base Pydantic models** (AgentResponse, ToolGapReport, ApprovalRequest, RiskLevel) for inter-component contracts
 4. **OpenTelemetry instrumentation** with Jaeger exporter for full observability of all database operations
@@ -36,7 +36,7 @@ This feature establishes the foundational data persistence and observability inf
 **Constraints**: 
 - All database operations must be async (asyncio-compatible)
 - Memory abstraction must prevent agents from importing database drivers
-- 1536-dimensional embeddings (OpenAI Ada-002 compatible)
+- Embedding dimension is configurable via settings (`vector_dimension`, default 1536) and paired `embedding_model_name`
 - 100% sampling rate for OpenTelemetry traces (Phase 1 only)
 **Scale/Scope**: 
 - Phase 1: 10k documents, 100 sessions, 10k messages (single-user development)

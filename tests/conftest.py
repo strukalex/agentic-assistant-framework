@@ -19,6 +19,9 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
 from src.core.config import settings
+from src.models.document import Document  # noqa: F401 - ensure model is registered
+from src.models.message import Message  # noqa: F401 - ensure model is registered
+from src.models.session import Session  # noqa: F401 - ensure model is registered
 
 LOGGER = logging.getLogger("tests.db")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -54,6 +57,7 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
     print(f"[tests.db] Connecting using database_url={settings.database_url}")
     await _wait_for_postgres(engine)
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(SQLModel.metadata.drop_all)
         await conn.run_sync(SQLModel.metadata.create_all)
     yield engine

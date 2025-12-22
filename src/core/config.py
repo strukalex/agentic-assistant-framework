@@ -66,7 +66,7 @@ class Settings(BaseSettings):
     # Logical service name that will appear in tracing backends (Jaeger, etc.).
     # Helps distinguish this component from others in a distributed system.
     otel_service_name: str = Field(
-        default="paias",
+        default="paias-memory-layer",
         description="OpenTelemetry service.name resource attribute",
     )
 
@@ -95,6 +95,14 @@ class Settings(BaseSettings):
     hnsw_ef_search: int = Field(
         default=40,
         description="HNSW ef_search parameter for pgvector queries",
+    )
+
+    # ----------------------
+    # Embedding model info
+    # ----------------------
+    embedding_model_name: str = Field(
+        default="text-embedding-ada-002",
+        description="Embedding model identifier; dimension follows model defaults",
     )
 
 

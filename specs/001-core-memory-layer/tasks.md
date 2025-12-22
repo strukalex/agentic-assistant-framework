@@ -119,20 +119,20 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T035 [P] [US2] Create unit test for Document model validation in tests/unit/test_models.py - test UUID generation, embedding dimension validation (1536), metadata_ JSONB field
-- [ ] T036 [P] [US2] Create unit test for embedding validation in tests/unit/test_models.py - test dimension mismatch error, non-numeric values error, null embedding allowed per data-model.md validation rules and research.md section 10
-- [ ] T037 [P] [US2] Create integration test for store_document in tests/integration/test_database.py - test document persistence with and without embeddings per FR-003
-- [ ] T038 [P] [US2] Create integration test for semantic_search in tests/integration/test_semantic_search.py - test cosine similarity ranking, top_k parameter, metadata filters, empty results per spec.md acceptance scenarios
+- [X] T035 [P] [US2] Create unit test for Document model validation in tests/unit/test_models.py - test UUID generation, embedding dimension validation (configurable vector_dimension), metadata_ JSONB field
+- [X] T036 [P] [US2] Create unit test for embedding validation in tests/unit/test_models.py - test dimension mismatch error, non-numeric values error, null embedding allowed per data-model.md validation rules and research.md section 10
+- [X] T037 [P] [US2] Create integration test for store_document in tests/integration/test_database.py - test document persistence with and without embeddings per FR-003
+- [X] T038 [P] [US2] Create integration test for semantic_search in tests/integration/test_semantic_search.py - test cosine similarity ranking, top_k parameter, metadata filters, empty results per spec.md acceptance scenarios
 
 ### Implementation for User Story 2
 
-- [ ] T039 [P] [US2] Create Document SQLModel in src/models/document.py with fields (id UUID, content str, embedding Vector(1536), metadata_ JSONB, created_at datetime, updated_at datetime) using Field(sa_column=Column(Vector(1536))) per data-model.md and research.md section 1
-- [ ] T040 [US2] Implement MemoryManager.store_document method in src/core/memory.py with content validation, embedding validation (1536 dims), OpenTelemetry span per contracts/README.md and FR-003
-- [ ] T041 [US2] Implement MemoryManager.semantic_search method in src/core/memory.py with cosine distance query, top_k parameter, metadata filters using JSONB where clause per contracts/README.md, FR-006, and research.md section 4
-- [ ] T042 [US2] Add Pydantic field validator for Document.embedding in src/models/document.py - validate dimension=1536, all numeric values per data-model.md validation rules and research.md section 10
-- [ ] T043 [US2] Add Pydantic field validator for Document.content in src/models/document.py - validate non-empty string per data-model.md validation rules
-- [ ] T044 [US2] Add OpenTelemetry span attributes to store_document (content_length, has_embedding, metadata_keys) per FR-017
-- [ ] T045 [US2] Add OpenTelemetry span attributes to semantic_search (top_k, filter_count, result_count, query_time_ms) per FR-017
+- [X] T039 [P] [US2] Create Document SQLModel in src/models/document.py with fields (id UUID, content str, embedding Vector(configured dimension), metadata_ JSONB, created_at datetime, updated_at datetime) using Field(sa_column=Column(Vector(settings.vector_dimension))) per data-model.md and research.md section 1
+- [X] T040 [US2] Implement MemoryManager.store_document method in src/core/memory.py with content validation, embedding validation (configured dimension), OpenTelemetry span per contracts/README.md and FR-003
+- [X] T041 [US2] Implement MemoryManager.semantic_search method in src/core/memory.py with cosine distance query, top_k parameter, metadata filters using JSONB where clause per contracts/README.md, FR-006, and research.md section 4
+- [X] T042 [US2] Add Pydantic field validator for Document.embedding in src/models/document.py - validate dimension=settings.vector_dimension, all numeric values per data-model.md validation rules and research.md section 10
+- [X] T043 [US2] Add Pydantic field validator for Document.content in src/models/document.py - validate non-empty string per data-model.md validation rules
+- [X] T044 [US2] Add OpenTelemetry span attributes to store_document (content_length, has_embedding, metadata_keys) per FR-017
+- [X] T045 [US2] Add OpenTelemetry span attributes to semantic_search (top_k, filter_count, result_count, query_time_ms) per FR-017
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently - agents have conversation memory and semantic search
 

@@ -172,7 +172,7 @@ class Message(SQLModel, table=True):
 |--------|------|-------------|-------------|
 | `id` | UUID | PRIMARY KEY, NOT NULL | Unique document identifier (UUID v4) |
 | `content` | TEXT | NOT NULL | Document content (plaintext) |
-| `embedding` | VECTOR(1536) | NULLABLE | Vector embedding (1536-dim, OpenAI Ada-002) |
+| `embedding` | VECTOR(settings.vector_dimension) | NULLABLE | Vector embedding (configurable dimension, default 1536 for OpenAI Ada-002) |
 | `metadata_` | JSONB | NULLABLE, DEFAULT '{}' | Flexible document metadata (source, category, tags) |
 | `created_at` | TIMESTAMP | NOT NULL, DEFAULT NOW() | Document creation timestamp (UTC) |
 | `updated_at` | TIMESTAMP | NOT NULL, DEFAULT NOW() | Last update timestamp (UTC) |
