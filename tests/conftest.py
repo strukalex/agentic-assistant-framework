@@ -5,6 +5,7 @@ Provides:
 - db_engine: session-scoped AsyncEngine that waits for Postgres and creates all SQLModel tables.
 - db_session: function-scoped AsyncSession with automatic rollback for isolation.
 """
+pytest_plugins = ["tests.fixtures.conftest"]
 
 from __future__ import annotations
 

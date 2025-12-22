@@ -148,17 +148,17 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 4 (REQUIRED) ⚠️
 
-- [ ] T046 [P] [US4] Create unit test for @trace_memory_operation decorator in tests/unit/test_telemetry.py - test span creation, attribute setting, error handling
-- [ ] T047 [P] [US4] Create integration test for trace export in tests/integration/test_database.py - test that store_message, semantic_search emit spans visible to in-memory exporter (mock Jaeger)
+ - [X] T046 [P] [US4] Create unit test for @trace_memory_operation decorator in tests/unit/test_telemetry.py - test span creation, attribute setting, error handling
+ - [X] T047 [P] [US4] Create integration test for trace export in tests/integration/test_database.py - test that store_message, semantic_search emit spans visible to in-memory exporter (mock Jaeger)
 
 ### Implementation for User Story 4
 
-- [ ] T048 [US4] Configure OpenTelemetry service.name resource attribute in src/core/telemetry.py with value "paias-memory-layer" per FR-020
-- [ ] T049 [US4] Set OpenTelemetry sampling rate to 1.0 (100%) in src/core/telemetry.py per FR-019
-- [ ] T050 [US4] Verify all MemoryManager methods (store_message, get_conversation_history, store_document, semantic_search) use @trace_memory_operation decorator
-- [ ] T051 [US4] Add error span recording in @trace_memory_operation decorator - set span.set_attribute("operation.success", False) and span.record_exception(e) on database errors per contracts/README.md
-- [ ] T052 [US4] Add db.statement attribute to trace spans (sanitized SQL query without sensitive data) per FR-017
-- [ ] T053 [US4] Document trace span attributes in contracts/README.md OpenTelemetry section (already exists, verify implementation matches)
+ - [X] T048 [US4] Configure OpenTelemetry service.name resource attribute in src/core/telemetry.py with value "paias-memory-layer" per FR-020
+ - [X] T049 [US4] Set OpenTelemetry sampling rate to 1.0 (100%) in src/core/telemetry.py per FR-019
+ - [X] T050 [US4] Verify all MemoryManager methods (store_message, get_conversation_history, store_document, semantic_search) use @trace_memory_operation decorator
+ - [X] T051 [US4] Add error span recording in @trace_memory_operation decorator - set span.set_attribute("operation.success", False) and span.record_exception(e) on database errors per contracts/README.md
+ - [X] T052 [US4] Add db.statement attribute to trace spans (sanitized SQL query without sensitive data) per FR-017
+ - [X] T053 [US4] Document trace span attributes in contracts/README.md OpenTelemetry section (already exists, verify implementation matches)
 
 **Checkpoint**: All database operations now emit trace spans - operators can monitor performance and debug issues in Jaeger UI
 
@@ -172,16 +172,16 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
-- [ ] T054 [P] [US3] Create integration test for temporal_query in tests/integration/test_database.py - test date range filtering (created_at >= start AND created_at <= end) per spec.md acceptance scenarios
-- [ ] T055 [P] [US3] Create integration test for metadata filtering in tests/integration/test_database.py - test JSONB where clause (metadata_["category"].astext == "research") per spec.md acceptance scenarios
-- [ ] T056 [P] [US3] Create integration test for combined query in tests/integration/test_database.py - test date range + metadata + semantic search (AND logic) per spec.md acceptance scenario 3
+- [X] T054 [P] [US3] Create integration test for temporal_query in tests/integration/test_database.py - test date range filtering (created_at >= start AND created_at <= end) per spec.md acceptance scenarios
+- [X] T055 [P] [US3] Create integration test for metadata filtering in tests/integration/test_database.py - test JSONB where clause (metadata_["category"].astext == "research") per spec.md acceptance scenarios
+- [X] T056 [P] [US3] Create integration test for combined query in tests/integration/test_database.py - test date range + metadata + semantic search (AND logic) per spec.md acceptance scenario 3
 
 ### Implementation for User Story 3
 
-- [ ] T057 [US3] Implement MemoryManager.temporal_query method in src/core/memory.py with date range filter (start_date, end_date), metadata filters, chronological ordering per contracts/README.md and FR-008
-- [ ] T058 [US3] Add input validation to temporal_query in src/core/memory.py - validate end_date >= start_date per contracts/README.md
-- [ ] T059 [US3] Add OpenTelemetry span attributes to temporal_query (start_date, end_date, filter_count, result_count) per FR-017
-- [ ] T060 [US3] Extend semantic_search to support combined query (date range + metadata + vector similarity) in src/core/memory.py per spec.md acceptance scenario 3
+- [X] T057 [US3] Implement MemoryManager.temporal_query method in src/core/memory.py with date range filter (start_date, end_date), metadata filters, chronological ordering per contracts/README.md and FR-008
+- [X] T058 [US3] Add input validation to temporal_query in src/core/memory.py - validate end_date >= start_date per contracts/README.md
+- [X] T059 [US3] Add OpenTelemetry span attributes to temporal_query (start_date, end_date, filter_count, result_count) per FR-017
+- [X] T060 [US3] Extend semantic_search to support combined query (date range + metadata + vector similarity) in src/core/memory.py per spec.md acceptance scenario 3
 
 **Checkpoint**: All user stories (US1, US2, US3, US4) should now work independently - agents have full memory capabilities plus observability
 
@@ -195,21 +195,21 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 5 (REQUIRED) ⚠️
 
-- [ ] T061 [P] [US5] Create integration test for migration upgrade in tests/integration/test_migrations.py - test alembic upgrade head creates all tables with correct schema per spec.md acceptance scenario 1
-- [ ] T062 [P] [US5] Create integration test for migration rollback in tests/integration/test_migrations.py - test alembic downgrade -1 drops tables and returns to previous state per spec.md acceptance scenario 2
-- [ ] T063 [P] [US5] Create integration test for pgvector extension in tests/integration/test_migrations.py - test that migration enables pgvector extension per FR-029
+- [X] T061 [P] [US5] Create integration test for migration upgrade in tests/integration/test_migrations.py - test alembic upgrade head creates all tables with correct schema per spec.md acceptance scenario 1
+- [X] T062 [P] [US5] Create integration test for migration rollback in tests/integration/test_migrations.py - test alembic downgrade -1 drops tables and returns to previous state per spec.md acceptance scenario 2
+- [X] T063 [P] [US5] Create integration test for pgvector extension in tests/integration/test_migrations.py - test that migration enables pgvector extension per FR-029
 
 ### Implementation for User Story 5
 
-- [ ] T064 [US5] Create initial Alembic migration 001_initial_schema.py in alembic/versions/ with sessions, messages, documents table creation per data-model.md and research.md section 5
-- [ ] T065 [US5] Add pgvector extension setup to migration: CREATE EXTENSION IF NOT EXISTS vector per FR-029 and research.md section 5
-- [ ] T066 [US5] Add HNSW index creation for documents.embedding in migration: CREATE INDEX USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=64) per data-model.md and research.md section 4
-- [ ] T067 [US5] Add GIN indexes for metadata_ columns in migration: CREATE INDEX USING gin (metadata_) for all three tables per data-model.md and FR-011
-- [ ] T068 [US5] Add B-tree indexes in migration: session_id (messages), user_id (sessions), created_at (documents, messages) per data-model.md and FR-011
-- [ ] T069 [US5] Add foreign key constraint in migration: messages.session_id REFERENCES sessions(id) ON DELETE CASCADE per data-model.md
-- [ ] T070 [US5] Add check constraint in migration: messages.role IN ('user', 'assistant', 'system') per data-model.md
-- [ ] T071 [US5] Implement downgrade function in migration to drop all tables and pgvector extension (with CASCADE) per FR-028 and research.md section 5
-- [ ] T072 [US5] Test migration upgrade and downgrade on local Docker PostgreSQL per quickstart.md step 4
+- [X] T064 [US5] Create initial Alembic migration 001_initial_schema.py in alembic/versions/ with sessions, messages, documents table creation per data-model.md and research.md section 5
+- [X] T065 [US5] Add pgvector extension setup to migration: CREATE EXTENSION IF NOT EXISTS vector per FR-029 and research.md section 5
+- [X] T066 [US5] Add HNSW index creation for documents.embedding in migration: CREATE INDEX USING hnsw (embedding vector_cosine_ops) WITH (m=16, ef_construction=64) per data-model.md and research.md section 4
+- [X] T067 [US5] Add GIN indexes for metadata_ columns in migration: CREATE INDEX USING gin (metadata_) for all three tables per data-model.md and FR-011
+- [X] T068 [US5] Add B-tree indexes in migration: session_id (messages), user_id (sessions), created_at (documents, messages) per data-model.md and FR-011
+- [X] T069 [US5] Add foreign key constraint in migration: messages.session_id REFERENCES sessions(id) ON DELETE CASCADE per data-model.md
+- [X] T070 [US5] Add check constraint in migration: messages.role IN ('user', 'assistant', 'system') per data-model.md
+- [X] T071 [US5] Implement downgrade function in migration to drop all tables and pgvector extension (with CASCADE) per FR-028 and research.md section 5
+- [X] T072 [US5] Test migration upgrade and downgrade on local Docker PostgreSQL per quickstart.md step 4
 
 **Checkpoint**: Database migrations are repeatable and safe - schema can be deployed across environments without manual SQL
 
@@ -219,11 +219,11 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Purpose**: Create shared Pydantic models for inter-component contracts (not tied to specific user story)
 
-- [ ] T073 [P] Create AgentResponse Pydantic model in src/models/common.py with fields (answer str, reasoning Optional[str], tool_calls list[dict], confidence float 0-1, timestamp datetime) per data-model.md
-- [ ] T074 [P] Create ToolGapReport Pydantic model in src/models/common.py with fields (missing_tools list[str], attempted_task str, existing_tools_checked list[str], proposed_mcp_server Optional[str]) per data-model.md
-- [ ] T075 [P] Create ApprovalRequest Pydantic model in src/models/common.py with fields (action_type str, action_description str, confidence float, risk_level RiskLevel enum, tool_name str, parameters dict, requires_immediate_approval bool, timeout_seconds Optional[int]) per data-model.md
-- [ ] T076 [P] Add Pydantic field validators for AgentResponse.confidence (0.0 <= value <= 1.0) and ApprovalRequest.confidence (0.0 <= value <= 1.0) per data-model.md validation rules
-- [ ] T077 [P] Create unit tests for AgentResponse, ToolGapReport, ApprovalRequest in tests/unit/test_models.py - test field validation, JSON serialization per data-model.md
+- [X] T073 [P] Create AgentResponse Pydantic model in src/models/common.py with fields (answer str, reasoning Optional[str], tool_calls list[dict], confidence float 0-1, timestamp datetime) per data-model.md
+- [X] T074 [P] Create ToolGapReport Pydantic model in src/models/common.py with fields (missing_tools list[str], attempted_task str, existing_tools_checked list[str], proposed_mcp_server Optional[str]) per data-model.md
+- [X] T075 [P] Create ApprovalRequest Pydantic model in src/models/common.py with fields (action_type str, action_description str, confidence float, risk_level RiskLevel enum, tool_name str, parameters dict, requires_immediate_approval bool, timeout_seconds Optional[int]) per data-model.md
+- [X] T076 [P] Add Pydantic field validators for AgentResponse.confidence (0.0 <= value <= 1.0) and ApprovalRequest.confidence (0.0 <= value <= 1.0) per data-model.md validation rules
+- [X] T077 [P] Create unit tests for AgentResponse, ToolGapReport, ApprovalRequest in tests/unit/test_models.py - test field validation, JSON serialization per data-model.md
 
 **Checkpoint**: Common models ready for use by agents and workflows
 
@@ -233,11 +233,11 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Purpose**: Provide database connectivity health check for operations
 
-- [ ] T078 Implement MemoryManager.health_check method in src/core/memory.py - test database connection, return {"status": "healthy", "postgres_version": "15.3", "pgvector_version": "0.5.1"} per contracts/README.md
-- [ ] T079 Add PostgreSQL version query to health_check: SELECT version() per contracts/README.md
-- [ ] T080 Add pgvector version query to health_check: SELECT extversion FROM pg_extension WHERE extname='vector' per contracts/README.md
-- [ ] T081 Add OpenTelemetry span to health_check with attributes (status, postgres_version) per FR-017
-- [ ] T082 Create integration test for health_check in tests/integration/test_database.py - test successful health check, database unreachable error per contracts/README.md
+- [X] T078 Implement MemoryManager.health_check method in src/core/memory.py - test database connection, return {"status": "healthy", "postgres_version": "15.3", "pgvector_version": "0.5.1"} per contracts/README.md
+- [X] T079 Add PostgreSQL version query to health_check: SELECT version() per contracts/README.md
+- [X] T080 Add pgvector version query to health_check: SELECT extversion FROM pg_extension WHERE extname='vector' per contracts/README.md
+- [X] T081 Add OpenTelemetry span to health_check with attributes (status, postgres_version) per FR-017
+- [X] T082 Create integration test for health_check in tests/integration/test_database.py - test successful health check, database unreachable error per contracts/README.md
 
 **Checkpoint**: Health check endpoint ready for monitoring and debugging
 
@@ -247,10 +247,10 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Purpose**: Create reusable test data and fixtures for consistent testing
 
-- [ ] T083 [P] Create sample_documents.py in tests/fixtures/ with 100+ sample documents, 1536-dim dummy embeddings, varied metadata (category, source, tags) per research.md section 9
-- [ ] T084 [P] Add pytest fixture for clean database session in tests/fixtures/conftest.py - create tables before test, rollback after test per research.md section 9
-- [ ] T085 [P] Add pytest fixture for Docker Compose service waits in tests/fixtures/conftest.py - wait for PostgreSQL healthy, Jaeger ready per research.md section 9 and quickstart.md
-- [ ] T086 [P] Add pytest fixture for MemoryManager instance in tests/fixtures/conftest.py - initialize with test config per research.md section 9
+- [X] T083 [P] Create sample_documents.py in tests/fixtures/ with 100+ sample documents, 1536-dim dummy embeddings, varied metadata (category, source, tags) per research.md section 9
+- [X] T084 [P] Add pytest fixture for clean database session in tests/fixtures/conftest.py - create tables before test, rollback after test per research.md section 9
+- [X] T085 [P] Add pytest fixture for Docker Compose service waits in tests/fixtures/conftest.py - wait for PostgreSQL healthy, Jaeger ready per research.md section 9 and quickstart.md
+- [X] T086 [P] Add pytest fixture for MemoryManager instance in tests/fixtures/conftest.py - initialize with test config per research.md section 9
 
 **Checkpoint**: Test fixtures ready for comprehensive integration testing
 

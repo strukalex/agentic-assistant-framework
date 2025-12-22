@@ -140,7 +140,9 @@ class MemoryManager:
         self,
         query_embedding: list[float],
         top_k: int = 10,
-        metadata_filters: dict | None = None
+        metadata_filters: dict | None = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> list[Document]:
         """
         Perform semantic search using vector similarity (cosine distance).
@@ -149,6 +151,8 @@ class MemoryManager:
             query_embedding: 1536-dimensional query vector
             top_k: Number of results to return (default: 10)
             metadata_filters: Optional JSONB filters (e.g., {"category": "research"})
+            start_date: Optional inclusive lower bound for created_at filter
+            end_date: Optional inclusive upper bound for created_at filter
         
         Returns:
             list[Document]: Top K most similar documents (ordered by similarity)
@@ -156,6 +160,7 @@ class MemoryManager:
         
         Raises:
             ValueError: If query_embedding dimension != 1536 or top_k <= 0
+            ValueError: If end_date < start_date when both are provided
             DatabaseError: If database operation fails
         
         Traces:
@@ -634,6 +639,8 @@ except ValidationError as e:
 - `filter_count`: integer (number of metadata filters)
 - `result_count`: integer
 - `query_time_ms`: float
+- `start_date`: ISO 8601 string (when provided)
+- `end_date`: ISO 8601 string (when provided)
 
 #### temporal_query
 - `start_date`: ISO 8601 string

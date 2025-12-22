@@ -58,6 +58,24 @@ class MemoryManager:
         except ValueError as exc:
             raise ValueError(f"Invalid message role: {role}") from exc
 
+    def _build_document_conditions(
+        self,
+        metadata_filters: Optional[dict] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ) -> list:
+        conditions = []
+        if start_date and end_date and end_date < start_date:
+            raise ValueError("end_date must be greater than or equal to start_date")
+        if start_date:
+            conditions.append(Document.created_at >= start_date)
+        if end_date:
+            conditions.append(Document.created_at <= end_date)
+        if metadata_filters:
+            for key, value in metadata_filters.items():
+                conditions.append(Document.metadata_[key].astext == str(value))
+        return conditions
+
     @trace_memory_operation("store_message")
     async def store_message(
         self,
@@ -163,15 +181,18 @@ class MemoryManager:
         query_embedding: list[float],
         top_k: int = 10,
         metadata_filters: Optional[dict] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
     ) -> list[Document]:
         if top_k <= 0:
             raise ValueError("top_k must be greater than 0")
         validated_embedding = self._validate_embedding(query_embedding)
 
-        conditions = []
-        if metadata_filters:
-            for key, value in metadata_filters.items():
-                conditions.append(Document.metadata_[key].astext == str(value))
+        conditions = self._build_document_conditions(
+            metadata_filters=metadata_filters,
+            start_date=start_date,
+            end_date=end_date,
+        )
 
         stmt = select(Document)
         if conditions:
@@ -189,9 +210,70 @@ class MemoryManager:
         span.set_attribute("filter_count", len(metadata_filters or {}))
         span.set_attribute("result_count", len(documents))
         span.set_attribute("query_time_ms", round(duration_ms, 4))
+        if start_date:
+            span.set_attribute("start_date", start_date.isoformat())
+        if end_date:
+            span.set_attribute("end_date", end_date.isoformat())
         span.set_attribute("db.statement", str(stmt))
 
         return documents
+
+    @trace_memory_operation("temporal_query")
+    async def temporal_query(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        metadata_filters: Optional[dict] = None,
+    ) -> list[Document]:
+        conditions = self._build_document_conditions(
+            metadata_filters=metadata_filters,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        stmt = (
+            select(Document)
+            .where(and_(*conditions))
+            .order_by(Document.created_at.desc())
+        )
+
+        async with self._session_factory() as db:
+            result = await db.execute(stmt)
+            documents = list(result.scalars().all())
+
+        span = self._get_span()
+        span.set_attribute("start_date", start_date.isoformat())
+        span.set_attribute("end_date", end_date.isoformat())
+        span.set_attribute("filter_count", len(metadata_filters or {}))
+        span.set_attribute("result_count", len(documents))
+        span.set_attribute("db.statement", str(stmt))
+
+        return documents
+
+    @trace_memory_operation("health_check")
+    async def health_check(self) -> dict[str, str]:
+        async with self._engine.connect() as conn:
+            version_result = await conn.exec_driver_sql("SELECT version()")
+            postgres_version = version_result.scalar_one()
+            vector_result = await conn.exec_driver_sql(
+                "SELECT extversion FROM pg_extension WHERE extname='vector'"
+            )
+            pgvector_version = vector_result.scalar_one_or_none()
+
+        response = {
+            "status": "healthy",
+            "postgres_version": postgres_version,
+        }
+        if pgvector_version:
+            response["pgvector_version"] = pgvector_version
+
+        span = self._get_span()
+        span.set_attribute("status", response["status"])
+        span.set_attribute("postgres_version", postgres_version)
+        if pgvector_version:
+            span.set_attribute("pgvector_version", pgvector_version)
+        span.set_attribute("db.statement", "SELECT version(); SELECT extversion FROM pg_extension")
+
+        return response
 
     @property
     def engine(self) -> AsyncEngine:
