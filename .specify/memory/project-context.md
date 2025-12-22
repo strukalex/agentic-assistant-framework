@@ -3,7 +3,7 @@
 **Project**: Personal AI Assistant System (PAIAS)  
 **Current Phase**: Phase 1 — Foundation / Vertical Slice  
 **Phase Intent**: Deliver an end-to-end slice (UI → Workflow → Agent → Memory) to prove the architecture works and delivers value. 
-**Governed By**: `constitution.md` v2.0. 
+**Governed By**: `constitution.md` v2.1. 
 **Date**: 2025-12-21
 
 ---
