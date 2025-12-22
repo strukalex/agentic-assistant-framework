@@ -94,7 +94,7 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 ### I.D Memory Layer: PostgreSQL-First Architecture
 
 **Primary Database:** PostgreSQL 15+ with pgvector extension  
-**ORM:** SQLAlchemy 2.0+ with async support  
+**ORM:** SQLModel 
 **Vector Store:** pgvector (in-database)
 
 **Data Architecture:**
