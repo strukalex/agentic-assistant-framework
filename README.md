@@ -75,3 +75,4 @@ docker-compose.yml  # PostgreSQL + Jaeger for local dev
 - Minimum Python version: 3.11
 - Coverage gate: 80% enforced via `pytest --cov=src --cov-fail-under=80`
 - All DB operations must be async and traced (OpenTelemetry → Jaeger)
+- ADR: See `docs/adr/0001-memory-layer.md` for memory-layer stack & constraints
