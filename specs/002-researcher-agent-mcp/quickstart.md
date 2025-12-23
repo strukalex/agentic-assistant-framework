@@ -40,7 +40,7 @@ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
 OTEL_SERVICE_NAME=paias-agent-layer
 
 # Database (inherited from Spec 001)
-DATABASE_URL=postgresql+asyncpg://paias:password@localhost:5432/paias_dev
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/paias
 ```
 
 **How to get Azure AI Foundry credentials**:
@@ -159,7 +159,7 @@ pytest --cov=src --cov-report=html tests/
 **If tests fail**:
 - Check `.env` configuration (Azure AI Foundry credentials)
 - Verify Docker services are running (`docker-compose ps`)
-- Check PostgreSQL connection (`psql -h localhost -U paias paias_dev`)
+- Check PostgreSQL connection (`psql -h localhost -U postgres paias`)
 
 ---
 
@@ -340,7 +340,7 @@ Details: Connection refused (localhost:5432)
 2. Check PostgreSQL logs: `docker-compose logs postgres`
 3. Test connection manually:
    ```bash
-   psql -h localhost -U paias paias_dev -c "SELECT version();"
+   psql -h localhost -U postgres paias -c "SELECT version();"
    ```
 4. If still failing, restart services:
    ```bash
