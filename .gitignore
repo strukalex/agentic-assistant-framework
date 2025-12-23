@@ -22,7 +22,6 @@ htmlcov/
 
 # Environment and secrets
 .env
-.env.*
 
 # Tooling
 .ruff_cache/

@@ -520,7 +520,7 @@ Documents are immutable once created (no state transitions). Updates create new 
 ```json
 {
   "token_count": 150,
-  "model_used": "claude-3-5-sonnet",
+  "model_used": "deepseek-3.2",
   "confidence_score": 0.92,
   "processing_time_ms": 250,
   "referenced_documents": ["uuid-1", "uuid-2"]

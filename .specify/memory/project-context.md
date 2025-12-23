@@ -52,6 +52,16 @@ This section records *why* decisions were made, providing context for future pha
   - **Rationale**: Python-native, streaming-friendly, enforces headless API boundary, easy to surface OTel/Windmill updates.
   - **Trade-off**: Not production-grade for multi-user; migration to React/Next.js or LibreChat planned for Phase 3. 
 
+- **Decision (LLM Provider / Default Model)**: **DeepSeek 3.2 via Microsoft Azure AI Foundry** (default production model).
+  - **Date**: 2025-12-22
+  - **Rationale**: Strong reasoning/code performance, 128K context, cost effectiveness, and enterprise-grade Azure governance.
+  - **Notes**: Agent code remains model-agnostic via Pydantic AI; comparison models remain supported per constitution Article I.G.
+
+- **Decision (Web Search MCP)**: **Open-WebSearch MCP** (`@open-websearch/mcp-server`) for `@web_search`.
+  - **Date**: 2025-12-22
+  - **Rationale**: Open source, easy local install via `npx`, and no paid API dependency required for baseline usage.
+  - **Notes**: Tool interface remains `@web_search`; only the backing MCP server changes.
+
 ---
 
 ## 4. Open Questions & Blockers (To Be Resolved in Phase 1)

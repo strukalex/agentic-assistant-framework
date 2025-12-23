@@ -50,6 +50,13 @@ export PYTHONPATH="$PWD/src:$PYTHONPATH"
 pytest
 ```
 
+### LLM + Web Search (Phase 1 Agent Layer)
+
+The Phase 1 agent spec assumes:
+
+- **Default LLM**: DeepSeek 3.2 via **Microsoft Azure AI Foundry** (see `AZURE_AI_FOUNDRY_*` in `env.example`)
+- **Web Search**: **Open-WebSearch MCP** (`npx -y @open-websearch/mcp-server`) (see `WEBSEARCH_*` in `env.example`)
+
 ### Updating packages
 
 Use information from:

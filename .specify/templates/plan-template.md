@@ -22,7 +22,7 @@
 **Storage**: PostgreSQL 15+ + pgvector *(Article I.D)*  
 **Tool Integration**: Model Context Protocol (MCP) *(Article I.E; no hardcoded integrations)*  
 **UI Layer**: Streamlit for Phase 1-2; React/Next.js OR LibreChat for Phase 3+ *(Article I.F)*  
-**Primary LLM**: Claude 3.5 Sonnet *(Article I.G)*  
+**Primary LLM**: DeepSeek 3.2 via Microsoft Azure AI Foundry *(Article I.G)*  
 **Testing**: pytest + pytest-cov; **minimum 80% coverage** *(Article III.A)*  
 **Target Platform**: Linux server (baseline)  
 **Project Type**: Web/service backend with chat UI integration *(Streamlit for Phase 1-2; production UI for Phase 3+; see Constitution Article I.F)*  
@@ -46,7 +46,7 @@
   - [ ] **Memory**: PostgreSQL + pgvector (PostgreSQL is source of truth; memory abstraction layer required)
   - [ ] **Tools**: MCP-only tool discovery/execution (no hardcoded tool clients)
   - [ ] **UI**: Streamlit for Phase 1-2 (proof-of-concept); React/Next.js OR LibreChat for Phase 3+ (decision pending Phase 2 evaluation) *(Article I.F)*
-  - [ ] **Primary model**: Claude 3.5 Sonnet (agent-level model-agnostic via Pydantic AI)
+  - [ ] **Primary model**: DeepSeek 3.2 via Microsoft Azure AI Foundry (agent-level model-agnostic via Pydantic AI)
 
 - [ ] **Article II — Architectural Principles (all 7)**: Plan explicitly respects:
   - [ ] Vertical-slice delivery (end-to-end system deliverable)

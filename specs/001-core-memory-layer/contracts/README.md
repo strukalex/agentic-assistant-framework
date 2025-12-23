@@ -511,7 +511,7 @@ await memory.store_message(
     role="assistant",
     content="Async programming allows non-blocking I/O operations...",
     metadata={
-        "model": "claude-3-5-sonnet",
+        "model": "deepseek-3.2",
         "confidence": 0.95,
         "token_count": 150
     }

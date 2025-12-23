@@ -20,7 +20,7 @@ conflicts with any item below, it MUST be escalated via **Article V (Amendment P
   - **Memory**: PostgreSQL 15+ + pgvector (PostgreSQL is source of truth; memory abstraction layer required)
   - **Tools**: MCP-only integrations (no hardcoded tool clients)
   - **UI**: Streamlit for Phase 1-2 (proof-of-concept); React/Next.js OR LibreChat for Phase 3+ (decision pending Phase 2 evaluation) *(Article I.F)*
-  - **Default model**: Claude 3.5 Sonnet (model-agnostic agents via Pydantic AI)
+  - **Default model**: DeepSeek 3.2 via Microsoft Azure AI Foundry (model-agnostic agents via Pydantic AI)
 - **Architectural principles (Article II)**: All 7 principles apply (vertical-slice, pluggable orchestration, human-in-the-loop, observable everything, multi-storage abstraction, isolation & safety boundaries, tool gap detection).
 - **Quality gates (Article III)**: Testing is required; CI enforces **≥ 80% coverage**.
 

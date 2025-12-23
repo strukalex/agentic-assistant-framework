@@ -200,11 +200,12 @@ MCP Servers: Execute actual API calls
 
 ### I.G Primary LLM Provider
 
-**Default Production Model:** Claude 3.5 Sonnet (Anthropic)
+**Default Production Model:** DeepSeek 3.2 (Microsoft Azure AI Foundry)
 
-**Rationale:** Balanced reasoning/code performance, long context (200K tokens), strong safety alignment, cost-effective at scale.
+**Rationale:** Strong reasoning/code performance, long context (128K), competitive cost, and enterprise-grade integration and governance via Azure.
 
 **Fallback / Comparison Models:**
+- **Claude 3.5 Sonnet (Anthropic):** For tasks requiring extended context (200K tokens)
 - **OpenAI GPT-4 Turbo:** For tasks requiring maximum code generation quality
 - **Local Ollama:** For on-premises privacy requirements; use Llama 2 (13B/70B) or Mistral 7B as baseline
 

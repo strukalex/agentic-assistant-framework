@@ -529,8 +529,8 @@ class ResearcherAgent(PydanticAgent):
     
 # Instantiate many times
 agents = [
-    ResearcherAgent(model="gpt-4", risk_threshold=0.8),
-    ResearcherAgent(model="claude-3", risk_threshold=0.7),  # Compare variants
+    ResearcherAgent(model="deepseek-3.2", risk_threshold=0.8),  # Default (Azure AI Foundry)
+    ResearcherAgent(model="claude-3.5-sonnet", risk_threshold=0.7),  # Compare variants
 ]
 ```
 
@@ -729,7 +729,7 @@ Rollback: If metrics degrade, revert to Baseline (one command)
 
 **Layer 3: Model Switching & Load Balancing (Phase 2+)**
 - Model health monitoring (rate limits, errors, latency)
-- Automatic failover (GPT-4 fails → Claude-3 → local Ollama)
+- Automatic failover (DeepSeek 3.2 fails → Claude 3.5 Sonnet → local Ollama)
 - Cost-aware selection (expensive models only when cheaper ones fail)
 
 **Benefits**:
@@ -1021,7 +1021,7 @@ Step 3: Execute normally
 # config.yaml
 agents:
   researcher:
-    model: "gpt-4"
+    model: "deepseek-3.2"
     risk_threshold: 0.8
     max_retries: 3
     tools:
@@ -1103,7 +1103,7 @@ trace.get_tracer_provider().add_span_processor(span_processor)
 @tracer.instrument(name="agent.execute")
 def execute_agent(query: str):
     with tracer.start_as_current_span("llm_call") as span:
-        span.set_attribute("model", "gpt-4")
+        span.set_attribute("model", "deepseek-3.2")
         span.set_attribute("input_tokens", 1500)
         # ... LLM call ...
         span.set_attribute("output_tokens", 300)
@@ -1291,7 +1291,7 @@ Comparison:
 # Create new agent in <5 minutes
 analyst = AgentFactory.create(
     archetype="analyst",
-    model="gpt-4",
+    model="deepseek-3.2",
     tools=["data_query", "visualization", "statistical_test"],
     memory_plugin=VectorMemoryPlugin(),
     risk_threshold=0.75,
@@ -1414,7 +1414,7 @@ POST /api/agents
 {
   "name": "MarketAnalyst",
   "archetype": "analyst",
-  "model": "gpt-4",
+  "model": "deepseek-3.2",
   "tools": ["market_data", "visualization"],
   "risk_threshold": 0.75
 }
@@ -1999,8 +1999,8 @@ All validated via Pydantic on startup
 - Contradictory sources trigger human review
 
 **Model Selection Strategy** (Phase 2+):
-- Default: GPT-4 (quality primary)
-- On failure: Claude-3 (cost-effective backup)
+- Default: DeepSeek 3.2 (Azure AI Foundry)
+- On failure: Claude 3.5 Sonnet (extended context / strong backup)
 - On rate limit: Local Ollama (unlimited but slower)
 - Cost threshold: <$0.10/call triggers cheaper model selection
 
@@ -2067,7 +2067,7 @@ Trace Hierarchy:
 ├── Workflow Execution (Root Span)
 │   ├── Agent Reasoning (Child Span)
 │   │   ├── LLM Call (Grandchild Span)
-│   │   │   ├── Model: gpt-4
+│   │   │   ├── Model: deepseek-3.2
 │   │   │   ├── Input Tokens: 1500
 │   │   │   ├── Output Tokens: 300
 │   │   │   ├── Cost: $0.045
@@ -2109,7 +2109,7 @@ Trace Hierarchy:
   - `workflow.success`: true/false
 
 - **Agent-Level Attributes**:
-  - `agent.model`: "gpt-4", "claude-3", "llama-3.1"
+  - `agent.model`: "deepseek-3.2", "claude-3.5-sonnet", "llama-3.1"
   - `agent.confidence_score`: 0.0-1.0
   - `agent.risk_level`: "low", "medium", "high"
   - `agent.tools_used`: ["@web_search", "@document_retrieval"]
@@ -2148,7 +2148,7 @@ Cost Dimensions:
 │   │   ├── LLM Costs (Primary driver)
 │   │   │   ├── Input Token Cost: $0.0015/token
 │   │   │   ├── Output Token Cost: $0.002/token
-│   │   │   └── Model Multiplier: gpt-4 = 1x, claude-3 = 0.8x
+│   │   │   └── Model Multiplier: deepseek-3.2 = 1x, claude-3.5-sonnet = 1.2x (example)
 │   │   ├── Tool Costs (Secondary)
 │   │   │   ├── API Call Costs: Search APIs, external services
 │   │   │   ├── Compute Costs: Local processing, vector search

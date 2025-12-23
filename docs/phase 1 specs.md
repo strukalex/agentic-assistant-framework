@@ -254,7 +254,7 @@ from models.common import AgentResponse, ToolGapReport, RiskLevel
 from core.memory import MemoryManager
 
 researcher_agent = Agent(
-    'anthropic:claude-3-5-sonnet',  # Constitution Article I.G
+    'azure-ai-foundry:deepseek-3.2',  # Constitution Article I.G (DeepSeek 3.2 via Azure AI Foundry)
     system_prompt="""You are the ResearcherAgent for a Personal AI Assistant.
 
 Your capabilities:
@@ -282,7 +282,7 @@ Integrate the following MCP tools using the `mcp` Python client:
 
 **Tool 1: Web Search** (`@web_search`)
 
-- MCP Server: Use Tavily or Brave Search MCP server
+- MCP Server: Use Open-WebSearch MCP server (`@open-websearch/mcp-server`)
 - Function: `search_web(query: str, max_results: int = 10) -> List[dict]`
 - Risk Level: `REVERSIBLE` (read-only)
 - Auto-execute: Yes (if confidence > 0.5)
@@ -311,8 +311,8 @@ async def setup_mcp_tools():
     """Initialize MCP client connections"""
     # Connect to web search MCP server
     search_server = StdioServerParameters(
-        command="uvx",
-        args=["mcp-server-tavily"]
+        command="npx",
+        args=["-y", "@open-websearch/mcp-server"]
     )
     
     # Similar setup for filesystem and time servers

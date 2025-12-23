@@ -174,7 +174,7 @@ async def test_memory():
         session_id=session_id,
         role="assistant",
         content="Async programming enables non-blocking I/O operations.",
-        metadata={"model": "claude-3-5-sonnet", "confidence": 0.95}
+        metadata={"model": "deepseek-3.2", "confidence": 0.95}
     )
     print(f"   ✓ Stored assistant message: {msg_id_2}")
     
