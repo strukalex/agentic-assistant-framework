@@ -229,7 +229,7 @@ class ToolGapReport(BaseModel):
             "example": {
                 "missing_tools": ["financial_data_api", "account_access"],
                 "attempted_task": "Retrieve my stock portfolio performance for Q3 2024",
-                "existing_tools_checked": ["web_search", "read_file", "get_current_time", "memory_search"]
+                "existing_tools_checked": ["web_search", "read_file", "get_current_time", "search_memory"]
             }
         }
 ```

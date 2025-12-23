@@ -270,8 +270,7 @@
       "search_web": RiskLevel.REVERSIBLE,
       "read_file": RiskLevel.REVERSIBLE,
       "get_current_time": RiskLevel.REVERSIBLE,
-      "memory_search": RiskLevel.REVERSIBLE,
-      "search_memory": RiskLevel.REVERSIBLE,
+      "search_memory": RiskLevel.REVERSIBLE,  # Tool name per FR-024
 
       # Reversible with delay (can be undone within time window)
       "send_email": RiskLevel.REVERSIBLE_WITH_DELAY,

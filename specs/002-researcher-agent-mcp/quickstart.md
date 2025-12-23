@@ -251,7 +251,7 @@ Existing tools checked:
   - web_search
   - read_file
   - get_current_time
-  - memory_search
+  - search_memory
   - store_memory
 
 Recommendation: Install or configure the missing MCP tools to complete this task.

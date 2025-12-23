@@ -144,7 +144,7 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
 - [ ] T300 [P] [US3] Write contract test in tests/contract/test_agent_api_contract.py to validate categorize_action_risk() and requires_approval() return correct types per contracts/researcher-agent-api.yaml
-- [ ] T301 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies known REVERSIBLE tools: web_search, read_file, get_current_time, memory_search (FR-016)
+- [ ] T301 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies known REVERSIBLE tools: web_search, read_file, get_current_time, search_memory (FR-016)
 - [ ] T302 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies hypothetical REVERSIBLE_WITH_DELAY tools: send_email, create_calendar_event, schedule_task (FR-017)
 - [ ] T303 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies hypothetical IRREVERSIBLE tools: delete_file, make_purchase, send_money, modify_production (FR-018)
 - [ ] T304 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() defaults to IRREVERSIBLE for unknown tools (FR-019)
@@ -219,6 +219,7 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 - [ ] T603 [P] Add timeout handling for MCP tool calls in src/agents/researcher.py: configure WEBSEARCH_TIMEOUT from env var, catch timeout exceptions, return AgentResponse with confidence=0.0 and reasoning explaining failure per edge cases in spec.md
 - [ ] T604 [P] Add malformed data handling for MCP tool responses in src/agents/researcher.py: catch JSON parsing errors and schema validation failures, log with OpenTelemetry, return AgentResponse with confidence=0.0 per edge cases in spec.md
 - [ ] T605 [P] Add unit tests to increase coverage to ≥ 80% in tests/unit/: focus on untested error paths, edge cases, and validation logic per Constitution Article III.A
+- [ ] T605a [P] Write unit test in tests/unit/test_researcher_agent.py to verify agent initialization fails with clear error message when required environment variables are missing (AZURE_AI_FOUNDRY_ENDPOINT, AZURE_AI_FOUNDRY_API_KEY, AZURE_DEPLOYMENT_NAME) per FR-027
 - [ ] T606 Validate all test scenarios from quickstart.md work end-to-end: test MCP tool availability (step 5), run test suite (step 6), manual CLI test (step 7), view Jaeger traces (step 8), test tool gap detection (step 9), test risk assessment (step 10)
 - [ ] T607 Run full test suite with coverage validation: pytest --cov=src --cov-fail-under=80 tests/ and verify all tests pass with coverage ≥ 80%
 - [ ] T608 Run linting and type checking: ruff check src/ tests/, black --check src/ tests/, mypy src/ and fix any issues per Constitution Article III

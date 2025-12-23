@@ -45,7 +45,7 @@ This layer includes:
 
 4. Risk-Based Action Categorization (core/risk_assessment.py)
    - categorize_action_risk(tool_name, parameters) -> RiskLevel
-     - REVERSIBLE: web_search, read_file, get_current_time, memory_search
+     - REVERSIBLE: web_search, read_file, get_current_time, search_memory
      - REVERSIBLE_WITH_DELAY: send_email, create_calendar_event, schedule_task
      - IRREVERSIBLE: delete_file, make_purchase, send_money, modify_production
      - Default: IRREVERSIBLE (safest assumption)

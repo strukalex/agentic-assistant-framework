@@ -325,7 +325,7 @@ components:
             - "web_search"
             - "read_file"
             - "get_current_time"
-            - "memory_search"
+            - "search_memory"
       required:
         - missing_tools
         - attempted_task

@@ -117,7 +117,7 @@ All ResearcherAgent operations, including MCP tool invocations and agent.run() c
 
 - **How does risk categorization handle tools with context-dependent risk?** Example: read_file is REVERSIBLE for most files, but reading /etc/shadow or API keys could be sensitive. The risk_assessment module should have a parameter inspection mechanism to detect sensitive patterns in file paths and escalate risk level accordingly.
 
-- **What happens if DeepSeek 3.2 API quota is exceeded during a research query?** The agent (configured with retries=2) should retry twice, then fail gracefully with an error indicating quota exceeded. OpenTelemetry should capture the quota error in traces. User should receive clear guidance to wait or increase quota.
+- **What happens if DeepSeek 3.2 API quota is exceeded during a research query?** The agent (configured with retries=2) should retry twice with exponential backoff (1s delay, then 2s delay), then fail gracefully with an error indicating quota exceeded. OpenTelemetry should capture the quota error in traces. User should receive clear guidance to wait or increase quota.
 
 - **How does the system handle tool execution timeouts?** Each MCP tool call should have a configurable timeout (e.g., WEBSEARCH_TIMEOUT=30 from env). If exceeded, the tool call should fail, the agent should detect this in tool_calls list, and may attempt alternate tools or report incomplete results with reduced confidence.
 
@@ -155,7 +155,7 @@ All ResearcherAgent operations, including MCP tool invocations and agent.run() c
 
 - **FR-015**: The system MUST implement a categorize_action_risk(tool_name: str, parameters: dict) function that returns a RiskLevel enum value (REVERSIBLE, REVERSIBLE_WITH_DELAY, or IRREVERSIBLE)
 
-- **FR-016**: The categorize_action_risk function MUST classify the following tools as REVERSIBLE: web_search, read_file, get_current_time, memory_search (search_memory)
+- **FR-016**: The categorize_action_risk function MUST classify the following tools as REVERSIBLE: web_search, read_file, get_current_time, search_memory
 
 - **FR-017**: The categorize_action_risk function MUST classify the following hypothetical tools as REVERSIBLE_WITH_DELAY: send_email, create_calendar_event, schedule_task (these tools may not exist yet but categorization logic must handle them)
 
@@ -209,9 +209,9 @@ All ResearcherAgent operations, including MCP tool invocations and agent.run() c
 
 ### Measurable Outcomes
 
-- **SC-001**: The ResearcherAgent successfully initializes with DeepSeek 3.2 via Azure AI Foundry and all 3 MCP tools (Open-WebSearch, filesystem, time) connect without errors within 10 seconds of startup
+- **SC-001**: The ResearcherAgent successfully initializes with DeepSeek 3.2 via Azure AI Foundry and all 3 MCP tools (Open-WebSearch, filesystem, time) connect without errors within 10 seconds (measured from setup_researcher_agent() call start to agent.run() ready-state, excluding Docker container boot time)
 
-- **SC-002**: When asked "What is the capital of France?", the agent returns a correct answer within 5 seconds, triggers the web_search tool (visible in tool_calls), and returns confidence > 0.8
+- **SC-002**: When asked "What is the capital of France?", the agent returns a correct answer within 5 seconds end-to-end (breakdown: web_search tool execution < 3s, LLM reasoning and response generation < 2s), triggers the web_search tool (visible in tool_calls), and returns confidence > 0.8
 
 - **SC-003**: When asked "Retrieve my stock portfolio performance for Q3 2024" with no financial API tool available, the agent returns a ToolGapReport within 3 seconds containing missing_tools=["financial_data_api"] and does NOT fabricate data or claim task completion
 
