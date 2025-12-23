@@ -49,12 +49,12 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project directory structure per plan.md: src/{agents,core,mcp_integration,models,cli}/, tests/{unit,integration,contract}/, mcp-servers/time-context/
-- [ ] T002 Initialize Python 3.11+ project with pyproject.toml using Poetry, add baseline dependencies: pydantic-ai[azure], mcp, asyncpg, sqlmodel, opentelemetry-api, opentelemetry-sdk, opentelemetry-exporter-otlp
-- [ ] T003 [P] Configure linting/formatting/type-checking tools in pyproject.toml: ruff (linter), black (formatter), mypy (type checker) per Constitution Article III
-- [ ] T004 [P] Configure pytest with pytest.ini: add pytest, pytest-cov, pytest-asyncio dependencies, set --cov-fail-under=80 per Constitution Article III.A
-- [ ] T005 [P] Create .env.example file with all required environment variables: AZURE_AI_FOUNDRY_ENDPOINT, AZURE_AI_FOUNDRY_API_KEY, AZURE_DEPLOYMENT_NAME, WEBSEARCH_ENGINE, WEBSEARCH_MAX_RESULTS, WEBSEARCH_TIMEOUT, OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME, DATABASE_URL (FR-027, FR-028, FR-029)
-- [ ] T006 [P] Create docker-compose.yml with PostgreSQL 15 + pgvector extension (port 5432) and Jaeger all-in-one (UI port 16686, OTLP port 4317) per plan.md infrastructure requirements
+- [X] T001 Create project directory structure per plan.md: src/{agents,core,mcp_integration,models,cli}/, tests/{unit,integration,contract}/, mcp-servers/time-context/
+- [X] T002 Initialize Python 3.11+ project with pyproject.toml using Poetry, add baseline dependencies: pydantic-ai[azure], mcp, asyncpg, sqlmodel, opentelemetry-api, opentelemetry-sdk, opentelemetry-exporter-otlp
+- [X] T003 [P] Configure linting/formatting/type-checking tools in pyproject.toml: ruff (linter), black (formatter), mypy (type checker) per Constitution Article III
+- [X] T004 [P] Configure pytest with pytest.ini: add pytest, pytest-cov, pytest-asyncio dependencies, set --cov-fail-under=80 per Constitution Article III.A
+- [X] T005 [P] Create .env.example file with all required environment variables: AZURE_AI_FOUNDRY_ENDPOINT, AZURE_AI_FOUNDRY_API_KEY, AZURE_DEPLOYMENT_NAME, WEBSEARCH_ENGINE, WEBSEARCH_MAX_RESULTS, WEBSEARCH_TIMEOUT, OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME, DATABASE_URL (FR-027, FR-028, FR-029)
+- [X] T006 [P] Create docker-compose.yml with PostgreSQL 15 + pgvector extension (port 5432) and Jaeger all-in-one (UI port 16686, OTLP port 4317) per plan.md infrastructure requirements
 
 ---
 
@@ -64,17 +64,17 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T007 Create RiskLevel enum in src/models/risk_level.py with values: REVERSIBLE, REVERSIBLE_WITH_DELAY, IRREVERSIBLE per data-model.md (FR-015)
-- [ ] T008 [P] Create ToolCallStatus enum in src/models/agent_response.py with values: SUCCESS, FAILED, TIMEOUT per data-model.md
-- [ ] T009 [P] Create ToolCallRecord Pydantic model in src/models/agent_response.py with fields: tool_name (str), parameters (dict), result (Optional[Any]), duration_ms (int, ge=0), status (ToolCallStatus) per data-model.md
-- [ ] T010 Create AgentResponse Pydantic model in src/models/agent_response.py with fields: answer (str, min_length=1), reasoning (str, min_length=1), tool_calls (List[ToolCallRecord]), confidence (confloat ge=0.0, le=1.0) per data-model.md (FR-003)
-- [ ] T011 [P] Create ToolGapReport Pydantic model in src/models/tool_gap_report.py with fields: missing_tools (List[str], min_items=1), attempted_task (str, min_length=1), existing_tools_checked (List[str]) per data-model.md (FR-013)
-- [ ] T012 Implement categorize_action_risk(tool_name: str, parameters: dict) -> RiskLevel function in src/core/risk_assessment.py using TOOL_RISK_MAP with parameter inspection for sensitive file paths per research.md RQ-006 (FR-015 to FR-019)
-- [ ] T013 Implement requires_approval(action: RiskLevel, confidence: float) -> bool function in src/core/risk_assessment.py: return True for IRREVERSIBLE always, True for REVERSIBLE_WITH_DELAY if confidence < 0.85, False for REVERSIBLE per research.md RQ-006 (FR-020 to FR-023)
-- [ ] T014 Setup OpenTelemetry tracing infrastructure in src/core/observability.py: configure TracerProvider, BatchSpanProcessor, OTLPSpanExporter with endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var, service name "paias-agent-layer" per research.md RQ-004 (FR-029, FR-032)
-- [ ] T015 Implement @trace_tool_call decorator in src/core/observability.py: create span with name "mcp_tool_call:{func_name}", set attributes tool_name, parameters, result_count, handle errors with span.set_status(ERROR) per research.md RQ-004 (FR-030)
-- [ ] T016 Implement custom MCP time server in mcp-servers/time-context/server.py: create Python-based MCP server with get_current_time(timezone: str = 'UTC') tool returning dict with timestamp (ISO 8601), timezone, unix_epoch per plan.md structure (FR-008)
-- [ ] T017 Implement setup_mcp_tools() async function in src/mcp_integration/setup.py: initialize 3 MCP servers using StdioServerParameters (Open-WebSearch via "npx -y @open-websearch/mcp-server", mcp-server-filesystem read-only, custom time server), return ClientSession per research.md RQ-002 (FR-005)
+- [X] T007 Create RiskLevel enum in src/models/risk_level.py with values: REVERSIBLE, REVERSIBLE_WITH_DELAY, IRREVERSIBLE per data-model.md (FR-015)
+- [X] T008 [P] Create ToolCallStatus enum in src/models/agent_response.py with values: SUCCESS, FAILED, TIMEOUT per data-model.md
+- [X] T009 [P] Create ToolCallRecord Pydantic model in src/models/agent_response.py with fields: tool_name (str), parameters (dict), result (Optional[Any]), duration_ms (int, ge=0), status (ToolCallStatus) per data-model.md
+- [X] T010 Create AgentResponse Pydantic model in src/models/agent_response.py with fields: answer (str, min_length=1), reasoning (str, min_length=1), tool_calls (List[ToolCallRecord]), confidence (confloat ge=0.0, le=1.0) per data-model.md (FR-003)
+- [X] T011 [P] Create ToolGapReport Pydantic model in src/models/tool_gap_report.py with fields: missing_tools (List[str], min_items=1), attempted_task (str, min_length=1), existing_tools_checked (List[str]) per data-model.md (FR-013)
+- [X] T012 Implement categorize_action_risk(tool_name: str, parameters: dict) -> RiskLevel function in src/core/risk_assessment.py using TOOL_RISK_MAP with parameter inspection for sensitive file paths per research.md RQ-006 (FR-015 to FR-019)
+- [X] T013 Implement requires_approval(action: RiskLevel, confidence: float) -> bool function in src/core/risk_assessment.py: return True for IRREVERSIBLE always, True for REVERSIBLE_WITH_DELAY if confidence < 0.85, False for REVERSIBLE per research.md RQ-006 (FR-020 to FR-023)
+- [X] T014 Setup OpenTelemetry tracing infrastructure in src/core/observability.py: configure TracerProvider, BatchSpanProcessor, OTLPSpanExporter with endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var, service name "paias-agent-layer" per research.md RQ-004 (FR-029, FR-032)
+- [X] T015 Implement @trace_tool_call decorator in src/core/observability.py: create span with name "mcp_tool_call:{func_name}", set attributes tool_name, parameters, result_count, handle errors with span.set_status(ERROR) per research.md RQ-004 (FR-030)
+- [X] T016 Implement custom MCP time server in mcp-servers/time-context/server.py: create Python-based MCP server with get_current_time(timezone: str = 'UTC') tool returning dict with timestamp (ISO 8601), timezone, unix_epoch per plan.md structure (FR-008)
+- [X] T017 Implement setup_mcp_tools() async function in src/mcp_integration/setup.py: initialize 3 MCP servers using StdioServerParameters (Open-WebSearch via "npx -y @open-websearch/mcp-server", mcp-server-filesystem read-only, custom time server), return ClientSession per research.md RQ-002 (FR-005)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
