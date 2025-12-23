@@ -53,6 +53,44 @@ export PYTHONPATH="$PWD/src:$PYTHONPATH"
 pytest
 ```
 
+### Reset & DB re-init
+
+To fully reset local infra, re-create the DB schema, and set `PYTHONPATH` automatically:
+
+```bash
+npm run reset
+```
+
+What the script does:
+- Stops containers, removes volumes, restarts infra (`docker compose` fallback to `docker-compose`)
+- Waits for Postgres health
+- Runs `alembic upgrade head` to initialize the schema
+- Exports `PYTHONPATH="$PWD/src:$PYTHONPATH"` for the session
+
+Manual re-init (if you prefer the long form):
+```bash
+docker compose down
+docker compose down -v
+docker compose up -d
+alembic upgrade head
+```
+
+### Running tests (PYTHONPATH automated)
+
+Use the helper to avoid manually exporting `PYTHONPATH` and to auto-activate `venv` when present:
+
+```bash
+# npm wrappers (PYTHONPATH handled by the script)
+npm test              # alias to npm run test:py
+npm run test:py -q tests/integration
+```
+
+If you want to run pytest directly, set `PYTHONPATH` first:
+```bash
+export PYTHONPATH="$PWD/src:$PYTHONPATH"
+pytest
+```
+
 ### LLM + Web Search (Phase 1 Agent Layer)
 
 The Phase 1 agent spec assumes:

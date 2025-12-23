@@ -4,7 +4,9 @@
   "description": "Personal AI Assistant System",
   "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "reset": "bash scripts/reset_dev_env.sh",
+    "test:py": "bash scripts/run_pytest.sh",
+    "test": "npm run test:py"
   },
   "dependencies": {
     "open-websearch": "latest"
