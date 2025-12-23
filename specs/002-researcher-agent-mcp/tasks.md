@@ -90,10 +90,10 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T100 [P] [US1] Write contract test in tests/contract/test_agent_api_contract.py to validate agent.run() returns AgentResponse schema matching contracts/researcher-agent-api.yaml for simple query "What is the capital of France?"
-- [ ] T101 [P] [US1] Write integration test in tests/integration/test_mcp_tools.py to verify setup_mcp_tools() successfully initializes all 3 MCP servers (Open-WebSearch, filesystem, time) and list_tools() returns expected tool schemas (FR-005, FR-006, FR-007, FR-008)
-- [ ] T102 [P] [US1] Write integration test in tests/integration/test_memory_integration.py to verify search_memory and store_memory tools work with MemoryManager dependency injection via RunContext (FR-024, FR-025, FR-026)
-- [ ] T103 [P] [US1] Write unit test in tests/unit/test_researcher_agent.py to verify ResearcherAgent initialization with DeepSeek 3.2 via AzureModel, result_type=AgentResponse, retries=2 (FR-001, FR-002, FR-003, FR-004, FR-034)
+- [X] T100 [P] [US1] Write contract test in tests/contract/test_agent_api_contract.py to validate agent.run() returns AgentResponse schema matching contracts/researcher-agent-api.yaml for simple query "What is the capital of France?"
+- [X] T101 [P] [US1] Write integration test in tests/integration/test_mcp_tools.py to verify setup_mcp_tools() successfully initializes all 3 MCP servers (Open-WebSearch, filesystem, time) and list_tools() returns expected tool schemas (FR-005, FR-006, FR-007, FR-008)
+- [X] T102 [P] [US1] Write integration test in tests/integration/test_memory_integration.py to verify search_memory and store_memory tools work with MemoryManager dependency injection via RunContext (FR-024, FR-025, FR-026)
+- [X] T103 [P] [US1] Write unit test in tests/unit/test_researcher_agent.py to verify ResearcherAgent initialization with DeepSeek 3.2 via AzureModel, result_type=AgentResponse, retries=2 (FR-001, FR-002, FR-003, FR-004, FR-034)
 
 ### Implementation for User Story 1
 
