@@ -13,7 +13,6 @@ from typing import List, Optional
 
 from mcp import ClientSession
 from pydantic_ai import Agent
-from pydantic_ai.models.azure import AzureModel
 
 from src.models.tool_gap_report import ToolGapReport
 
@@ -64,7 +63,9 @@ class ToolGapDetector:
         """
         # Phase 1: Get available tools (with caching)
         if self.available_tools is None:
-            self.available_tools = await self.mcp_session.list_tools()
+            tools_result = await self.mcp_session.list_tools()
+            # Extract tools from result object (same pattern as researcher.py:284-285)
+            self.available_tools = getattr(tools_result, "tools", [])
 
         # Phase 2: Extract required capabilities from task using LLM
         required_capabilities = await self._extract_capabilities(task_description)
@@ -102,16 +103,29 @@ class ToolGapDetector:
         """
         # Import at runtime to avoid circular dependencies
         import os
+        from pydantic_ai.models.openai import OpenAIModel
+        from pydantic_ai.providers.openai import OpenAIProvider
 
         # Create a simple agent for capability extraction
         # NOTE: This uses the same Azure AI Foundry configuration as ResearcherAgent
-        model = AzureModel(
-            model_name=os.getenv("AZURE_DEPLOYMENT_NAME", "deepseek-v3"),
-            endpoint=os.getenv("AZURE_AI_FOUNDRY_ENDPOINT"),
-            api_key=os.getenv("AZURE_AI_FOUNDRY_API_KEY"),
+        endpoint = os.getenv("AZURE_AI_FOUNDRY_ENDPOINT")
+        api_key = os.getenv("AZURE_AI_FOUNDRY_API_KEY")
+        model_name = os.getenv("AZURE_DEPLOYMENT_NAME", "DeepSeek-V3.2")
+
+        # Normalize the base URL for serverless endpoints
+        base_url = endpoint
+        if "/chat/completions" in base_url:
+            base_url = base_url.split("/chat/completions")[0]
+        if "services.ai.azure.com" in base_url and not base_url.endswith("/models"):
+            base_url = f"{base_url.rstrip('/')}/models"
+
+        provider = OpenAIProvider(
+            base_url=base_url,
+            api_key=api_key,
         )
 
-        extraction_agent = Agent(model=model, result_type=List[str], retries=1)
+        model = OpenAIModel(model_name, provider=provider)
+        extraction_agent = Agent(model=model, output_type=List[str], retries=1)
 
         prompt = f"""Analyze this task and list the required tool capabilities.
 
@@ -130,7 +144,16 @@ Return ONLY the JSON array, no additional text.
 
         try:
             result = await extraction_agent.run(prompt)
-            capabilities = result.data
+
+            # Normalize payload shape across pydantic-ai versions
+            # (same pattern as researcher.py:370-379)
+            capabilities = getattr(result, "data", None)
+            if capabilities is None:
+                capabilities = getattr(result, "output", None)
+            if capabilities is None:
+                raise AttributeError(
+                    f"agent.run result missing data/output. Available attrs: {dir(result)}"
+                )
 
             # Validate result is a list
             if not isinstance(capabilities, list):
