@@ -4,25 +4,14 @@ import argparse
 import asyncio
 import sys
 from pathlib import Path
-from typing import Any
 
 # Ensure project root is on sys.path when running as a script
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.agents.researcher import (
-    run_researcher_agent,
-    setup_researcher_agent,
-)
+from src.agents.researcher import run_researcher_agent
 from src.core.memory import MemoryManager
-
-
-async def _shutdown_session(mcp_session: Any) -> None:
-    """Close the MCP session if a context manager reference is attached."""
-    close_cm = getattr(mcp_session, "_close_cm", None)
-    if close_cm is not None:
-        await close_cm.__aexit__(None, None, None)
 
 
 async def main(question: str) -> None:
@@ -38,11 +27,6 @@ async def main(question: str) -> None:
     logger.info("🔧 Initializing MemoryManager...")
     memory = MemoryManager()
     logger.info("✅ MemoryManager initialized")
-
-    # Initialize MCP tools and agent
-    logger.info("🔧 Setting up ResearcherAgent and MCP tools...")
-    agent, mcp_session = await setup_researcher_agent(memory)
-    logger.info("✅ Setup complete, ready to execute query")
 
     try:
         logger.info("🚀 Running researcher agent...")
@@ -64,8 +48,6 @@ async def main(question: str) -> None:
         print(f"{'='*60}\n")
     finally:
         logger.info("🧹 Shutting down MCP session...")
-        await _shutdown_session(mcp_session)
-        logger.info("✅ Cleanup complete")
 
 
 if __name__ == "__main__":

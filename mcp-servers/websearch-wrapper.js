@@ -55,8 +55,13 @@ child.stdout.on('data', (data) => {
     }
     // Check if line looks like JSON-RPC (starts with '{' or '[')
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-      // This is a JSON-RPC message, pass to stdout
-      process.stdout.write(line + '\n');
+      // Only forward if it parses as JSON; otherwise treat as log noise
+      try {
+        JSON.parse(trimmed);
+        process.stdout.write(line + '\n');
+      } catch {
+        process.stderr.write('[FILTERED] ' + line + '\n');
+      }
     } else {
       // This is informational output (emoji messages, etc.), redirect to stderr
       process.stderr.write('[FILTERED] ' + line + '\n');

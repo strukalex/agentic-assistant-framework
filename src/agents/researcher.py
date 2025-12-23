@@ -6,9 +6,10 @@ time context, filesystem access, and memory integration.
 Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-031, FR-034)
 """
 
+import asyncio
 import logging
 import os
-from typing import List, Tuple
+from typing import Any, Callable, List, Tuple
 from uuid import UUID
 
 from dotenv import load_dotenv
@@ -93,15 +94,16 @@ def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]
     return embedding
 
 
-# Initialize ResearcherAgent with AzureModel
-# Per tasks.md T104 (FR-001, FR-002, FR-003, FR-004)
 model = _get_azure_model()
 
-researcher_agent = Agent[MemoryManager, AgentResponse](
-    model=model,
-    output_type=AgentResponse,
-    retries=2,
-    system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
+
+def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
+    """Create a fresh ResearcherAgent instance with base configuration."""
+    return Agent[MemoryManager, AgentResponse](
+        model=model,
+        output_type=AgentResponse,
+        retries=2,
+        system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
 
 Your capabilities:
 - Search external information sources via web search
@@ -121,11 +123,10 @@ Output Format: Always return a structured AgentResponse with:
 - tool_calls: List of all tool invocations made during execution
 - confidence: Your self-assessed confidence score (0.0-1.0)
 """,
-)
+    )
 
 
 @trace_tool_call
-@researcher_agent.tool
 async def search_memory(
     ctx: RunContext[MemoryManager], query: str
 ) -> List[dict]:
@@ -158,7 +159,6 @@ async def search_memory(
 
 
 @trace_tool_call
-@researcher_agent.tool
 async def store_memory(
     ctx: RunContext[MemoryManager], content: str, metadata: dict
 ) -> str:
@@ -179,6 +179,17 @@ async def store_memory(
     return str(doc_id)
 
 
+def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
+    """Attach built-in memory tools to the given agent."""
+    agent.tool(search_memory)
+    agent.tool(store_memory)
+
+
+# Export a baseline agent for compatibility; MCP tools are added per session.
+researcher_agent = _create_researcher_agent()
+_register_core_tools(researcher_agent)
+
+
 async def setup_researcher_agent(
     memory_manager: MemoryManager,
 ) -> Tuple[Agent[MemoryManager, AgentResponse], ClientSession]:
@@ -192,19 +203,93 @@ async def setup_researcher_agent(
     logger = logging.getLogger(__name__)
     logger.info("🤖 Setting up ResearcherAgent...")
 
-    # Initialize MCP tools; keep session open for caller
-    # Keep reference to suppress unused-argument warnings and future-proof DI
-    _ = memory_manager
+    # Create a fresh agent instance so MCP tool wrappers are bound to this session.
+    agent = _create_researcher_agent()
+    _register_core_tools(agent)
 
     logger.info("🔧 Initializing MCP tools...")
     mcp_session_cm = setup_mcp_tools()
     mcp_session = await mcp_session_cm.__aenter__()
     logger.info("✅ MCP tools initialized")
 
+    try:
+        await _register_mcp_tools(agent, mcp_session, logger)
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.warning("⚠️ Failed to register MCP tools: %s", exc)
+
     # Attach context manager for optional cleanup by caller
     setattr(mcp_session, "_close_cm", mcp_session_cm)
     logger.info("✅ ResearcherAgent setup complete")
-    return researcher_agent, mcp_session
+    return agent, mcp_session
+
+
+def _format_mcp_result(result: Any) -> str:
+    """Normalize MCP tool results into a displayable string."""
+    def _sanitize(text: str, max_len: int = 4000) -> str:
+        # Drop control characters that can break JSON encoding and cap length
+        import re
+
+        cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
+        if len(cleaned) > max_len:
+            return cleaned[:max_len] + "... [truncated]"
+        return cleaned
+
+    content = getattr(result, "content", None)
+    if isinstance(content, list):
+        parts: List[str] = []
+        for block in content:
+            text = getattr(block, "text", None)
+            parts.append(text if text is not None else str(block))
+        return _sanitize("\n".join(parts))
+    if content is None:
+        return ""
+    return _sanitize(str(content))
+
+
+def _make_mcp_tool(
+    mcp_session: ClientSession, tool: Any
+) -> Callable[..., Any]:
+    """Create a tool wrapper that calls the given MCP tool via the session."""
+    tool_name = getattr(tool, "name", "mcp_tool")
+    description = getattr(tool, "description", "") or f"MCP tool {tool_name}"
+    timeout_seconds = 10
+
+    @trace_tool_call
+    async def mcp_tool_wrapper(ctx: RunContext[MemoryManager], **kwargs: Any) -> str:
+        try:
+            result = await asyncio.wait_for(
+                mcp_session.call_tool(tool_name, arguments=kwargs),
+                timeout=timeout_seconds,
+            )
+            return _format_mcp_result(result)
+        except asyncio.TimeoutError:
+            return (
+                f"Tool '{tool_name}' timed out after {timeout_seconds}s. "
+                "Failing fast per configuration."
+            )
+
+    mcp_tool_wrapper.__name__ = tool_name
+    mcp_tool_wrapper.__doc__ = description
+    return mcp_tool_wrapper
+
+
+async def _register_mcp_tools(
+    agent: Agent[MemoryManager, AgentResponse],
+    mcp_session: ClientSession,
+    logger: logging.Logger,
+) -> None:
+    """Discover available MCP tools and register them on the agent."""
+    tools_result = await mcp_session.list_tools()
+    tools = getattr(tools_result, "tools", [])
+
+    for tool in tools:
+        agent.tool(
+            _make_mcp_tool(mcp_session, tool),
+            name=getattr(tool, "name", None),
+            description=getattr(tool, "description", None),
+        )
+
+    logger.info("✅ Registered %d MCP tools with agent", len(tools))
 
 
 # Wrapper function for instrumented agent.run() calls
@@ -281,6 +366,17 @@ async def run_agent_with_tracing(
 
 
 async def run_researcher_agent(task: str, deps: MemoryManager) -> AgentResponse:
-    """Convenience entrypoint to run the ResearcherAgent with tracing."""
-    return await run_agent_with_tracing(researcher_agent, task, deps)
+    """Convenience entrypoint: create agent with MCP tools, run it, then clean up."""
+    agent, mcp_session = await setup_researcher_agent(deps)
+    try:
+        return await run_agent_with_tracing(agent, task, deps)
+    finally:
+        await _shutdown_session(mcp_session)
+
+
+async def _shutdown_session(mcp_session: Any) -> None:
+    """Close the MCP session if a context manager reference is attached."""
+    close_cm = getattr(mcp_session, "_close_cm", None)
+    if close_cm is not None:
+        await close_cm.__aexit__(None, None, None)
 
