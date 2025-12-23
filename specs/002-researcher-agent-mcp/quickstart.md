@@ -7,7 +7,7 @@
 ## Prerequisites
 
 - Python 3.11+ installed (`python --version`)
-- Node.js 18+ installed (`node --version`) for Open-WebSearch MCP server
+- Node.js 24+ installed (`node --version`) for Open-WebSearch MCP server
 - Docker and Docker Compose installed (for PostgreSQL + Jaeger)
 - Azure AI Foundry access with DeepSeek 3.2 deployment
 - Git repository cloned
@@ -132,7 +132,7 @@ npx -y @open-websearch/mcp-server --version
 ```
 
 If this fails:
-- Install Node.js 18+ from https://nodejs.org/
+- Install Node.js 24+ from https://nodejs.org/
 - Ensure `npx` is in your PATH
 
 **Note**: The MCP server will be auto-started by the agent initialization code.
@@ -317,7 +317,7 @@ Details: npx command not found
 ```
 
 **Solution**:
-1. Install Node.js 18+ from https://nodejs.org/
+1. Install Node.js 24+ from https://nodejs.org/
 2. Verify npx is available: `npx --version`
 3. Test manual server start:
    ```bash

@@ -7,7 +7,8 @@ Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-03
 """
 
 import os
-from typing import List
+from contextlib import asynccontextmanager
+from typing import AsyncIterator, List, Tuple
 from uuid import UUID
 
 from mcp import ClientSession
@@ -170,25 +171,32 @@ async def store_memory(
     return str(doc_id)
 
 
+@asynccontextmanager
 async def setup_researcher_agent(
     memory_manager: MemoryManager,
-) -> tuple[Agent[MemoryManager, AgentResponse], ClientSession]:
+) -> AsyncIterator[Tuple[Agent[MemoryManager, AgentResponse], ClientSession]]:
     """Initialize ResearcherAgent with MCP tools and MemoryManager dependency.
 
     Args:
         memory_manager: MemoryManager instance for dependency injection
 
-    Returns:
+    Yields:
         Tuple of (agent, mcp_session)
+        
+    Example:
+        async with setup_researcher_agent(memory_manager) as (agent, mcp_session):
+            result = await agent.run("What is the capital of France?", deps=memory_manager)
+            # Use agent and session...
+        # Session is automatically closed here
 
     Per tasks.md T107 (FR-026, FR-034)
     """
-    # Initialize MCP tools
-    mcp_session = await setup_mcp_tools()
-
-    # Agent is already configured with MemoryManager as dependency type
-    # Return agent and session tuple
-    return (researcher_agent, mcp_session)
+    # Initialize MCP tools using async context manager to keep session alive
+    async with setup_mcp_tools() as mcp_session:
+        # Agent is already configured with MemoryManager as dependency type
+        # Yield the tuple to keep session alive for the caller
+        yield (researcher_agent, mcp_session)
+        # Session cleanup happens automatically when context exits
 
 
 # Wrapper function for instrumented agent.run() calls

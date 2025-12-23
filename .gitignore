@@ -27,6 +27,10 @@ htmlcov/
 .ruff_cache/
 .mypy_cache/
 
+# Node.js
+node_modules/
+package-lock.json
+
 # OS / editor noise
 .DS_Store
 Thumbs.db

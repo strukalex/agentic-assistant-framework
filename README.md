@@ -35,6 +35,9 @@ source venv/bin/activate  # Windows: venv\\Scripts\\activate
 # Install the project in editable mode with all development dependencies
 pip install -e .[dev]
 
+# Install Node.js dependencies for MCP servers (requires Node.js 24+)
+npm install
+
 # Copy environment defaults
 cp .env.example .env
 
@@ -55,7 +58,7 @@ pytest
 The Phase 1 agent spec assumes:
 
 - **Default LLM**: DeepSeek 3.2 via **Microsoft Azure AI Foundry** (see `AZURE_AI_FOUNDRY_*` in `env.example`)
-- **Web Search**: **Open-WebSearch MCP** (`npx -y @open-websearch/mcp-server`) (see `WEBSEARCH_*` in `env.example`)
+- **Web Search**: **Open-WebSearch MCP** (embedded via `npm install`, see `package.json`) (see `WEBSEARCH_*` in `env.example`)
 
 ### Updating packages
 

@@ -5,6 +5,9 @@ from typing import List
 from pydantic import BaseModel, Field
 
 
+from pydantic import ConfigDict
+
+
 class ToolGapReport(BaseModel):
     """
     Report of missing tool capabilities detected during task analysis.
@@ -30,8 +33,8 @@ class ToolGapReport(BaseModel):
         description="List of available MCP tools that were evaluated",
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "missing_tools": ["financial_data_api", "account_access"],
                 "attempted_task": "Retrieve my stock portfolio performance for Q3 2024",
@@ -43,3 +46,4 @@ class ToolGapReport(BaseModel):
                 ],
             }
         }
+    )

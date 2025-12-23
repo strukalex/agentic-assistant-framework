@@ -2,54 +2,101 @@
 
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+import subprocess
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+# Project root directory (3 levels up from this file: src/mcp_integration/setup.py)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Path to embedded open-websearch binary
+NODE_OPEN_WEBSEARCH = PROJECT_ROOT / "node_modules" / ".bin" / "open-websearch"
+# Path to wrapper script that filters stdout to comply with MCP protocol
+WEBSEARCH_WRAPPER = PROJECT_ROOT / "mcp-servers" / "websearch-wrapper.js"
 
-async def setup_mcp_tools() -> ClientSession:
+
+@asynccontextmanager
+async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
     """
-    Initialize MCP servers and return ClientSession.
+    Initialize MCP servers and return ClientSession as a context manager.
 
-    Sets up 3 MCP servers:
-    1. Open-WebSearch via "npx -y @open-websearch/mcp-server"
-    2. mcp-server-filesystem (read-only)
-    3. Custom time server
+    Sets up the Open-WebSearch MCP server via embedded open-websearch package.
+    The session remains open as long as the context is active.
 
-    Returns:
+    Yields:
         ClientSession: Initialized MCP client session
 
-    Per research.md RQ-002 (FR-005)
-    """
-    # Environment variables for web search configuration
-    websearch_engine = os.getenv("WEBSEARCH_ENGINE", "duckduckgo")
-    websearch_max_results = os.getenv("WEBSEARCH_MAX_RESULTS", "10")
-    websearch_timeout = os.getenv("WEBSEARCH_TIMEOUT_SECONDS", "30")
+    Example:
+        async with setup_mcp_tools() as session:
+            tools = await session.list_tools()
+            # Use session...
+        # Session is automatically closed here
 
-    # Open-WebSearch MCP server parameters
+    Per research.md RQ-002 (FR-005)
+
+    Note: Requires 'npm install' to be run first to install open-websearch dependency.
+    """
+    # Validate Node.js version (open-websearch requires Node 20+; prefer 24+)
+    node_version = subprocess.run(
+        ["node", "-v"], capture_output=True, text=True
+    ).stdout.strip()
+    try:
+        node_major = int(node_version.lstrip("v").split(".")[0])
+    except Exception:
+        node_major = 0
+
+    if node_major < 20:
+        raise RuntimeError(
+            f"Node.js 20+ required for Open-WebSearch MCP server. Detected: {node_version}. "
+            "Run `nvm use 24` (or upgrade Node) and reinstall npm deps."
+        )
+
+    # Check if embedded binary exists
+    if not NODE_OPEN_WEBSEARCH.exists():
+        raise RuntimeError(
+            f"Open-WebSearch MCP server not found at {NODE_OPEN_WEBSEARCH}. "
+            "Please run 'npm install' to install dependencies."
+        )
+    
+    # Check if wrapper script exists
+    if not WEBSEARCH_WRAPPER.exists():
+        raise RuntimeError(
+            f"Wrapper script not found at {WEBSEARCH_WRAPPER}. "
+            "The wrapper is required to filter stdout for MCP protocol compliance."
+        )
+
+    # Environment variables for web search configuration
+    # Use environment variable names that open-websearch expects
+    websearch_engine = os.getenv("WEBSEARCH_ENGINE", "duckduckgo")
+    allowed_engines = os.getenv(
+        "ALLOWED_SEARCH_ENGINES", "duckduckgo,bing,exa"
+    )
+
+    # Open-WebSearch MCP server parameters using wrapper script
     websearch_params = StdioServerParameters(
-        command="npx",
-        args=["-y", "@open-websearch/mcp-server"],
+        command="node",
+        args=[str(WEBSEARCH_WRAPPER)],
         env={
-            "WEBSEARCH_ENGINE": websearch_engine,
-            "WEBSEARCH_MAX_RESULTS": websearch_max_results,
-            "WEBSEARCH_TIMEOUT": websearch_timeout,
+            **os.environ,  # Preserve existing environment
+            "MODE": "stdio",  # Required for MCP stdio mode
+            "DEFAULT_SEARCH_ENGINE": websearch_engine,
+            "ALLOWED_SEARCH_ENGINES": allowed_engines,
         },
     )
 
-    # Get project root directory
-    project_root = Path(__file__).parent.parent.parent
-
     # Custom time server parameters
-    time_server_path = project_root / "mcp-servers" / "time-context" / "server.py"
+    time_server_path = PROJECT_ROOT / "mcp-servers" / "time-context" / "server.py"
     time_server_params = StdioServerParameters(
         command="python",
         args=[str(time_server_path)],
     )
 
-    # For now, we'll initialize just the web search server
-    # Multi-server support will be added in later tasks
+    # Use async context managers to keep session alive
     async with stdio_client(websearch_params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            return session
+            # Yield the session to keep it alive for the caller
+            yield session
+            # Session cleanup happens automatically when context exits

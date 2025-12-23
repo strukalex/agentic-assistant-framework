@@ -3,7 +3,7 @@
 from enum import Enum
 from typing import Any, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ToolCallStatus(str, Enum):
@@ -40,8 +40,8 @@ class ToolCallRecord(BaseModel):
         ..., description="Execution status: SUCCESS, FAILED, or TIMEOUT"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "tool_name": "web_search",
                 "parameters": {"query": "capital of France", "max_results": 5},
@@ -56,6 +56,7 @@ class ToolCallRecord(BaseModel):
                 "status": "SUCCESS",
             }
         }
+    )
 
 
 class AgentResponse(BaseModel):
@@ -93,8 +94,8 @@ class AgentResponse(BaseModel):
             raise ValueError("Confidence must be between 0.0 and 1.0")
         return v
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "answer": "Paris",
                 "reasoning": "Used web_search to find 'capital of France'. Top result from Wikipedia confirmed Paris.",
@@ -116,3 +117,4 @@ class AgentResponse(BaseModel):
                 "confidence": 0.95,
             }
         }
+    )

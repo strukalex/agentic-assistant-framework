@@ -1,0 +1,16 @@
+{
+  "name": "paias",
+  "version": "0.1.0",
+  "description": "Personal AI Assistant System",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "open-websearch": "latest"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
+
