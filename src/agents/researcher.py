@@ -7,15 +7,14 @@ Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-03
 """
 
 import os
-from contextlib import asynccontextmanager
-from typing import AsyncIterator, List, Tuple
+from typing import List, Tuple
 from uuid import UUID
 
 from mcp import ClientSession
 from pydantic_ai import Agent, RunContext
 
 from src.core.memory import MemoryManager
-from src.core.telemetry import get_tracer
+from src.core.telemetry import get_tracer, trace_tool_call
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
 
@@ -119,6 +118,7 @@ Output Format: Always return a structured AgentResponse with:
 )
 
 
+@trace_tool_call
 @researcher_agent.tool
 async def search_memory(
     ctx: RunContext[MemoryManager], query: str
@@ -136,12 +136,13 @@ async def search_memory(
     """
     from src.core.config import settings
 
-    # Generate embedding for semantic search
-    # NOTE: This is a placeholder - proper embedding generation needed
-    query_embedding = _generate_simple_embedding(query, settings.vector_dimension)
-
-    # Call MemoryManager.semantic_search
-    documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
+    try:
+        # Preferred path per spec: pass raw query string
+        documents = await ctx.deps.semantic_search(query, top_k=5)
+    except Exception:
+        # Fallback for backends that expect embeddings
+        query_embedding = _generate_simple_embedding(query, settings.vector_dimension)
+        documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
 
     # Convert Document objects to dict format
     return [
@@ -150,6 +151,7 @@ async def search_memory(
     ]
 
 
+@trace_tool_call
 @researcher_agent.tool
 async def store_memory(
     ctx: RunContext[MemoryManager], content: str, metadata: dict
@@ -171,32 +173,25 @@ async def store_memory(
     return str(doc_id)
 
 
-@asynccontextmanager
 async def setup_researcher_agent(
     memory_manager: MemoryManager,
-) -> AsyncIterator[Tuple[Agent[MemoryManager, AgentResponse], ClientSession]]:
-    """Initialize ResearcherAgent with MCP tools and MemoryManager dependency.
+) -> Tuple[Agent[MemoryManager, AgentResponse], ClientSession]:
+    """Initialize ResearcherAgent with MCP tools and return (agent, mcp_session).
 
-    Args:
-        memory_manager: MemoryManager instance for dependency injection
-
-    Yields:
-        Tuple of (agent, mcp_session)
-        
-    Example:
-        async with setup_researcher_agent(memory_manager) as (agent, mcp_session):
-            result = await agent.run("What is the capital of France?", deps=memory_manager)
-            # Use agent and session...
-        # Session is automatically closed here
+    This matches the contract usage pattern in contracts/researcher-agent-api.yaml.
+    The caller is responsible for closing the MCP session when finished.
 
     Per tasks.md T107 (FR-026, FR-034)
     """
-    # Initialize MCP tools using async context manager to keep session alive
-    async with setup_mcp_tools() as mcp_session:
-        # Agent is already configured with MemoryManager as dependency type
-        # Yield the tuple to keep session alive for the caller
-        yield (researcher_agent, mcp_session)
-        # Session cleanup happens automatically when context exits
+    # Initialize MCP tools; keep session open for caller
+    # Keep reference to suppress unused-argument warnings and future-proof DI
+    _ = memory_manager
+
+    mcp_session_cm = setup_mcp_tools()
+    mcp_session = await mcp_session_cm.__aenter__()
+    # Attach context manager for optional cleanup by caller
+    setattr(mcp_session, "_close_cm", mcp_session_cm)
+    return researcher_agent, mcp_session
 
 
 # Wrapper function for instrumented agent.run() calls
@@ -238,4 +233,9 @@ async def run_agent_with_tracing(
         span.set_attribute("tool_calls_count", len(result.data.tool_calls))
 
         return result.data
+
+
+async def run_researcher_agent(task: str, deps: MemoryManager) -> AgentResponse:
+    """Convenience entrypoint to run the ResearcherAgent with tracing."""
+    return await run_agent_with_tracing(researcher_agent, task, deps)
 
