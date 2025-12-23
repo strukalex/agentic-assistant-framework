@@ -1,44 +1,52 @@
 <!--
 Sync Impact Report
 ==================
-Version Change: v2.0 → v2.1
-Amendment Date: 2025-12-21
-Amendment Type: MINOR (materially expanded UI technology guidance with phased approach)
+Version Change: v2.1 → v2.2
+Amendment Date: 2025-12-22
+Amendment Type: MINOR (added unified telemetry principle)
 
 Modified Sections:
-- Article I.F: UI Layer: Composite Strategy → User Interface Technology
-  - OLD: Mandated LibreChat for chat interaction across all phases
-  - NEW: Streamlit for Phase 1-2 (velocity), production UI (LibreChat/React) for Phase 3+ (scale)
-  - Rationale: Phase 1-2 prioritizes rapid prototyping and architecture validation; production polish deferred to Phase 3
+- Article I.H: Added explicit OpenTelemetry requirement
+  - Specified src/core/telemetry.py as single source of truth
+  - Prohibited duplicate telemetry modules (e.g., observability.py)
 
-Added Guidance:
-- Phased UI strategy: Streamlit → LibreChat/React/Windmill Native Apps
-- Decision criteria for Phase 3 UI evaluation
-- Constraint: UI must call Windmill via API (no direct agent calls)
+Added Principle:
+- Article II.H: Unified Telemetry Architecture
+  - MUST use single telemetry module (src/core/telemetry.py)
+  - Component-based tracing (memory, agent, mcp)
+  - Hierarchical span naming convention
+  - Prevents duplication and initialization conflicts
+
+Rationale:
+- Prevents duplicate OpenTelemetry setup (occurred in Spec 002)
+- Ensures consistent tracing across all components
+- Single service name with component filtering
+- Simplifies testing and exporter configuration
 
 Dependent Files Updated:
-- ✅ .specify/memory/project-context.md (Section 3: Added UI decision rationale)
-- ✅ docs/roadmap.md (Phase 1.4: Made Streamlit explicit; Phase 2.6: Updated UI deliverables; Phase 3.7: Added UI evaluation)
+- ✅ src/core/telemetry.py (enhanced with trace_agent_operation, trace_tool_call)
+- ✅ .env.example (OTEL_SERVICE_NAME: paias-agent-layer → paias)
+- ✅ docs/telemetry-refactoring.md (refactoring documentation created)
 
 Templates Requiring Updates:
-- ⚠️ .specify/templates/spec-template.md: Review if UI technology selection needs to be added to constitutional compliance checklist
-- ⚠️ .specify/templates/plan-template.md: Review if phased UI approach should be referenced in planning guidelines
+- ⚠️ .specify/templates/plan-template.md: Add telemetry architecture validation
+- ⚠️ .specify/templates/tasks-template.md: Reference unified telemetry in observability tasks
 
 Follow-Up TODOs:
 - None (all critical updates complete)
 
 Commit Message Suggestion:
-docs: amend constitution to v2.1 (phased UI strategy: Streamlit for Phase 1-2, production UI for Phase 3+)
+docs: amend constitution to v2.2 (add unified telemetry architecture principle)
 -->
 
-# Personal AI Assistant System: Project Constitution v2.1
+# Personal AI Assistant System: Project Constitution v2.2
 
 ## Executive Summary
 
 This constitution establishes the **immutable architectural rules** and **non-negotiable technology stack** for the Personal AI Assistant System (PAIAS). It serves as the persistent source of truth for all AI agents, developers, and technical decisions across the entire system lifecycle. Changes to this constitution require cross-functional review and documented rationale per Article V.
 
-**Ratification Date:** 2025-12-20  
-**Last Amended:** 2025-12-21  
+**Ratification Date:** 2025-12-20
+**Last Amended:** 2025-12-22
 **Status:** Active
 
 ---
@@ -220,7 +228,7 @@ MCP Servers: Execute actual API calls
 | **Testing** | pytest + pytest-cov | Latest | Industry standard; coverage enforcement |
 | **Linting** | Ruff + Black | Latest | Python 3.11+ compatible; 10x faster than flake8 |
 | **Async Database** | asyncpg (PostgreSQL driver) | 0.30+ | Non-blocking DB I/O; required for async agents |
-| **Observability** | OpenTelemetry + Logfire | Latest | Traces all agent decisions; integrates with Langfuse/Datadog |
+| **Observability** | OpenTelemetry + Logfire | Latest | **MUST use `src/core/telemetry.py` as single source**; traces all decisions; integrates with Langfuse/Datadog |
 | **Task Scheduling** | APScheduler | 3.10+ | Cron-style scheduling when Windmill not required |
 | **Document Loading** | Unstructured + PyPDF2 | Latest | Basic PDF/DOCX parsing; LlamaParse for complex layouts when accuracy demands it |
 | **UI (Phase 1-2)** | Streamlit | 1.30+ | Python-native rapid prototyping; native streaming support; observability dashboards |
@@ -351,6 +359,49 @@ memory.temporal_query(date_range="2024-Q4")  # Routes to PostgreSQL
 - Operational patterns have stabilized (90-day baseline established)
 
 **Until Trigger Met:** Manual tool development only.
+
+### II.H Principle: Unified Telemetry Architecture
+
+**Definition:** All observability instrumentation MUST use a single telemetry module to prevent duplication and initialization conflicts.
+
+**Implementation Requirements:**
+
+1. **Single Source of Truth:** `src/core/telemetry.py` is the ONLY module for OpenTelemetry setup
+   - MUST NOT create additional modules (e.g., `src/core/observability.py`, `src/core/tracing.py`)
+   - All telemetry decorators and setup functions live in this one file
+
+2. **Component-Based Tracing:** Use hierarchical span naming with component attribution:
+   ```
+   Service: paias (unified)
+   ├── Component: memory (trace_memory_operation)
+   ├── Component: agent (trace_agent_operation)
+   └── Component: mcp (trace_tool_call)
+   ```
+
+3. **Standard Decorators:**
+   - `@trace_memory_operation(operation_name)`: For database and memory operations
+   - `@trace_agent_operation(operation_name)`: For agent reasoning and execution
+   - `@trace_tool_call`: For MCP tool invocations
+
+4. **Consistent Attributes:** All spans MUST set:
+   - `component`: "memory" | "agent" | "mcp"
+   - `operation.type`: The operation name
+   - `operation.success`: true | false
+
+5. **Single Service Name:** Use unified service name `paias` (not `paias-memory-layer`, `paias-agent-layer`)
+   - Filter by `component` attribute in Jaeger for layer-specific traces
+   - Environment variable: `OTEL_SERVICE_NAME=paias`
+
+**Rationale:**
+- Prevents duplicate TracerProvider initialization (encountered in Spec 002)
+- Ensures consistent tracing across all system components
+- Simplifies testing (single exporter configuration)
+- Enables component-level filtering in observability tools
+
+**Enforcement:**
+- Code reviews MUST reject PRs creating duplicate telemetry modules
+- CI linting can detect multiple `TracerProvider` initializations
+- Planning documents MUST reference this principle when adding observability
 
 ---
 
@@ -528,12 +579,13 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
   - [ ] Memory: PostgreSQL with async access?
   - [ ] Tools: All via MCP (no hardcoded integrations)?
 
-- [ ] **Article II: Principles** – Respects all 7 principles?
+- [ ] **Article II: Principles** – Respects all 8 principles?
   - [ ] Vertical slice deliverable?
   - [ ] Pluggable orchestration (framework-agnostic agent code)?
   - [ ] Human-in-the-loop for irreversible actions?
   - [ ] Observable: telemetry instrumented (Article II.D)?
   - [ ] Memory abstraction (no direct DB driver imports in agents)?
+  - [ ] Unified telemetry: Uses src/core/telemetry.py only (Article II.H)?
 
 - [ ] **Article III: Standards** – Meets testing, observability, async requirements?
   - [ ] Tests: 80% coverage target enforced?
@@ -564,7 +616,7 @@ If ANY gate fails, escalate to tech lead before proceeding.
 
 ---
 
-**Ratified:** 2025-12-20  
-**Last Amended:** 2025-12-21  
-**Version:** v2.1  
+**Ratified:** 2025-12-20
+**Last Amended:** 2025-12-22
+**Version:** v2.2
 **Next Review:** When Article V.A amendment proposal submitted
