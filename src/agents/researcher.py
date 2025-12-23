@@ -6,52 +6,58 @@ time context, filesystem access, and memory integration.
 Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-031, FR-034)
 """
 
+import logging
 import os
 from typing import List, Tuple
 from uuid import UUID
 
+from dotenv import load_dotenv
 from mcp import ClientSession
 from pydantic_ai import Agent, RunContext
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.core.memory import MemoryManager
 from src.core.telemetry import get_tracer, trace_tool_call
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
 
-# Try to import AzureModel, raise clear error if not available
-try:
-    from pydantic_ai.models.azure import AzureModel
-except ImportError as e:
-    raise ImportError(
-        "pydantic-ai[azure] is required. Install with: pip install 'pydantic-ai[azure]'"
-    ) from e
-
 
 def _get_azure_model():
-    """Create AzureModel instance with DeepSeek 3.2 configuration.
+    """Create a model instance for Azure AI Foundry (Serverless/MaaS).
 
     Reads configuration from environment variables:
-    - AZURE_AI_FOUNDRY_ENDPOINT: Azure AI Foundry endpoint URL
-    - AZURE_AI_FOUNDRY_API_KEY: Azure AI Foundry API key
-
-    Per research.md RQ-001 (FR-001, FR-002)
+    - AZURE_AI_FOUNDRY_ENDPOINT: The base URL for the model (e.g., https://<...>.services.ai.azure.com/models)
+    - AZURE_AI_FOUNDRY_API_KEY: The key for the specific deployment
+    - AZURE_DEPLOYMENT_NAME: The model name (e.g., "DeepSeek-V3.2")
     """
+    load_dotenv()
+
     endpoint = os.getenv("AZURE_AI_FOUNDRY_ENDPOINT")
     api_key = os.getenv("AZURE_AI_FOUNDRY_API_KEY")
+    model_name = os.getenv("AZURE_DEPLOYMENT_NAME", "DeepSeek-V3.2")
 
     if not endpoint:
-        raise ValueError(
-            "AZURE_AI_FOUNDRY_ENDPOINT environment variable is required"
-        )
+        raise ValueError("AZURE_AI_FOUNDRY_ENDPOINT environment variable is required")
     if not api_key:
-        raise ValueError(
-            "AZURE_AI_FOUNDRY_API_KEY environment variable is required"
-        )
+        raise ValueError("AZURE_AI_FOUNDRY_API_KEY environment variable is required")
 
-    return AzureModel(
-        model_name="deepseek-v3",
-        endpoint=endpoint,
+    # Normalize the base URL for serverless endpoints.
+    base_url = endpoint
+    if "/chat/completions" in base_url:
+        base_url = base_url.split("/chat/completions")[0]
+
+    if "services.ai.azure.com" in base_url and not base_url.endswith("/models"):
+        base_url = f"{base_url.rstrip('/')}/models"
+
+    provider = OpenAIProvider(
+        base_url=base_url,
         api_key=api_key,
+    )
+
+    return OpenAIModel(
+        model_name,
+        provider=provider,
     )
 
 
@@ -93,7 +99,7 @@ model = _get_azure_model()
 
 researcher_agent = Agent[MemoryManager, AgentResponse](
     model=model,
-    result_type=AgentResponse,
+    output_type=AgentResponse,
     retries=2,
     system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
 
@@ -219,6 +225,7 @@ async def run_agent_with_tracing(
 
     Per tasks.md T108 (FR-031)
     """
+    logger = logging.getLogger(__name__)
     tracer = get_tracer("agent")
 
     with tracer.start_as_current_span("agent_run") as span:
@@ -227,12 +234,33 @@ async def run_agent_with_tracing(
 
         # Execute agent.run()
         result = await agent.run(task, deps=deps)
+        logger.info(
+            "agent.run result type=%s dict=%s repr=%r",
+            type(result),
+            getattr(result, "__dict__", {}),
+            result,
+        )
+
+        # Normalize payload shape across pydantic-ai versions
+        payload = getattr(result, "data", None)
+        if payload is None:
+            payload = getattr(result, "output", None)
+        if payload is None:
+            logger.error(
+                "Unexpected agent.run result shape; has no .data/.output. attrs=%s",
+                dir(result),
+            )
+            raise AttributeError("agent.run result missing data/output")
 
         # Set result attributes
-        span.set_attribute("confidence_score", result.data.confidence)
-        span.set_attribute("tool_calls_count", len(result.data.tool_calls))
+        span.set_attribute(
+            "confidence_score", getattr(payload, "confidence", None)
+        )
+        span.set_attribute(
+            "tool_calls_count", len(getattr(payload, "tool_calls", []))
+        )
 
-        return result.data
+        return payload
 
 
 async def run_researcher_agent(task: str, deps: MemoryManager) -> AgentResponse:
