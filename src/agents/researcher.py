@@ -189,14 +189,21 @@ async def setup_researcher_agent(
 
     Per tasks.md T107 (FR-026, FR-034)
     """
+    logger = logging.getLogger(__name__)
+    logger.info("🤖 Setting up ResearcherAgent...")
+
     # Initialize MCP tools; keep session open for caller
     # Keep reference to suppress unused-argument warnings and future-proof DI
     _ = memory_manager
 
+    logger.info("🔧 Initializing MCP tools...")
     mcp_session_cm = setup_mcp_tools()
     mcp_session = await mcp_session_cm.__aenter__()
+    logger.info("✅ MCP tools initialized")
+
     # Attach context manager for optional cleanup by caller
     setattr(mcp_session, "_close_cm", mcp_session_cm)
+    logger.info("✅ ResearcherAgent setup complete")
     return researcher_agent, mcp_session
 
 
@@ -228,12 +235,15 @@ async def run_agent_with_tracing(
     logger = logging.getLogger(__name__)
     tracer = get_tracer("agent")
 
+    logger.info("🚀 Starting agent execution for task: %s", task)
     with tracer.start_as_current_span("agent_run") as span:
         span.set_attribute("task_description", task)
         span.set_attribute("result_type", "AgentResponse")
 
         # Execute agent.run()
+        logger.info("🔄 Calling agent.run()...")
         result = await agent.run(task, deps=deps)
+        logger.info("✅ agent.run() completed")
         logger.info(
             "agent.run result type=%s dict=%s repr=%r",
             type(result),
@@ -242,6 +252,7 @@ async def run_agent_with_tracing(
         )
 
         # Normalize payload shape across pydantic-ai versions
+        logger.info("🔍 Extracting payload from result...")
         payload = getattr(result, "data", None)
         if payload is None:
             payload = getattr(result, "output", None)
@@ -252,6 +263,8 @@ async def run_agent_with_tracing(
             )
             raise AttributeError("agent.run result missing data/output")
 
+        logger.info("✅ Payload extracted successfully")
+
         # Set result attributes
         span.set_attribute(
             "confidence_score", getattr(payload, "confidence", None)
@@ -259,6 +272,10 @@ async def run_agent_with_tracing(
         span.set_attribute(
             "tool_calls_count", len(getattr(payload, "tool_calls", []))
         )
+
+        logger.info("✅ Agent execution complete - confidence: %.2f, tool_calls: %d",
+                   getattr(payload, "confidence", 0.0),
+                   len(getattr(payload, "tool_calls", [])))
 
         return payload
 

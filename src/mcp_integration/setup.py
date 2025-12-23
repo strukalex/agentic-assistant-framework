@@ -38,6 +38,10 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
 
     Note: Requires 'npm install' to be run first to install open-websearch dependency.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    logger.info("🔧 Validating Node.js version...")
     # Validate Node.js version (open-websearch requires Node 20+; prefer 24+)
     node_version = subprocess.run(
         ["node", "-v"], capture_output=True, text=True
@@ -52,20 +56,25 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
             f"Node.js 20+ required for Open-WebSearch MCP server. Detected: {node_version}. "
             "Run `nvm use 24` (or upgrade Node) and reinstall npm deps."
         )
+    logger.info(f"✅ Node.js version: {node_version}")
 
     # Check if embedded binary exists
+    logger.info("🔧 Checking for open-websearch binary...")
     if not NODE_OPEN_WEBSEARCH.exists():
         raise RuntimeError(
             f"Open-WebSearch MCP server not found at {NODE_OPEN_WEBSEARCH}. "
             "Please run 'npm install' to install dependencies."
         )
-    
+    logger.info(f"✅ Found open-websearch at {NODE_OPEN_WEBSEARCH}")
+
     # Check if wrapper script exists
+    logger.info("🔧 Checking for wrapper script...")
     if not WEBSEARCH_WRAPPER.exists():
         raise RuntimeError(
             f"Wrapper script not found at {WEBSEARCH_WRAPPER}. "
             "The wrapper is required to filter stdout for MCP protocol compliance."
         )
+    logger.info(f"✅ Found wrapper script at {WEBSEARCH_WRAPPER}")
 
     # Environment variables for web search configuration
     # Use environment variable names that open-websearch expects
@@ -73,6 +82,7 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
     allowed_engines = os.getenv(
         "ALLOWED_SEARCH_ENGINES", "duckduckgo,bing,exa"
     )
+    logger.info(f"🔧 Search engine: {websearch_engine}, allowed: {allowed_engines}")
 
     # Open-WebSearch MCP server parameters using wrapper script
     websearch_params = StdioServerParameters(
@@ -94,9 +104,15 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
     )
 
     # Use async context managers to keep session alive
+    logger.info("🔌 Connecting to MCP server via stdio...")
     async with stdio_client(websearch_params) as (read, write):
+        logger.info("✅ STDIO client connected")
+        logger.info("🔧 Creating client session...")
         async with ClientSession(read, write) as session:
+            logger.info("🔧 Initializing MCP session...")
             await session.initialize()
+            logger.info("✅ MCP session initialized successfully")
             # Yield the session to keep it alive for the caller
             yield session
             # Session cleanup happens automatically when context exits
+            logger.info("🧹 Cleaning up MCP session...")

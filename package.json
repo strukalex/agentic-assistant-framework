@@ -6,7 +6,8 @@
   "scripts": {
     "reset": "bash scripts/reset_dev_env.sh",
     "test:py": "bash scripts/run_pytest.sh",
-    "test": "npm run test:py"
+    "test": "npm run test:py",
+    "test:agent": "python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py"
   },
   "dependencies": {
     "open-websearch": "latest"
