@@ -71,8 +71,8 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 - [X] T011 [P] Create ToolGapReport Pydantic model in src/models/tool_gap_report.py with fields: missing_tools (List[str], min_items=1), attempted_task (str, min_length=1), existing_tools_checked (List[str]) per data-model.md (FR-013)
 - [X] T012 Implement categorize_action_risk(tool_name: str, parameters: dict) -> RiskLevel function in src/core/risk_assessment.py using TOOL_RISK_MAP with parameter inspection for sensitive file paths per research.md RQ-006 (FR-015 to FR-019)
 - [X] T013 Implement requires_approval(action: RiskLevel, confidence: float) -> bool function in src/core/risk_assessment.py: return True for IRREVERSIBLE always, True for REVERSIBLE_WITH_DELAY if confidence < 0.85, False for REVERSIBLE per research.md RQ-006 (FR-020 to FR-023)
-- [X] T014 Setup OpenTelemetry tracing infrastructure in src/core/observability.py: configure TracerProvider, BatchSpanProcessor, OTLPSpanExporter with endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var, service name "paias-agent-layer" per research.md RQ-004 (FR-029, FR-032)
-- [X] T015 Implement @trace_tool_call decorator in src/core/observability.py: create span with name "mcp_tool_call:{func_name}", set attributes tool_name, parameters, result_count, handle errors with span.set_status(ERROR) per research.md RQ-004 (FR-030)
+- [X] T014 Setup OpenTelemetry tracing infrastructure in src/core/telemetry.py: configure TracerProvider, BatchSpanProcessor, OTLPSpanExporter with endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var, service name from OTEL_SERVICE_NAME env var per research.md RQ-004 (FR-029, FR-032). Note: Uses unified telemetry module per Constitution Article II.H
+- [X] T015 Implement @trace_tool_call decorator in src/core/telemetry.py: create span with name "mcp.tool_call.{func_name}", set attributes tool_name, parameters, result_count, handle errors with span.record_exception() per research.md RQ-004 (FR-030). Note: Uses unified telemetry module per Constitution Article II.H
 - [X] T016 Implement custom MCP time server in mcp-servers/time-context/server.py: create Python-based MCP server with get_current_time(timezone: str = 'UTC') tool returning dict with timestamp (ISO 8601), timezone, unix_epoch per plan.md structure (FR-008)
 - [X] T017 Implement setup_mcp_tools() async function in src/mcp_integration/setup.py: initialize 3 MCP servers using StdioServerParameters (Open-WebSearch via "npx -y @open-websearch/mcp-server", mcp-server-filesystem read-only, custom time server), return ClientSession per research.md RQ-002 (FR-005)
 
@@ -193,15 +193,15 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 5 (REQUIRED) ⚠️
 
-- [ ] T500 [P] [US5] Write integration test in tests/integration/test_observability.py to verify OpenTelemetry exporter is configured with OTLP endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var (FR-029, FR-032)
-- [ ] T501 [P] [US5] Write integration test in tests/integration/test_observability.py to verify all MCP tool invocations create trace spans with attributes: tool_name, parameters (serialized), result_count, execution_duration_ms (FR-030)
-- [ ] T502 [P] [US5] Write integration test in tests/integration/test_observability.py to verify agent.run() calls create trace spans with attributes: confidence_score, tool_calls_count, task_description, result_type (FR-031)
-- [ ] T503 [P] [US5] Write unit test in tests/unit/test_observability.py to verify @trace_tool_call decorator correctly creates spans and handles errors by setting span status to ERROR with error details
+- [ ] T500 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify OpenTelemetry exporter is configured with OTLP endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var (FR-029, FR-032). Note: Tests unified telemetry module per Constitution Article II.H
+- [ ] T501 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify all MCP tool invocations create trace spans with attributes: tool_name, parameters (serialized), result_count, execution_duration_ms (FR-030)
+- [ ] T502 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify agent.run() calls create trace spans with attributes: confidence_score, tool_calls_count, task_description, result_type (FR-031)
+- [ ] T503 [P] [US5] Write unit test in tests/unit/test_telemetry.py to verify @trace_tool_call decorator correctly creates spans and handles errors by setting span status to ERROR with error details
 
 ### Implementation for User Story 5
 
-- [ ] T504 [US5] Enhance @trace_tool_call decorator in src/core/observability.py to capture execution_duration_ms by measuring time before/after tool invocation
-- [ ] T505 [US5] Add span attributes for error handling in src/core/observability.py @trace_tool_call decorator: capture error_type, error_message when tool execution fails or times out
+- [ ] T504 [US5] Enhance @trace_tool_call decorator in src/core/telemetry.py to capture execution_duration_ms by measuring time before/after tool invocation
+- [ ] T505 [US5] Add span attributes for error handling in src/core/telemetry.py @trace_tool_call decorator: capture error_type, error_message when tool execution fails or times out (Note: error_type and error_message already captured via span.record_exception(), verify implementation)
 - [ ] T506 [US5] Verify all agent.run() spans in src/agents/researcher.py include complete set of attributes: confidence_score from result.confidence, tool_calls_count from len(result.tool_calls), task_description from input query
 - [ ] T507 [US5] Add parent-child span linking in src/agents/researcher.py: ensure all mcp_tool_call spans are children of agent_run span for trace hierarchy visualization in Jaeger
 

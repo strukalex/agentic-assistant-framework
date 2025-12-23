@@ -129,7 +129,7 @@
 
 **Question**: How to instrument async Pydantic AI agents with OpenTelemetry for full observability?
 
-**Decision**: Use `opentelemetry-api` with custom decorators and manual span management
+**Decision**: Use `opentelemetry-api` with custom decorators and manual span management via unified `src/core/telemetry.py` module (per Constitution Article II.H)
 
 **Rationale**:
 - Pattern for instrumenting tool calls:
@@ -183,9 +183,12 @@
 - Auto-instrumentation: Rejected because Pydantic AI is too new for auto-instrumentation support
 - Logfire integration: Deferred to Phase 2 (Pydantic AI has native Logfire support but adds complexity)
 
+**Implementation Note**: All telemetry functionality is implemented in `src/core/telemetry.py` (unified module per Constitution Article II.H). Use `get_tracer()`, `trace_tool_call()`, and `trace_agent_operation()` from this module.
+
 **References**:
 - OpenTelemetry Python: https://opentelemetry.io/docs/languages/python/
 - OTLP exporter: https://opentelemetry-python.readthedocs.io/en/latest/exporter/otlp/otlp.html
+- Constitution Article II.H: Unified Telemetry Architecture
 
 ---
 

@@ -14,7 +14,7 @@ from mcp import ClientSession
 from pydantic_ai import Agent, RunContext
 
 from src.core.memory import MemoryManager
-from src.core.observability import get_tracer, trace_tool_call
+from src.core.telemetry import get_tracer
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
 

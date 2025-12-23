@@ -99,7 +99,7 @@ src/
 │   ├── __init__.py
 │   ├── tool_gap_detector.py    # ToolGapDetector class
 │   ├── risk_assessment.py      # categorize_action_risk(), requires_approval()
-│   └── observability.py        # @trace_tool_call decorator, OpenTelemetry setup
+│   └── telemetry.py            # @trace_tool_call decorator, OpenTelemetry setup (unified per Constitution Article II.H)
 ├── mcp_integration/
 │   ├── __init__.py
 │   ├── setup.py                # setup_mcp_tools() function
@@ -120,7 +120,7 @@ tests/
 │   ├── test_researcher_agent.py        # FR-003, FR-034 validation
 │   ├── test_tool_gap_detector.py       # FR-009 to FR-014 validation
 │   ├── test_risk_assessment.py         # FR-015 to FR-023 validation
-│   └── test_observability.py           # FR-030, FR-031 validation
+│   └── test_telemetry.py               # FR-030, FR-031 validation (tests unified telemetry module)
 ├── integration/
 │   ├── test_mcp_tools.py               # FR-005 to FR-008 validation
 │   └── test_memory_integration.py      # FR-024 to FR-026 validation
