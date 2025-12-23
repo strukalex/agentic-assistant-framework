@@ -83,6 +83,9 @@ Use the helper to avoid manually exporting `PYTHONPATH` and to auto-activate `ve
 # npm wrappers (PYTHONPATH handled by the script)
 npm test              # alias to npm run test:py
 npm run test:py -q tests/integration
+
+# Test the ResearcherAgent with MCP tools
+npm run test:agent "What is the capital of France?"
 ```
 
 If you want to run pytest directly, set `PYTHONPATH` first:
