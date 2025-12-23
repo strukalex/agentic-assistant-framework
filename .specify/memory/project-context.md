@@ -4,18 +4,18 @@
 **Current Phase**: Phase 1 — Foundation / Vertical Slice  
 **Phase Intent**: Deliver an end-to-end slice (UI → Workflow → Agent → Memory) to prove the architecture works and delivers value. 
 **Governed By**: `constitution.md` v2.1. 
-**Date**: 2025-12-21
+**Date**: 2025-12-22
 
 ---
 
 ## 1. Current Status (Where We Are Now)
 
-We are executing **Phase 1 (Foundation)**.  The primary goal is to build the first "vertical slice" of the system, demonstrating a complete, working loop from user input to a useful, automated output.
+Phase 1 core memory layer is implemented and passing tests (async SQLModel + asyncpg + pgvector, OpenTelemetry tracing). Docker Compose (PostgreSQL 15 + Jaeger) is required for local runs and tests; coverage gate enforced at 80%.
 
-- **Orchestration**: Windmill is being deployed as the primary orchestrator for a simple DAG (Directed Acyclic Graph) workflow. 
-- **Reasoning**: LangGraph will be used as a library *inside* a Windmill step to handle a research task that requires a retry/refine loop. 
-- **Agent**: The first agent, `ResearcherAgent`, is being built using Pydantic AI. 
-- **Memory**: A PostgreSQL database with the `pgvector` extension is being set up to store conversation history and initial document embeddings. 
+- **Orchestration**: Windmill as primary orchestrator for simple DAG; LangGraph embedded in Windmill step for retry/refine loops. 
+- **Reasoning**: LangGraph inside Windmill; Pydantic AI for agent capabilities. 
+- **Agent**: `ResearcherAgent` built with Pydantic AI. 
+- **Memory**: PostgreSQL + pgvector running via Docker Compose; Alembic migrations in place.
 
 ---
 
@@ -35,25 +35,22 @@ All work must strictly adhere to the project constitution. Key principles includ
 
 ## 3. Key Decisions & Rationale (Log)
 
-This section records *why* decisions were made, providing context for future phases.
+This section records *why* decisions were made, providing context for future phases. Items marked 🟢 are now implemented/validated in Phase 1.
 
-- **Decision (Orchestration)**: **Windmill + LangGraph** was chosen over a single framework.
-  - **Rationale**: Windmill provides enterprise-grade DAG orchestration, scheduling, and observability, while LangGraph excels at the complex, cyclical reasoning needed for agentic loops. This hybrid model provides the best of both worlds. 
+- **Decision (Orchestration)**: **Windmill + LangGraph** was chosen over a single framework. 🟢 validated via workflow plan; implementation remains planned for later slices.
+  - **Rationale**: Windmill provides enterprise-grade DAG orchestration, scheduling, and observability, while LangGraph excels at complex, cyclical reasoning needed for agentic loops. 
 
-- **Decision (Memory)**: **PostgreSQL with pgvector** was chosen for Phase 1-2 instead of a dedicated vector database.
-  - **Rationale**: This simplifies the initial architecture to a single, reliable datastore. It is sufficient for initial semantic search needs and avoids the premature complexity of a multi-store setup. A migration path to specialized stores is defined in the constitution for when scale demands it. 
+- **Decision (Memory)**: **PostgreSQL with pgvector** for Phase 1-2. 🟢 implemented with Alembic migration `001_initial_schema`.
+  - **Rationale**: Single reliable datastore, sufficient for semantic search; avoids premature multi-store complexity.
+  - **Operational note**: Migration fixes `Vector(1536)` with HNSW (`m=16`, `ef_construction=64`) and GIN indexes on JSONB metadata. Changing `vector_dimension` now requires a new migration to keep schema and settings aligned.
+  - **ADR**: See `docs/adr/0001-memory-layer.md` for stack, tracing defaults, and migration constraints.
 
-- **Decision (Agents)**: **Pydantic AI** was selected as the agent building block.
-  - **Rationale**: It enforces type safety, is model-agnostic, and is natively compatible with MCP. It defines the "atomic unit" of capability, separating the agent's logic from the system's orchestration layer. 
+- **Decision (Agents)**: **Pydantic AI** for agent capabilities. 🟢 adopted.
+  - **Rationale**: Type safety, model-agnostic, MCP-friendly separation between capabilities and orchestration. 
 
-- **Decision (UI)**: **Streamlit** was chosen for Phase 1-2 instead of LibreChat or Windmill Native Apps.
-  - **Rationale**: 
-    - Python-native: No JavaScript build chain required for Phase 1 velocity
-    - Streaming-ready: Native `st.write_stream` handles token-by-token output with zero complexity
-    - Decoupled: Forces us to build a clean API contract between UI and Windmill workflows, proving the backend is truly headless
-    - Observability-friendly: Easy to render OpenTelemetry logs and Windmill step updates in real-time sidebars
-  - **Trade-off**: Streamlit is not production-grade for multi-user scenarios (lacks robust auth, session isolation). Migration to React/Next.js or LibreChat planned for Phase 3 when multi-user demand justifies the investment.
-  - **Constitutional Reference**: Added as Article I.F (User Interface Technology)
+- **Decision (UI)**: **Streamlit** for Phase 1-2. 
+  - **Rationale**: Python-native, streaming-friendly, enforces headless API boundary, easy to surface OTel/Windmill updates.
+  - **Trade-off**: Not production-grade for multi-user; migration to React/Next.js or LibreChat planned for Phase 3. 
 
 ---
 
@@ -62,9 +59,18 @@ This section records *why* decisions were made, providing context for future pha
 - **Flagship Workflow**: What is the definitive "DailyTrendingResearch" workflow for the Phase 1 demo? What specific sources will it use, and what is the exact output format?
 - **Risk Categories**: What is the initial, concrete list of "reversible," "reversible-with-delay," and "irreversible" actions for the Human-in-the-Loop policy?
 - **Tooling**: Which three MCP servers will be implemented first to support the flagship workflow? (e.g., `@web_search`, `@filesystem`, `@email`). 
+- **UI path**: Confirm when to transition from Streamlit to production UI (React/Next.js or LibreChat) based on Phase 1 learnings.
 
 ---
 
-## 5. Next Review Cycle
+## 5. Operational Notes from Implementation
+
+- **Memory API**: `store_message` auto-creates sessions with `user_id="auto-created"` when missing; `get_conversation_history` returns chronological order by reversing a DESC query to keep indexes efficient. Content and roles are validated before writes; metadata stored as JSONB. 
+- **Semantic search & filters**: `semantic_search` performs cosine ordering on `embedding`, supports metadata/date filters, and records timing metrics; `temporal_query` validates date ranges and applies metadata filters.
+- **Tracing**: All MemoryManager methods wrap in `@trace_memory_operation`, setting `operation.type`, `operation.success`, `db.system=postgresql`, and recording exceptions. Default OTLP gRPC exporter; `otel_exporter_otlp_endpoint="memory"` switches tests to an in-memory exporter. Sampling is 100%.
+- **Health check**: Queries Postgres version and pgvector extension version; returns `{"status": "healthy", ...}` and records span attributes.
+- **Dependencies**: Docker Compose services (PostgreSQL 15 + pgvector, Jaeger) must be running for integration tests; coverage gate set at 80% in pytest config. 
+
+## 6. Next Review Cycle
 
 A formal review of this context and Phase 1 progress will occur upon the successful completion of the first end-to-end workflow run.

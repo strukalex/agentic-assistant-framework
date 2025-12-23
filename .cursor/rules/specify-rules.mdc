@@ -1,0 +1,29 @@
+# agentic-assistant-framework Development Guidelines
+
+Auto-generated from all feature plans. Last updated: 2025-12-21
+
+## Active Technologies
+
+- Python 3.11+ *(non-negotiable; see Constitution Article I.A)* + SQLModel 0.0.14+, asyncpg 0.30+, Pydantic 2.0+, opentelemetry-sdk 1.20+, opentelemetry-exporter-otlp 1.20+, alembic 1.13+ *(Article I.H)* (001-core-memory-layer)
+
+## Project Structure
+
+```text
+src/
+tests/
+```
+
+## Commands
+
+cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+
+## Code Style
+
+Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard conventions
+
+## Recent Changes
+
+- 001-core-memory-layer: Added Python 3.11+ *(non-negotiable; see Constitution Article I.A)* + SQLModel 0.0.14+, asyncpg 0.30+, Pydantic 2.0+, opentelemetry-sdk 1.20+, opentelemetry-exporter-otlp 1.20+, alembic 1.13+ *(Article I.H)*
+
+<!-- MANUAL ADDITIONS START -->
+<!-- MANUAL ADDITIONS END -->

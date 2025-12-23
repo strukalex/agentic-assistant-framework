@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=70.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "paias"
+version = "0.1.0"
+description = "Personal AI Assistant System - Phase 1 vertical slice"
+authors = [{ name = "PAIAS Team" }]
+requires-python = ">=3.11"
+dependencies = [
+  "sqlmodel>=0.0.24",
+  "asyncpg>=0.30",
+  "pydantic>=2.0",
+  "pydantic-settings>=2.0",
+  "pgvector>=0.3.0",
+  "opentelemetry-sdk>=1.39.1",
+  "opentelemetry-exporter-otlp>=1.39.1",
+  "alembic>=1.14",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.13.0",
+  "black>=24.10.0",
+  "mypy>=1.10.0",
+  "pytest>=7.0",
+  "pytest-asyncio>=1.2.0",
+  "pytest-cov>=4.0",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = "--cov=src --cov-fail-under=80"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+skip-string-normalization = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "I",
+  "B",
+]
+ignore = []
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+no_implicit_optional = true
+strict_equality = true
+show_error_codes = true
+pretty = true
+mypy_path = "src"
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["pgvector.*"]
+ignore_missing_imports = true
+
