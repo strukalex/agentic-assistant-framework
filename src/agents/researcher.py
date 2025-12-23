@@ -20,8 +20,10 @@ from pydantic_ai.providers.openai import OpenAIProvider
 
 from src.core.memory import MemoryManager
 from src.core.telemetry import get_tracer, trace_tool_call
+from src.core.tool_gap_detector import ToolGapDetector
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
+from src.models.tool_gap_report import ToolGapReport
 
 
 def _get_azure_model():
@@ -293,29 +295,31 @@ async def _register_mcp_tools(
 
 
 # Wrapper function for instrumented agent.run() calls
-# Per tasks.md T108 (FR-031)
+# Per tasks.md T108 (FR-031), T210 (Tool Gap Detection Integration)
 async def run_agent_with_tracing(
     agent: Agent[MemoryManager, AgentResponse],
     task: str,
     deps: MemoryManager,
-) -> AgentResponse:
-    """Execute agent.run() with OpenTelemetry tracing.
+    mcp_session: ClientSession = None,
+) -> AgentResponse | ToolGapReport:
+    """Execute agent.run() with OpenTelemetry tracing and tool gap detection.
 
     Creates span "agent_run" with attributes:
     - confidence_score: From result.confidence
     - tool_calls_count: From len(result.tool_calls)
     - task_description: From input query
-    - result_type: "AgentResponse"
+    - result_type: "AgentResponse" or "ToolGapReport"
 
     Args:
         agent: ResearcherAgent instance
         task: User query/task description
         deps: MemoryManager dependency
+        mcp_session: Optional MCP session for tool gap detection
 
     Returns:
-        AgentResponse from agent execution
+        AgentResponse from agent execution, or ToolGapReport if missing tools detected
 
-    Per tasks.md T108 (FR-031)
+    Per tasks.md T108 (FR-031), T210 (FR-009 to FR-014)
     """
     logger = logging.getLogger(__name__)
     tracer = get_tracer("agent")
@@ -325,7 +329,33 @@ async def run_agent_with_tracing(
         span.set_attribute("task_description", task)
         span.set_attribute("result_type", "AgentResponse")
 
-        # Execute agent.run()
+        # Phase 1: Tool Gap Detection (if MCP session available)
+        # Per tasks.md T210: Before executing task, check for missing capabilities
+        if mcp_session is not None:
+            logger.info("🔍 Checking for tool capability gaps...")
+            detector = ToolGapDetector(mcp_session=mcp_session)
+
+            try:
+                gap_report = await detector.detect_missing_tools(task)
+                if gap_report is not None:
+                    logger.warning("⚠️ Tool gap detected: %s", gap_report.missing_tools)
+                    span.set_attribute("result_type", "ToolGapReport")
+                    span.set_attribute("gap_detected", True)
+                    span.set_attribute("missing_tools", str(gap_report.missing_tools))
+
+                    # Return gap report instead of attempting execution
+                    # This prevents hallucinated responses when tools are missing
+                    return gap_report
+                else:
+                    logger.info("✅ All required tools available, proceeding with execution")
+                    span.set_attribute("gap_detected", False)
+            except Exception as e:
+                # Log warning but proceed with execution
+                # (Tool gap detection failure shouldn't block legitimate queries)
+                logger.warning("⚠️ Tool gap detection failed: %s. Proceeding with execution.", str(e))
+                span.set_attribute("gap_detection_error", str(e))
+
+        # Phase 2: Execute agent.run()
         logger.info("🔄 Calling agent.run()...")
         result = await agent.run(task, deps=deps)
         logger.info("✅ agent.run() completed")
@@ -365,11 +395,11 @@ async def run_agent_with_tracing(
         return payload
 
 
-async def run_researcher_agent(task: str, deps: MemoryManager) -> AgentResponse:
+async def run_researcher_agent(task: str, deps: MemoryManager) -> AgentResponse | ToolGapReport:
     """Convenience entrypoint: create agent with MCP tools, run it, then clean up."""
     agent, mcp_session = await setup_researcher_agent(deps)
     try:
-        return await run_agent_with_tracing(agent, task, deps)
+        return await run_agent_with_tracing(agent, task, deps, mcp_session)
     finally:
         await _shutdown_session(mcp_session)
 

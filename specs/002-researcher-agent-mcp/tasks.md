@@ -116,20 +116,20 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T200 [P] [US2] Write contract test in tests/contract/test_agent_api_contract.py to validate ToolGapDetector.detect_missing_tools() returns ToolGapReport schema matching contracts/researcher-agent-api.yaml when capability gap exists
-- [ ] T201 [P] [US2] Write unit test in tests/unit/test_tool_gap_detector.py to verify detect_missing_tools() returns ToolGapReport with missing_tools populated when task requires unavailable tool (e.g., financial API) (FR-009, FR-011, FR-012, FR-013)
-- [ ] T202 [P] [US2] Write unit test in tests/unit/test_tool_gap_detector.py to verify detect_missing_tools() returns None when all required capabilities are available via existing MCP tools (FR-014)
-- [ ] T203 [P] [US2] Write integration test in tests/integration/test_tool_gap_detection.py to verify end-to-end gap detection: submit task requiring missing tool, verify agent calls ToolGapDetector and returns ToolGapReport without attempting hallucinated execution
+- [X] T200 [P] [US2] Write contract test in tests/contract/test_agent_api_contract.py to validate ToolGapDetector.detect_missing_tools() returns ToolGapReport schema matching contracts/researcher-agent-api.yaml when capability gap exists
+- [X] T201 [P] [US2] Write unit test in tests/unit/test_tool_gap_detector.py to verify detect_missing_tools() returns ToolGapReport with missing_tools populated when task requires unavailable tool (e.g., financial API) (FR-009, FR-011, FR-012, FR-013)
+- [X] T202 [P] [US2] Write unit test in tests/unit/test_tool_gap_detector.py to verify detect_missing_tools() returns None when all required capabilities are available via existing MCP tools (FR-014)
+- [X] T203 [P] [US2] Write integration test in tests/integration/test_tool_gap_detection.py to verify end-to-end gap detection: submit task requiring missing tool, verify agent calls ToolGapDetector and returns ToolGapReport without attempting hallucinated execution
 
 ### Implementation for User Story 2
 
-- [ ] T204 [P] [US2] Implement ToolGapDetector class in src/core/tool_gap_detector.py with __init__(mcp_session: ClientSession) storing session reference per research.md RQ-005 (FR-009)
-- [ ] T205 [US2] Implement ToolGapDetector.detect_missing_tools(task_description: str) -> Optional[ToolGapReport] method: call mcp_session.list_tools() to get available tools, store in self.available_tools if None per research.md RQ-005 (FR-010)
-- [ ] T206 [US2] Implement capability extraction in ToolGapDetector.detect_missing_tools() using DeepSeek 3.2 LLM: send prompt to extract required capabilities from task_description as JSON array of capability names per research.md RQ-005 (FR-011)
-- [ ] T207 [US2] Implement schema matching in ToolGapDetector.detect_missing_tools(): compare extracted required capabilities against available MCP tool names, identify missing tools per research.md RQ-005 (FR-012)
-- [ ] T208 [US2] Return ToolGapReport in ToolGapDetector.detect_missing_tools() when capability gaps detected: populate missing_tools, attempted_task (copy of task_description), existing_tools_checked (list of available tool names) per research.md RQ-005 (FR-013)
-- [ ] T209 [US2] Return None in ToolGapDetector.detect_missing_tools() when all required capabilities available in MCP tools (no gaps) per research.md RQ-005 (FR-014)
-- [ ] T210 [US2] Integrate ToolGapDetector into ResearcherAgent workflow in src/agents/researcher.py: before executing task, call detector.detect_missing_tools(), if ToolGapReport returned, return it to user instead of attempting execution
+- [X] T204 [P] [US2] Implement ToolGapDetector class in src/core/tool_gap_detector.py with __init__(mcp_session: ClientSession) storing session reference per research.md RQ-005 (FR-009)
+- [X] T205 [US2] Implement ToolGapDetector.detect_missing_tools(task_description: str) -> Optional[ToolGapReport] method: call mcp_session.list_tools() to get available tools, store in self.available_tools if None per research.md RQ-005 (FR-010)
+- [X] T206 [US2] Implement capability extraction in ToolGapDetector.detect_missing_tools() using DeepSeek 3.2 LLM: send prompt to extract required capabilities from task_description as JSON array of capability names per research.md RQ-005 (FR-011)
+- [X] T207 [US2] Implement schema matching in ToolGapDetector.detect_missing_tools(): compare extracted required capabilities against available MCP tool names, identify missing tools per research.md RQ-005 (FR-012)
+- [X] T208 [US2] Return ToolGapReport in ToolGapDetector.detect_missing_tools() when capability gaps detected: populate missing_tools, attempted_task (copy of task_description), existing_tools_checked (list of available tool names) per research.md RQ-005 (FR-013)
+- [X] T209 [US2] Return None in ToolGapDetector.detect_missing_tools() when all required capabilities available in MCP tools (no gaps) per research.md RQ-005 (FR-014)
+- [X] T210 [US2] Integrate ToolGapDetector into ResearcherAgent workflow in src/agents/researcher.py: before executing task, call detector.detect_missing_tools(), if ToolGapReport returned, return it to user instead of attempting execution
 
 **Checkpoint**: At this point, User Story 2 should be fully functional - agent detects and reports tool capability gaps honestly, preventing hallucinated execution
 

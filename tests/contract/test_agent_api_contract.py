@@ -11,6 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
+from src.models.tool_gap_report import ToolGapReport
 
 
 class TestAgentResponseContract:
@@ -170,3 +171,67 @@ class TestAgentResponseContract:
             )
 
         assert "tool_name" in str(exc_info.value)
+
+
+class TestToolGapReportContract:
+    """Validate ToolGapReport schema matches OpenAPI contract.
+
+    Per Spec 002 tasks.md T200 (FR-009 to FR-014, SC-003)
+    """
+
+    def test_tool_gap_report_schema_valid(self):
+        """Test that valid ToolGapReport passes validation."""
+        report = ToolGapReport(
+            missing_tools=["financial_data_api", "account_access"],
+            attempted_task="Retrieve my stock portfolio performance for Q3 2024",
+            existing_tools_checked=["web_search", "read_file", "get_current_time", "search_memory"],
+        )
+
+        # Validate all required fields are present
+        assert len(report.missing_tools) == 2
+        assert "financial_data_api" in report.missing_tools
+        assert report.attempted_task == "Retrieve my stock portfolio performance for Q3 2024"
+        assert len(report.existing_tools_checked) == 4
+
+    def test_tool_gap_report_empty_missing_tools_invalid(self):
+        """Test that empty missing_tools list fails validation."""
+        with pytest.raises(ValidationError) as exc_info:
+            ToolGapReport(
+                missing_tools=[],  # Invalid: must have at least 1 item
+                attempted_task="Some task",
+                existing_tools_checked=["web_search"],
+            )
+
+        assert "missing_tools" in str(exc_info.value)
+
+    def test_tool_gap_report_empty_attempted_task_invalid(self):
+        """Test that empty attempted_task fails validation."""
+        with pytest.raises(ValidationError) as exc_info:
+            ToolGapReport(
+                missing_tools=["financial_api"],
+                attempted_task="",  # Invalid: empty string
+                existing_tools_checked=["web_search"],
+            )
+
+        assert "attempted_task" in str(exc_info.value)
+
+    def test_tool_gap_report_empty_existing_tools_allowed(self):
+        """Test that empty existing_tools_checked is allowed (edge case: no tools available)."""
+        report = ToolGapReport(
+            missing_tools=["some_tool"],
+            attempted_task="Some task requiring tools",
+            existing_tools_checked=[],  # Valid: empty list allowed
+        )
+
+        assert len(report.existing_tools_checked) == 0
+
+    def test_tool_gap_report_single_missing_tool(self):
+        """Test ToolGapReport with single missing tool."""
+        report = ToolGapReport(
+            missing_tools=["database_query"],
+            attempted_task="Query the database for user records",
+            existing_tools_checked=["web_search", "read_file"],
+        )
+
+        assert len(report.missing_tools) == 1
+        assert report.missing_tools[0] == "database_query"
