@@ -246,6 +246,10 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
 
     @trace_tool_call
     async def mcp_tool_wrapper(ctx: RunContext[MemoryManager], **kwargs: Any) -> str:
+        # Log tool call initiation
+        logger.info("🔧 [AGENTIC STEP] Tool call initiated: %s", tool_name)
+        logger.debug("   Parameters: %s", kwargs)
+        
         # T308: Integrate risk assessment before tool invocation
         risk_level = categorize_action_risk(tool_name, kwargs)
 
@@ -282,16 +286,26 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
 
         # Execute the tool
         try:
+            logger.debug("   [AGENTIC STEP] Executing MCP tool call...")
             result = await asyncio.wait_for(
                 mcp_session.call_tool(tool_name, arguments=kwargs),
                 timeout=timeout_seconds,
             )
-            return _format_mcp_result(result)
+            formatted_result = _format_mcp_result(result)
+            
+            # Log tool result (truncate if too long)
+            result_preview = formatted_result[:200] + "..." if len(formatted_result) > 200 else formatted_result
+            logger.info("✅ [AGENTIC STEP] Tool call completed: %s", tool_name)
+            logger.debug("   Result preview: %s", result_preview)
+            
+            return formatted_result
         except asyncio.TimeoutError as exc:
+            logger.error("⏱️ [AGENTIC STEP] Tool call timed out: %s", tool_name)
             raise TimeoutError(
                 f"Tool '{tool_name}' timed out after {timeout_seconds}s"
             ) from exc
         except Exception as exc:
+            logger.error("❌ [AGENTIC STEP] Tool call failed: %s - %s", tool_name, exc)
             raise RuntimeError(
                 f"Tool '{tool_name}' failed during execution: {exc}"
             ) from exc
@@ -402,21 +416,33 @@ async def run_agent_with_tracing(
                 span.set_attribute("gap_detection_error", str(e))
 
         # Phase 2: Execute agent.run()
-        logger.info("🔄 Calling agent.run()...")
+        logger.info("🔄 [AGENTIC LOOP] Starting agent.run()...")
+        logger.info("   Task: %s", task)
+        logger.info("   [AGENTIC LOOP] Agent will make LLM calls to reason and use tools")
+        logger.info("   [AGENTIC LOOP] Each HTTP Request below is an LLM reasoning step")
         try:
             result = await agent.run(task, deps=deps)
-            logger.info("✅ agent.run() completed")
+            logger.info("✅ [AGENTIC LOOP] agent.run() completed")
             logger.info(
-                "agent.run result type=%s dict=%s repr=%r",
-                type(result),
-                getattr(result, "__dict__", {}),
-                result,
+                "   [AGENTIC LOOP] Result type=%s",
+                type(result).__name__,
             )
 
             # Normalize payload shape across pydantic-ai versions
-            logger.info("🔍 Extracting payload from result...")
+            logger.info("🔍 [AGENTIC LOOP] Extracting payload from result...")
             payload = parse_agent_result(result)
-            logger.info("✅ Payload extracted successfully")
+            logger.info("✅ [AGENTIC LOOP] Payload extracted successfully")
+            
+            # Log agent's reasoning and tool calls
+            if hasattr(payload, "reasoning"):
+                logger.info("🧠 [AGENTIC LOOP] Agent reasoning: %s", payload.reasoning[:500] + "..." if len(payload.reasoning) > 500 else payload.reasoning)
+            if hasattr(payload, "tool_calls") and payload.tool_calls:
+                logger.info("🔧 [AGENTIC LOOP] Total tool calls made: %d", len(payload.tool_calls))
+                for i, tool_call in enumerate(payload.tool_calls, 1):
+                    logger.info("   [AGENTIC LOOP] Tool call %d: %s (%s) - %dms", 
+                              i, tool_call.tool_name, tool_call.status.value, tool_call.duration_ms)
+            if hasattr(payload, "confidence"):
+                logger.info("📊 [AGENTIC LOOP] Agent confidence: %.2f", payload.confidence)
         except asyncio.TimeoutError as exc:
             # T603: Timeout handling for MCP tool calls
             message = (

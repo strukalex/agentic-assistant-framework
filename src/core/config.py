@@ -126,6 +126,14 @@ class Settings(BaseSettings):
         description="Embedding model identifier; dimension follows model defaults",
     )
 
+    # ----------------------
+    # Logging configuration
+    # ----------------------
+    enable_agentic_logging: bool = Field(
+        default=False,
+        description="Enable detailed agentic loop logging (shows LLM conversation messages and tool calls). Set ENABLE_AGENTIC_LOGGING=true to enable.",
+    )
+
 
 # Instantiate a global settings object.
 # Import this in your app as `from config import settings` and use `settings.<field>`.
