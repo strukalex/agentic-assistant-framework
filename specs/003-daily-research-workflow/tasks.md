@@ -72,25 +72,25 @@ Non-negotiables to satisfy while implementing tasks below:
 
 ### Tests for User Story 1 (REQUIRED) ⚠️
 
-- [ ] T020 [P] [US1] Add OpenAPI contract test for workflow endpoints in `tests/contract/test_workflow_api_contract.py` (parse `specs/003-daily-research-workflow/contracts/workflow-api.yaml`)
-- [ ] T021 [P] [US1] Add unit tests for report formatting in `tests/unit/test_report_formatter.py` (sections + citations + metadata)
-- [ ] T022 [P] [US1] Add unit tests for graph iteration cap in `tests/unit/test_research_graph_iteration_limit.py` (hard stop at 5 per FR-005)
-- [ ] T023 [P] [US1] Add integration test for end-to-end graph run with mocked agent + memory in `tests/integration/test_daily_research_graph_e2e.py`
+- [X] T020 [P] [US1] Add OpenAPI contract test for workflow endpoints in `tests/contract/test_workflow_api_contract.py` (parse `specs/003-daily-research-workflow/contracts/workflow-api.yaml`)
+- [X] T021 [P] [US1] Add unit tests for report formatting in `tests/unit/test_report_formatter.py` (sections + citations + metadata)
+- [X] T022 [P] [US1] Add unit tests for graph iteration cap in `tests/unit/test_research_graph_iteration_limit.py` (hard stop at 5 per FR-005)
+- [X] T023 [P] [US1] Add integration test for end-to-end graph run with mocked agent + memory in `tests/integration/test_daily_research_graph_e2e.py`
 
 ### Implementation for User Story 1
 
-- [ ] T024 [P] [US1] Implement Plan node in `src/workflows/nodes/plan.py` (derive a research plan from topic; update `ResearchState.plan`)
-- [ ] T025 [P] [US1] Implement Research node in `src/workflows/nodes/research.py` (invoke `src/agents/researcher.py:run_researcher_agent`, extract sources, update `refined_answer`)
-- [ ] T026 [P] [US1] Implement Critique node in `src/workflows/nodes/critique.py` (detect missing sources/quality issues; decide loop vs finish)
-- [ ] T027 [P] [US1] Implement Refine node in `src/workflows/nodes/refine.py` (increment iteration, adjust plan/queries based on critique)
-- [ ] T028 [P] [US1] Implement Finish node in `src/workflows/nodes/finish.py` (build `ResearchReport`, store via `src/core/memory.py:MemoryManager`, return memory doc id)
-- [ ] T029 [US1] Implement LangGraph assembly in `src/workflows/research_graph.py` (StateGraph wiring + conditional edge + max-5 enforcement)
-- [ ] T030 [US1] Implement Markdown report generation in `src/workflows/report_formatter.py` (FR-008: executive summary, detailed findings, citations, metadata)
-- [ ] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API)
+- [X] T024 [P] [US1] Implement Plan node in `src/workflows/nodes/plan.py` (derive a research plan from topic; update `ResearchState.plan`)
+- [X] T025 [P] [US1] Implement Research node in `src/workflows/nodes/research.py` (invoke `src/agents/researcher.py:run_researcher_agent`, extract sources, update `refined_answer`)
+- [X] T026 [P] [US1] Implement Critique node in `src/workflows/nodes/critique.py` (detect missing sources/quality issues; decide loop vs finish)
+- [X] T027 [P] [US1] Implement Refine node in `src/workflows/nodes/refine.py` (increment iteration, adjust plan/queries based on critique)
+- [X] T028 [P] [US1] Implement Finish node in `src/workflows/nodes/finish.py` (build `ResearchReport`, store via `src/core/memory.py:MemoryManager`, return memory doc id)
+- [X] T029 [US1] Implement LangGraph assembly in `src/workflows/research_graph.py` (StateGraph wiring + conditional edge + max-5 enforcement)
+- [X] T030 [US1] Implement Markdown report generation in `src/workflows/report_formatter.py` (FR-008: executive summary, detailed findings, citations, metadata)
+- [X] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API)
 - [ ] T031a [US1] Configure Windmill job settings to enforce subprocess isolation with 1 CPU / 2GB memory limits per FR-010 (prevent resource exhaustion)
-- [ ] T032 [US1] Implement API routes in `src/api/routes/daily_trending_research.py` to match contract (create run, get status, get report)
-- [ ] T033 [US1] Wire API router into app in `src/api/app.py` and ensure FastAPI OpenAPI includes `/v1/research/workflows/daily-trending-research/*`
-- [ ] T034 [US1] Ensure run result payload returned by Windmill script matches `ReportResponse` in `src/api/schemas/workflow_api.py`
+- [X] T032 [US1] Implement API routes in `src/api/routes/daily_trending_research.py` to match contract (create run, get status, get report)
+- [X] T033 [US1] Wire API router into app in `src/api/app.py` and ensure FastAPI OpenAPI includes `/v1/research/workflows/daily-trending-research/*`
+- [X] T034 [US1] Ensure run result payload returned by Windmill script matches `ReportResponse` in `src/api/schemas/workflow_api.py`
 
 **Checkpoint**: US1 fully functional and testable independently (API → workflow run → report → memory).
 

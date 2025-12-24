@@ -1,42 +1,94 @@
 from __future__ import annotations
 
-from typing import Callable
+from functools import partial
+from typing import Any, Awaitable, Callable, Optional
+from uuid import UUID, uuid4
 
-from langgraph.graph import END, START, StateGraph
+try:
+    from langgraph.graph import END, START, StateGraph
 
-from src.models.research_state import ResearchState
+    LANGGRAPH_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dependency fallback
+    END = None  # type: ignore[assignment]
+    START = None  # type: ignore[assignment]
+    StateGraph = None  # type: ignore[assignment]
+    LANGGRAPH_AVAILABLE = False
 
-NodeCallable = Callable[[ResearchState], ResearchState]
+from src.models.research_state import ResearchState, ResearchStatus
+from src.workflows.nodes.critique import critique_node
+from src.workflows.nodes.finish import finish_node
+from src.workflows.nodes.plan import plan_node
+from src.workflows.nodes.refine import refine_node
+from src.workflows.nodes.research import research_node
+
+NodeCallable = Callable[[ResearchState], Awaitable[ResearchState]]
 
 
-def _placeholder_node(name: str) -> NodeCallable:
-    def _node(state: ResearchState) -> ResearchState:
-        raise NotImplementedError(f"Node '{name}' is not implemented yet")
-
-    _node.__name__ = f"{name}_node"
-    return _node
-
-
-def build_research_graph() -> StateGraph:
+class InMemoryMemoryManager:
     """
-    Build the DailyTrendingResearch LangGraph.
+    Minimal async memory manager for tests and local execution.
 
-    Node implementations are placeholders until user story work lands.
+    Stores documents in-memory and returns UUID identifiers without touching a database.
     """
+
+    def __init__(self) -> None:
+        self.documents: dict[str, dict[str, Any]] = {}
+
+    async def store_document(
+        self, content: str, metadata: Optional[dict[str, Any]] = None, embedding: Any | None = None
+    ) -> UUID:
+        doc_id = uuid4()
+        self.documents[str(doc_id)] = {"content": content, "metadata": metadata or {}}
+        return doc_id
+
+
+def _should_continue(state: ResearchState) -> str:
+    """Decide whether to refine again or finish based on quality and iteration limits."""
+    if state.status == ResearchStatus.FINISHED:
+        return "finish"
+    if state.iteration_count >= state.max_iterations:
+        return "finish"
+    if len(state.sources) < 3 or state.quality_score < state.quality_threshold:
+        return "refine"
+    return "finish"
+
+
+def build_research_graph(
+    *,
+    memory_manager: Any | None = None,
+    agent_runner: Callable[..., Awaitable[Any]] | None = None,
+) -> StateGraph:
+    """
+    Build the DailyTrendingResearch LangGraph with real node implementations.
+
+    Args:
+        memory_manager: Optional memory manager passed to finish/research nodes.
+        agent_runner: Optional research runner for dependency injection in tests.
+    """
+    if not LANGGRAPH_AVAILABLE:
+        return _FallbackGraph(memory_manager=memory_manager, agent_runner=agent_runner)  # type: ignore[return-value]
+
     graph = StateGraph(ResearchState)
 
-    graph.add_node("plan", _placeholder_node("plan"))
-    graph.add_node("research", _placeholder_node("research"))
-    graph.add_node("critique", _placeholder_node("critique"))
-    graph.add_node("refine", _placeholder_node("refine"))
-    graph.add_node("finish", _placeholder_node("finish"))
+    graph.add_node("plan", plan_node)
+    graph.add_node(
+        "research",
+        partial(
+            research_node,
+            memory_manager=memory_manager,
+            agent_runner=agent_runner,
+        ),
+    )
+    graph.add_node("critique", critique_node)
+    graph.add_node("refine", refine_node)
+    graph.add_node("finish", partial(finish_node, memory_manager=memory_manager))
 
     graph.add_edge(START, "plan")
     graph.add_edge("plan", "research")
     graph.add_edge("research", "critique")
     graph.add_conditional_edges(
         "critique",
-        lambda state: "refine" if state.iteration_count < state.max_iterations else "finish",
+        _should_continue,
         {"refine": "refine", "finish": "finish"},
     )
     graph.add_edge("refine", "research")
@@ -45,7 +97,52 @@ def build_research_graph() -> StateGraph:
     return graph
 
 
-def compile_research_graph():
+def compile_research_graph(
+    *, memory_manager: Any | None = None, agent_runner: Callable[..., Awaitable[Any]] | None = None
+):
     """Compile the research graph into an executable app."""
-    return build_research_graph().compile()
+    graph = build_research_graph(memory_manager=memory_manager, agent_runner=agent_runner)
+    if hasattr(graph, "compile"):
+        return graph.compile()
+    # Fallback graph already returns a runner
+    return graph  # type: ignore[return-value]
+
+
+class _FallbackRunner:
+    """Minimal async runner used when LangGraph is unavailable."""
+
+    def __init__(self, memory_manager: Any | None, agent_runner: Callable[..., Awaitable[Any]] | None):
+        self.memory_manager = memory_manager
+        self.agent_runner = agent_runner
+
+    async def ainvoke(self, state: ResearchState) -> ResearchState:
+        current = await plan_node(state)
+        while True:
+            current = await research_node(
+                current,
+                memory_manager=self.memory_manager,
+                agent_runner=self.agent_runner,
+            )
+            current = await critique_node(current)
+            if current.status == ResearchStatus.FINISHED or current.iteration_count >= current.max_iterations:
+                break
+            current = await refine_node(current)
+            if current.iteration_count >= current.max_iterations:
+                current = current.model_copy(update={"status": ResearchStatus.FINISHED})
+                break
+        current = await finish_node(current, memory_manager=self.memory_manager)
+        return current
+
+    async def invoke(self, state: ResearchState) -> ResearchState:
+        return await self.ainvoke(state)
+
+
+class _FallbackGraph:
+    """Lightweight graph placeholder when LangGraph is not installed."""
+
+    def __init__(self, memory_manager: Any | None, agent_runner: Callable[..., Awaitable[Any]] | None):
+        self._runner = _FallbackRunner(memory_manager, agent_runner)
+
+    def compile(self) -> "_FallbackRunner":
+        return self._runner
 

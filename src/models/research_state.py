@@ -50,6 +50,13 @@ class ResearchState(BaseModel):
     planned_actions: list[PlannedAction] = Field(
         default_factory=list, description="Pending actions that may need approval"
     )
+    memory_document_id: str | None = Field(
+        default=None,
+        description="Identifier of the stored research report in MemoryManager",
+    )
+    report_markdown: str | None = Field(
+        default=None, description="Rendered markdown report generated at finish"
+    )
 
     @field_validator("topic")
     @classmethod

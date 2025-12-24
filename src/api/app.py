@@ -6,8 +6,7 @@ and basic health check endpoint.
 
 from fastapi import FastAPI
 
-# Router imports will be added in Phase 3 when routes are implemented
-# from src.api.routes import daily_trending_research
+from src.api.routes import daily_trending_research
 
 
 def create_app() -> FastAPI:
@@ -28,8 +27,7 @@ def create_app() -> FastAPI:
         """Health check endpoint for service monitoring."""
         return {"status": "ok"}
 
-    # Include workflow routers (will be implemented in Phase 3)
-    # app.include_router(daily_trending_research.router, prefix="/v1/research/workflows")
+    app.include_router(daily_trending_research.router)
 
     return app
 
