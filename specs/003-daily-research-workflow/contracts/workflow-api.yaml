@@ -1,0 +1,274 @@
+openapi: 3.0.3
+info:
+  title: DailyTrendingResearch Workflow API
+  version: 0.1.0
+  description: >
+    API contract for triggering and observing the DailyTrendingResearch workflow.
+    Orchestration is Windmill; cyclical reasoning is LangGraph embedded in a Windmill step.
+servers:
+  - url: http://localhost:8000
+tags:
+  - name: workflows
+    description: Workflow run lifecycle
+paths:
+  /v1/research/workflows/daily-trending-research/runs:
+    post:
+      tags: [workflows]
+      summary: Start a DailyTrendingResearch run
+      description: >
+        Validates inputs (topic, user_id) then triggers the Windmill workflow.
+        The LangGraph loop MUST enforce max 5 iterations (FR-005).
+      operationId: createDailyTrendingResearchRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRunRequest'
+            examples:
+              basic:
+                value:
+                  topic: "AI governance trends 2025"
+                  user_id: "8b6a4c64-3e0b-4a65-b0df-4e7e1e95d1e3"
+      responses:
+        '202':
+          description: Run accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateRunResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/research/workflows/daily-trending-research/runs/{run_id}:
+    get:
+      tags: [workflows]
+      summary: Get status for a run
+      operationId: getDailyTrendingResearchRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Run status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunStatusResponse'
+        '404':
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /v1/research/workflows/daily-trending-research/runs/{run_id}/report:
+    get:
+      tags: [workflows]
+      summary: Get final report for a completed run
+      description: Returns the Markdown report once the run is completed.
+      operationId: getDailyTrendingResearchRunReport
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report content (Markdown)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '409':
+          description: Report not ready (run not completed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    CreateRunRequest:
+      type: object
+      additionalProperties: false
+      required: [topic, user_id]
+      properties:
+        topic:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: Research topic (FR-001)
+        user_id:
+          type: string
+          format: uuid
+          description: User identifier for storage metadata (FR-001)
+        client_traceparent:
+          type: string
+          description: >
+            Optional W3C traceparent header value for correlating client traces with workflow traces.
+    CreateRunResponse:
+      type: object
+      additionalProperties: false
+      required: [run_id, status]
+      properties:
+        run_id:
+          type: string
+          description: Identifier for this workflow run (Windmill job/run id)
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        links:
+          type: object
+          additionalProperties: false
+          properties:
+            self:
+              type: string
+            report:
+              type: string
+    RunStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [run_id, status]
+      properties:
+        run_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        topic:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+        iterations_used:
+          type: integer
+          minimum: 0
+          maximum: 5
+          description: Actual iterations used (FR-005)
+        sources_count:
+          type: integer
+          minimum: 0
+        memory_document_id:
+          type: string
+          nullable: true
+          description: ID returned by MemoryManager storage (FR-009) if available
+        approval:
+          $ref: '#/components/schemas/ApprovalStatus'
+        error:
+          $ref: '#/components/schemas/RunError'
+    ReportResponse:
+      type: object
+      additionalProperties: false
+      required: [run_id, markdown]
+      properties:
+        run_id:
+          type: string
+        markdown:
+          type: string
+          description: Full markdown report (FR-008)
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceReference'
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Report metadata (topic, user_id, iterations, timestamp)
+    ApprovalStatus:
+      type: object
+      additionalProperties: false
+      nullable: true
+      properties:
+        status:
+          type: string
+          enum: [not_required, pending, approved, rejected, escalated]
+        action_type:
+          type: string
+          nullable: true
+        action_description:
+          type: string
+          nullable: true
+        timeout_at:
+          type: string
+          format: date-time
+          nullable: true
+        approval_page_url:
+          type: string
+          nullable: true
+          description: Windmill approval page link (native UI)
+        resume_url:
+          type: string
+          nullable: true
+        cancel_url:
+          type: string
+          nullable: true
+    RunError:
+      type: object
+      additionalProperties: false
+      nullable: true
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+          nullable: true
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+    SourceReference:
+      type: object
+      additionalProperties: false
+      required: [title, url, snippet, retrieved_at]
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        snippet:
+          type: string
+          maxLength: 1000
+        retrieved_at:
+          type: string
+          format: date-time
+    RunStatus:
+      type: string
+      enum:
+        - queued
+        - running
+        - suspended_approval
+        - completed
+        - failed
+        - escalated
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [message]
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+              nullable: true
+            details:
+              type: object
+              additionalProperties: true
+              nullable: true
+
+
