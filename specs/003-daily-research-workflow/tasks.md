@@ -87,6 +87,7 @@ Non-negotiables to satisfy while implementing tasks below:
 - [ ] T029 [US1] Implement LangGraph assembly in `src/workflows/research_graph.py` (StateGraph wiring + conditional edge + max-5 enforcement)
 - [ ] T030 [US1] Implement Markdown report generation in `src/workflows/report_formatter.py` (FR-008: executive summary, detailed findings, citations, metadata)
 - [ ] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API)
+- [ ] T031a [US1] Configure Windmill job settings to enforce subprocess isolation with 1 CPU / 2GB memory limits per FR-010 (prevent resource exhaustion)
 - [ ] T032 [US1] Implement API routes in `src/api/routes/daily_trending_research.py` to match contract (create run, get status, get report)
 - [ ] T033 [US1] Wire API router into app in `src/api/app.py` and ensure FastAPI OpenAPI includes `/v1/research/workflows/daily-trending-research/*`
 - [ ] T034 [US1] Ensure run result payload returned by Windmill script matches `ReportResponse` in `src/api/schemas/workflow_api.py`
@@ -135,6 +136,7 @@ Non-negotiables to satisfy while implementing tasks below:
 - [ ] T045 [US3] Extend unified telemetry utilities in `src/core/telemetry.py` (add `trace_langgraph_execution()` + `trace_langgraph_node()` decorators; no new telemetry module)
 - [ ] T046 [P] [US3] Apply `trace_langgraph_node` to LangGraph nodes in `src/workflows/nodes/plan.py`, `src/workflows/nodes/research.py`, `src/workflows/nodes/critique.py`, `src/workflows/nodes/refine.py`, `src/workflows/nodes/finish.py`
 - [ ] T047 [US3] Apply `trace_langgraph_execution` to graph runner in `src/workflows/research_graph.py` (set attributes: topic length, iterations, sources_count)
+- [ ] T047a [US3] Update Windmill script in `src/windmill/daily_research.py` to accept `traceparent` argument and link LangGraph root span to the API request (Distributed Tracing)
 - [ ] T048 [US3] Add API-level tracing spans in `src/api/routes/daily_trending_research.py` (span per endpoint, propagate `client_traceparent` if provided)
 
 **Checkpoint**: US3 observability is complete and independently testable.
