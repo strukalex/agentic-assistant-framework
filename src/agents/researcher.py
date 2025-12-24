@@ -76,6 +76,15 @@ _tool_call_log: contextvars.ContextVar[
 _tool_result_cache: contextvars.ContextVar[
     Optional[Dict[str, Any]]
 ] = contextvars.ContextVar("tool_result_cache", default=None)
+_web_search_seen: contextvars.ContextVar[
+    Optional[set[str]]
+] = contextvars.ContextVar("web_search_seen", default=None)
+_stored_hashes: contextvars.ContextVar[
+    Optional[set[str]]
+] = contextvars.ContextVar("stored_hashes", default=None)
+_answer_committed: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "answer_committed", default=False
+)
 
 
 def _make_cache_key(tool_name: str, parameters: dict) -> str:
@@ -103,6 +112,22 @@ def _get_tool_cache() -> Dict[str, Any]:
     return cache
 
 
+def _get_web_search_seen() -> set[str]:
+    seen = _web_search_seen.get()
+    if seen is None:
+        seen = set()
+        _web_search_seen.set(seen)
+    return seen
+
+
+def _get_stored_hashes() -> set[str]:
+    hashes = _stored_hashes.get()
+    if hashes is None:
+        hashes = set()
+        _stored_hashes.set(hashes)
+    return hashes
+
+
 def _record_tool_call(
     tool_name: str,
     parameters: dict,
@@ -121,10 +146,37 @@ def _record_tool_call(
     )
 
 
+def _reset_run_context() -> None:
+    """Reset the per-run tool call log and cache. Used for testing and run initialization."""
+    _tool_call_log.set([])
+    _tool_result_cache.set({})
+    _web_search_seen.set(set())
+    _stored_hashes.set(set())
+    _answer_committed.set(False)
+
+
 async def _with_tool_logging_and_cache(
-    tool_name: str, parameters: dict, func: Callable[[], Awaitable[Any]]
+    tool_name: str,
+    parameters: dict,
+    func: Callable[[], Awaitable[Any]],
+    *,
+    enable_cache: bool = True,
+    loop_guard: bool = True,
+    max_repeats: int = 3,
 ) -> Any:
-    """Execute a tool with deduplication and logging to AgentResponse."""
+    """Execute a tool with deduplication, loop-guarding, and logging.
+
+    Args:
+        tool_name: Name of the tool being invoked.
+        parameters: Dict of parameters for the tool call.
+        func: Async callable that performs the actual tool work.
+        enable_cache: When False, skip read/write of the per-run cache. Use for
+            dynamic tools (e.g., web_search) or side-effecting tools
+            (e.g., store_memory).
+        loop_guard: When True, detect repeated identical tool invocations within
+            a run and halt after `max_repeats` to prevent thrashing.
+        max_repeats: Maximum consecutive identical invocations allowed.
+    """
     cache = _get_tool_cache()
     key = _make_cache_key(tool_name, parameters)
     start = time.perf_counter()
@@ -141,7 +193,32 @@ async def _with_tool_logging_and_cache(
         )
         raise RuntimeError(message)
 
-    if key in cache:
+    if loop_guard:
+        # Detect consecutive identical tool calls (ignoring cached flag).
+        normalized_params = _make_cache_key(tool_name, parameters)
+        repeats = 0
+        for call in reversed(_get_tool_log()):
+            call_params = dict(call.parameters)
+            call_params.pop("_cached", None)
+            if _make_cache_key(tool_name, call_params) != normalized_params:
+                break
+            repeats += 1
+            if repeats >= max_repeats - 1:
+                duration_ms = int((time.perf_counter() - start) * 1000)
+                message = (
+                    "Loop detected: identical tool call repeated "
+                    f"{max_repeats} times. Halting to avoid thrashing."
+                )
+                _record_tool_call(
+                    tool_name=tool_name,
+                    parameters={**parameters, "_cached": False},
+                    result=message,
+                    duration_ms=duration_ms,
+                    status=ToolCallStatus.FAILED,
+                )
+                raise RuntimeError(message)
+
+    if enable_cache and key in cache:
         cached_result = cache[key]
         duration_ms = int((time.perf_counter() - start) * 1000)
         _record_tool_call(
@@ -156,7 +233,8 @@ async def _with_tool_logging_and_cache(
     try:
         result = await func()
         duration_ms = int((time.perf_counter() - start) * 1000)
-        cache[key] = result
+        if enable_cache:
+            cache[key] = result
         _record_tool_call(
             tool_name=tool_name,
             parameters=parameters,
@@ -182,8 +260,10 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
     return Agent[MemoryManager, AgentResponse](
         model=model,
         output_type=AgentResponse,
-        retries=0,  # Changed from 2 to 0 to fail fast in tests - prevents hanging
-        system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
+        retries=2,  # Allow LLM to auto-correct JSON/formatting errors
+        system_prompt=f"""You are the ResearcherAgent for a Personal AI Assistant System.
+
+Current date: {time.strftime("%Y-%m-%d")}. Treat earlier sources as valid historical facts.
 
 Your capabilities:
 - Search external information sources via web search
@@ -200,9 +280,16 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
 2. Use memory results when available. If search_memory() returns relevant past
    research, use that knowledge in your answer and cite the memory source in
    your reasoning (e.g., "Based on prior research stored on [date]...").
+   IMPORTANT:
+   - If search_memory() returns relevant facts that answer the question,
+     STOP and answer immediately. Do NOT call search_memory() again with
+     the same query.
+   - If search_memory() returns irrelevant data, query logs, or placeholders
+     (e.g., "NO RESULTS FOUND"), proceed directly to web_search.
 
 3. Research when needed. Only use web_search or other expensive tools when
-   memory does not have the answer.
+   memory does not have the answer (i.e., search_memory() returned empty results
+   or "NO RESULTS FOUND").
 
 4. Store new findings. After synthesizing new research findings from
    web_search or other sources, always call store_memory() to persist this
@@ -210,12 +297,17 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
    - topic: Brief topic description
    - timestamp: Current date/time from get_current_time()
    - sources: List of tools used (e.g., ["web_search"])
+   CRITICAL: ONLY store verified facts or synthesized answers. NEVER store
+   queries, status updates, "no results" messages, or intermediate reasoning.
 
 5. Provide accurate answers. Return structured responses with confidence scores
    based on source reliability.
 
 6. Be honest about gaps. Never hallucinate capabilities—acknowledge gaps
    honestly.
+
+7. Avoid tool thrashing. Do not repeat the exact same tool call with identical
+   parameters more than twice. If a tool yields relevant evidence, use it.
 
 Output Format: Always return a structured AgentResponse with:
 - answer: The final answer to the user's query
@@ -260,6 +352,10 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
             )
             documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
 
+        # Explicitly tell LLM to stop if no results found
+        if not documents:
+            return [{"content": "NO RESULTS FOUND. Please try web_search.", "metadata": {}}]
+
         # Convert Document objects to dict format
         return [{"content": doc.content, "metadata": doc.metadata_} for doc in documents]
 
@@ -284,14 +380,44 @@ async def store_memory(
     """
     params = {"content_preview": content[:80], "metadata_keys": list(metadata.keys())}
 
+    # Guardrail: skip meta/log/no-result entries to avoid memory pollution
+    lowered = content.lower()
+    if any(
+        phrase in lowered
+        for phrase in [
+            "no results found",
+            "no_results",
+            "initial query",
+            "status:",
+            "query:",
+        ]
+    ) or "status" in metadata or "query" in metadata:
+        return (
+            "SKIPPED: Not storing meta/log content. "
+            "Only verified facts and synthesized answers are persisted."
+        )
+
+    # Guardrail: avoid duplicate storage of identical content in the same run
+    content_hash = hash(content.strip())
+    stored_hashes = _get_stored_hashes()
+    if content_hash in stored_hashes:
+        return "SKIPPED: Duplicate content already stored this run."
+
     async def _execute() -> str:
         # Call MemoryManager.store_document
         doc_id: UUID = await ctx.deps.store_document(
             content=content, metadata=metadata
         )
+        stored_hashes.add(content_hash)
+        _answer_committed.set(True)
         return str(doc_id)
 
-    return await _with_tool_logging_and_cache("store_memory", params, _execute)
+    return await _with_tool_logging_and_cache(
+        "store_memory",
+        params,
+        _execute,
+        enable_cache=False,  # Side-effecting; never replay a cached store
+    )
 
 
 def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
@@ -381,6 +507,18 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
         params = dict(kwargs)
 
         async def _execute() -> str:
+            # Global stop: if answer already committed, skip further expensive calls
+            if _answer_committed.get() and tool_name in {"web_search", "search_memory", "search"}:
+                return "SKIPPED: Answer already committed; proceed to final_result."
+
+            # Prevent duplicate web_search queries in the same run
+            if tool_name in {"web_search", "search"}:
+                query = str(kwargs.get("query", "")).strip().lower()
+                seen = _get_web_search_seen()
+                if query in seen:
+                    return "SKIPPED: Duplicate web_search this run (cached result already available)."
+                seen.add(query)
+
             # T308: Integrate risk assessment before tool invocation
             risk_level = categorize_action_risk(tool_name, kwargs)
 
@@ -447,7 +585,13 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
                     f"Tool '{tool_name}' failed during execution: {exc}"
                 ) from exc
 
-        return await _with_tool_logging_and_cache(tool_name, params, _execute)
+        return await _with_tool_logging_and_cache(
+            tool_name,
+            params,
+            _execute,
+            # Dynamic external tools should not be cached; others can opt in
+            enable_cache=tool_name not in {"web_search", "search"},
+        )
 
     mcp_tool_wrapper.__name__ = tool_name
     mcp_tool_wrapper.__doc__ = description
@@ -478,9 +622,12 @@ async def _register_mcp_tools(
             logger.debug("⏭️  Skipping tool: %s", tool_name)
             continue
         
+        # Rename 'search' to 'web_search' for consistency with system prompt
+        final_name = "web_search" if tool_name == "search" else tool_name
+        
         agent.tool(  # type: ignore[call-overload]
             _make_mcp_tool(mcp_session, tool),
-            name=tool_name,
+            name=final_name,
             description=getattr(tool, "description", None),
         )
         registered_count += 1
@@ -562,6 +709,9 @@ async def run_agent_with_tracing(
         # Initialize per-run tool tracking
         tool_log_token = _tool_call_log.set([])
         tool_cache_token = _tool_result_cache.set({})
+        web_search_token = _web_search_seen.set(set())
+        stored_hashes_token = _stored_hashes.set(set())
+        answer_committed_token = _answer_committed.set(False)
         try:
             result = await agent.run(task, deps=deps)
             logger.info("✅ [AGENTIC LOOP] agent.run() completed")
@@ -630,6 +780,9 @@ async def run_agent_with_tracing(
             # Reset contextvars to avoid cross-run leakage
             _tool_call_log.reset(tool_log_token)
             _tool_result_cache.reset(tool_cache_token)
+            _web_search_seen.reset(web_search_token)
+            _stored_hashes.reset(stored_hashes_token)
+            _answer_committed.reset(answer_committed_token)
 
         # Set result attributes
         confidence_val = getattr(payload, "confidence", None)
