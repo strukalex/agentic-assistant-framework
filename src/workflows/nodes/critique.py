@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from src.core.telemetry import trace_langgraph_node
 from src.models.research_state import ResearchState, ResearchStatus
 
 
+@trace_langgraph_node("critique")
 async def critique_node(state: ResearchState) -> ResearchState:
     """
     Evaluate research quality and decide whether to continue refining.

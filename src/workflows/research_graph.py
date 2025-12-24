@@ -14,6 +14,7 @@ except ImportError:  # pragma: no cover - optional dependency fallback
     StateGraph = None  # type: ignore[assignment]
     LANGGRAPH_AVAILABLE = False
 
+from src.core.telemetry import trace_langgraph_execution_context
 from src.models.research_state import ResearchState, ResearchStatus
 from src.workflows.nodes.critique import critique_node
 from src.workflows.nodes.finish import finish_node
@@ -115,26 +116,42 @@ class _FallbackRunner:
         self.memory_manager = memory_manager
         self.agent_runner = agent_runner
 
-    async def ainvoke(self, state: ResearchState) -> ResearchState:
-        current = await plan_node(state)
-        while True:
-            current = await research_node(
-                current,
-                memory_manager=self.memory_manager,
-                agent_runner=self.agent_runner,
-            )
-            current = await critique_node(current)
-            if current.status == ResearchStatus.FINISHED or current.iteration_count >= current.max_iterations:
-                break
-            current = await refine_node(current)
-            if current.iteration_count >= current.max_iterations:
-                current = current.model_copy(update={"status": ResearchStatus.FINISHED})
-                break
-        current = await finish_node(current, memory_manager=self.memory_manager)
-        return current
+    async def ainvoke(
+        self, state: ResearchState, *, traceparent: Optional[str] = None
+    ) -> ResearchState:
+        with trace_langgraph_execution_context(
+            "daily_research",
+            topic=str(state.topic),
+            traceparent=traceparent,
+        ) as span:
+            current = await plan_node(state)
+            while True:
+                current = await research_node(
+                    current,
+                    memory_manager=self.memory_manager,
+                    agent_runner=self.agent_runner,
+                )
+                current = await critique_node(current)
+                if current.status == ResearchStatus.FINISHED or current.iteration_count >= current.max_iterations:
+                    break
+                current = await refine_node(current)
+                if current.iteration_count >= current.max_iterations:
+                    current = current.model_copy(update={"status": ResearchStatus.FINISHED})
+                    break
+            current = await finish_node(current, memory_manager=self.memory_manager)
 
-    async def invoke(self, state: ResearchState) -> ResearchState:
-        return await self.ainvoke(state)
+            # Set final metrics on the span
+            span.set_attribute("total_iterations", current.iteration_count)
+            span.set_attribute("sources_count", len(current.sources))
+            if current.quality_score is not None:
+                span.set_attribute("quality_score", float(current.quality_score))
+
+            return current
+
+    async def invoke(
+        self, state: ResearchState, *, traceparent: Optional[str] = None
+    ) -> ResearchState:
+        return await self.ainvoke(state, traceparent=traceparent)
 
 
 class _FallbackGraph:
@@ -153,13 +170,43 @@ class _LangGraphRunner:
     def __init__(self, compiled_app: Any):
         self._app = compiled_app
 
-    async def ainvoke(self, state: ResearchState) -> ResearchState:
-        result = await self._app.ainvoke(state)
-        return self._coerce(result)
+    async def ainvoke(
+        self, state: ResearchState, *, traceparent: Optional[str] = None
+    ) -> ResearchState:
+        with trace_langgraph_execution_context(
+            "daily_research",
+            topic=str(state.topic),
+            traceparent=traceparent,
+        ) as span:
+            result = await self._app.ainvoke(state)
+            final_state = self._coerce(result)
 
-    def invoke(self, state: ResearchState) -> ResearchState:
-        result = self._app.invoke(state)
-        return self._coerce(result)
+            # Set final metrics on the span
+            span.set_attribute("total_iterations", final_state.iteration_count)
+            span.set_attribute("sources_count", len(final_state.sources))
+            if final_state.quality_score is not None:
+                span.set_attribute("quality_score", float(final_state.quality_score))
+
+            return final_state
+
+    def invoke(
+        self, state: ResearchState, *, traceparent: Optional[str] = None
+    ) -> ResearchState:
+        with trace_langgraph_execution_context(
+            "daily_research",
+            topic=str(state.topic),
+            traceparent=traceparent,
+        ) as span:
+            result = self._app.invoke(state)
+            final_state = self._coerce(result)
+
+            # Set final metrics on the span
+            span.set_attribute("total_iterations", final_state.iteration_count)
+            span.set_attribute("sources_count", len(final_state.sources))
+            if final_state.quality_score is not None:
+                span.set_attribute("quality_score", float(final_state.quality_score))
+
+            return final_state
 
     def _coerce(self, result: Any) -> ResearchState:
         if isinstance(result, ResearchState):

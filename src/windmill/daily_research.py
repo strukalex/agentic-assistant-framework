@@ -107,10 +107,12 @@ async def main(
     if suspend_for_approval is None:
         suspend_for_approval = _windmill_suspend_for_approval
 
-    # Execute the research graph
+    # Execute the research graph with distributed tracing support (T047a)
     app = compile_research_graph(memory_manager=InMemoryMemoryManager())
     initial_state = ResearchState(topic=topic, user_id=user_id)
-    final_state: ResearchState = await app.ainvoke(initial_state)
+    final_state: ResearchState = await app.ainvoke(
+        initial_state, traceparent=client_traceparent
+    )
 
     # Format the report
     report = format_research_report(final_state)

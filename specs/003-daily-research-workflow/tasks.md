@@ -128,16 +128,16 @@ Non-negotiables to satisfy while implementing tasks below:
 
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
-- [ ] T043 [P] [US3] Add unit tests for LangGraph tracing decorators in `tests/unit/test_langgraph_tracing.py` (uses in-memory exporter via `src/core/telemetry.py`)
-- [ ] T044 [P] [US3] Add integration test ensuring spans emitted on workflow run in `tests/integration/test_daily_research_tracing.py`
+- [X] T043 [P] [US3] Add unit tests for LangGraph tracing decorators in `tests/unit/test_langgraph_tracing.py` (uses in-memory exporter via `src/core/telemetry.py`)
+- [X] T044 [P] [US3] Add integration test ensuring spans emitted on workflow run in `tests/integration/test_daily_research_tracing.py`
 
 ### Implementation for User Story 3
 
-- [ ] T045 [US3] Extend unified telemetry utilities in `src/core/telemetry.py` (add `trace_langgraph_execution()` + `trace_langgraph_node()` decorators; no new telemetry module)
-- [ ] T046 [P] [US3] Apply `trace_langgraph_node` to LangGraph nodes in `src/workflows/nodes/plan.py`, `src/workflows/nodes/research.py`, `src/workflows/nodes/critique.py`, `src/workflows/nodes/refine.py`, `src/workflows/nodes/finish.py`
-- [ ] T047 [US3] Apply `trace_langgraph_execution` to graph runner in `src/workflows/research_graph.py` (set attributes: topic length, iterations, sources_count)
-- [ ] T047a [US3] Update Windmill script in `src/windmill/daily_research.py` to accept `traceparent` argument and link LangGraph root span to the API request (Distributed Tracing)
-- [ ] T048 [US3] Add API-level tracing spans in `src/api/routes/daily_trending_research.py` (span per endpoint, propagate `client_traceparent` if provided)
+- [X] T045 [US3] Extend unified telemetry utilities in `src/core/telemetry.py` (add `trace_langgraph_execution()` + `trace_langgraph_node()` decorators; no new telemetry module)
+- [X] T046 [P] [US3] Apply `trace_langgraph_node` to LangGraph nodes in `src/workflows/nodes/plan.py`, `src/workflows/nodes/research.py`, `src/workflows/nodes/critique.py`, `src/workflows/nodes/refine.py`, `src/workflows/nodes/finish.py`
+- [X] T047 [US3] Apply `trace_langgraph_execution` to graph runner in `src/workflows/research_graph.py` (set attributes: topic length, iterations, sources_count)
+- [X] T047a [US3] Update Windmill script in `src/windmill/daily_research.py` to accept `traceparent` argument and link LangGraph root span to the API request (Distributed Tracing)
+- [X] T048 [US3] Add API-level tracing spans in `src/api/routes/daily_trending_research.py` (span per endpoint, propagate `client_traceparent` if provided)
 
 **Checkpoint**: US3 observability is complete and independently testable.
 

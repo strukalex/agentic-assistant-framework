@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import time
+from contextlib import contextmanager
 from functools import wraps
-from typing import Any, Awaitable, Callable, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Iterator, Optional, TypeVar, Union, cast
 
 from opentelemetry import trace
+from opentelemetry.context import Context
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SpanExporter
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.sdk.trace.sampling import TraceIdRatioBased
+from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 
 from .config import settings
 
@@ -219,3 +223,347 @@ def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitabl
                 raise
 
     return wrapper
+
+
+# W3C Trace Context propagation utilities
+_propagator = TraceContextTextMapPropagator()
+
+
+def extract_trace_context(traceparent: Optional[str]) -> Optional[Context]:
+    """
+    Extract OpenTelemetry context from a W3C traceparent header.
+
+    Args:
+        traceparent: W3C traceparent header value (e.g., "00-traceid-spanid-01")
+
+    Returns:
+        OpenTelemetry Context if valid, None otherwise.
+    """
+    if not traceparent:
+        return None
+    carrier = {"traceparent": traceparent}
+    return _propagator.extract(carrier)
+
+
+def inject_trace_context() -> dict[str, str]:
+    """
+    Inject current trace context into a carrier dict for propagation.
+
+    Returns:
+        Dict containing traceparent header if a span is active.
+    """
+    carrier: dict[str, str] = {}
+    _propagator.inject(carrier)
+    return carrier
+
+
+# LangGraph tracing decorators per Spec 003 research.md
+
+
+def trace_langgraph_node(
+    node_name: str,
+) -> Callable[
+    [Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]
+]:
+    """
+    Decorator for tracing LangGraph node execution.
+
+    Creates a span for each node invocation with attributes:
+    - component: "langgraph"
+    - node.name: The node identifier
+    - iteration_count: Current iteration (from state if available)
+    - state.status: Current state status (from state if available)
+
+    Per Spec 003 research.md and FR-011 (observable everything).
+
+    Usage:
+        @trace_langgraph_node("plan")
+        async def plan_node(state: ResearchState) -> ResearchState:
+            ...
+    """
+
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+        tracer = get_tracer("langgraph")
+
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
+            span_name = f"langgraph.node.{node_name}"
+
+            with tracer.start_as_current_span(span_name) as span:
+                span.set_attribute("component", "langgraph")
+                span.set_attribute("node.name", node_name)
+                span.set_attribute("operation.type", "node_execution")
+
+                # Extract state attributes if first positional arg is state-like
+                state = args[0] if args else None
+                if state is not None:
+                    if hasattr(state, "iteration_count"):
+                        span.set_attribute(
+                            "iteration_count", getattr(state, "iteration_count", 0)
+                        )
+                    if hasattr(state, "status"):
+                        status = getattr(state, "status", None)
+                        if hasattr(status, "value"):
+                            span.set_attribute("state.status", status.value)
+                        elif status is not None:
+                            span.set_attribute("state.status", str(status))
+                    if hasattr(state, "topic"):
+                        topic = getattr(state, "topic", "")
+                        span.set_attribute("topic_length", len(str(topic)))
+
+                start_time = time.perf_counter()
+
+                try:
+                    result = await func(*args, **kwargs)
+
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    span.set_attribute("execution_duration_ms", duration_ms)
+                    span.set_attribute("operation.success", True)
+
+                    # Capture result state attributes
+                    if hasattr(result, "iteration_count"):
+                        span.set_attribute(
+                            "result.iteration_count",
+                            getattr(result, "iteration_count", 0),
+                        )
+                    if hasattr(result, "status"):
+                        status = getattr(result, "status", None)
+                        if hasattr(status, "value"):
+                            span.set_attribute("result.status", status.value)
+                        elif status is not None:
+                            span.set_attribute("result.status", str(status))
+                    if hasattr(result, "sources"):
+                        sources = getattr(result, "sources", [])
+                        span.set_attribute("result.sources_count", len(sources))
+
+                    return result
+
+                except Exception as exc:
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    span.set_attribute("execution_duration_ms", duration_ms)
+                    span.set_attribute("operation.success", False)
+                    span.set_attribute("error_type", type(exc).__name__)
+                    span.set_attribute("error_message", str(exc))
+                    span.record_exception(exc)
+                    raise
+
+        return wrapper
+
+    return decorator
+
+
+@contextmanager
+def trace_langgraph_execution_context(
+    workflow_name: str,
+    topic: Optional[str] = None,
+    traceparent: Optional[str] = None,
+) -> Iterator[trace.Span]:
+    """
+    Context manager for tracing full LangGraph workflow execution.
+
+    Creates a root span for the entire workflow with attributes:
+    - component: "langgraph"
+    - workflow.name: Workflow identifier
+    - topic_length: Length of topic string (avoid storing PII)
+
+    Supports distributed tracing by linking to parent context from traceparent.
+
+    Per Spec 003 research.md and FR-011 (observable everything).
+
+    Usage:
+        with trace_langgraph_execution_context("daily_research", topic=topic) as span:
+            result = await graph.ainvoke(initial_state)
+            span.set_attribute("total_iterations", result.iteration_count)
+    """
+    tracer = get_tracer("langgraph")
+    span_name = f"langgraph.workflow.{workflow_name}"
+
+    # Extract parent context if traceparent provided
+    parent_context = extract_trace_context(traceparent)
+
+    with tracer.start_as_current_span(
+        span_name, context=parent_context
+    ) as span:
+        span.set_attribute("component", "langgraph")
+        span.set_attribute("workflow.name", workflow_name)
+        span.set_attribute("operation.type", "workflow_execution")
+
+        if topic:
+            span.set_attribute("topic_length", len(topic))
+
+        start_time = time.perf_counter()
+
+        try:
+            yield span
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            span.set_attribute("execution_duration_ms", duration_ms)
+            span.set_attribute("operation.success", True)
+        except Exception as exc:
+            duration_ms = int((time.perf_counter() - start_time) * 1000)
+            span.set_attribute("execution_duration_ms", duration_ms)
+            span.set_attribute("operation.success", False)
+            span.set_attribute("error_type", type(exc).__name__)
+            span.set_attribute("error_message", str(exc))
+            span.record_exception(exc)
+            raise
+
+
+def trace_langgraph_execution(
+    workflow_name: str,
+) -> Callable[
+    [Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]
+]:
+    """
+    Decorator for tracing full LangGraph workflow execution.
+
+    Creates a root span for the entire workflow with attributes:
+    - component: "langgraph"
+    - workflow.name: Workflow identifier
+    - topic_length: Length of topic string (avoid storing PII)
+    - total_iterations: Final iteration count (if available on result)
+    - sources_count: Number of sources collected (if available on result)
+
+    Per Spec 003 research.md and FR-011 (observable everything).
+
+    Usage:
+        @trace_langgraph_execution("daily_research")
+        async def run_research_workflow(state: ResearchState) -> ResearchState:
+            ...
+    """
+
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+        tracer = get_tracer("langgraph")
+
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
+            span_name = f"langgraph.workflow.{workflow_name}"
+
+            # Check for traceparent in kwargs for distributed tracing
+            traceparent = kwargs.pop("traceparent", None)
+            parent_context = extract_trace_context(traceparent)
+
+            with tracer.start_as_current_span(
+                span_name, context=parent_context
+            ) as span:
+                span.set_attribute("component", "langgraph")
+                span.set_attribute("workflow.name", workflow_name)
+                span.set_attribute("operation.type", "workflow_execution")
+
+                # Extract topic from first arg if state-like
+                state = args[0] if args else None
+                if state is not None and hasattr(state, "topic"):
+                    topic = getattr(state, "topic", "")
+                    span.set_attribute("topic_length", len(str(topic)))
+
+                start_time = time.perf_counter()
+
+                try:
+                    result = await func(*args, **kwargs)
+
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    span.set_attribute("execution_duration_ms", duration_ms)
+                    span.set_attribute("operation.success", True)
+
+                    # Capture final metrics from result
+                    if hasattr(result, "iteration_count"):
+                        span.set_attribute(
+                            "total_iterations", getattr(result, "iteration_count", 0)
+                        )
+                    if hasattr(result, "sources"):
+                        sources = getattr(result, "sources", [])
+                        span.set_attribute("sources_count", len(sources))
+                    if hasattr(result, "quality_score"):
+                        try:
+                            span.set_attribute(
+                                "quality_score",
+                                float(getattr(result, "quality_score", 0.0)),
+                            )
+                        except (TypeError, ValueError):
+                            pass
+
+                    return result
+
+                except Exception as exc:
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    span.set_attribute("execution_duration_ms", duration_ms)
+                    span.set_attribute("operation.success", False)
+                    span.set_attribute("error_type", type(exc).__name__)
+                    span.set_attribute("error_message", str(exc))
+                    span.record_exception(exc)
+                    raise
+
+        return wrapper
+
+    return decorator
+
+
+def trace_api_endpoint(
+    endpoint_name: str,
+) -> Callable[
+    [Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]
+]:
+    """
+    Decorator for tracing API endpoint execution.
+
+    Creates a span for each API request with attributes:
+    - component: "api"
+    - endpoint.name: The endpoint identifier
+    - http.method: HTTP method (extracted from request if available)
+
+    Per Spec 003 FR-011 (observable everything).
+
+    Usage:
+        @trace_api_endpoint("create_run")
+        async def create_run(payload: CreateRunRequest) -> CreateRunResponse:
+            ...
+    """
+
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+        tracer = get_tracer("api")
+
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
+            span_name = f"api.{endpoint_name}"
+
+            # Check for client_traceparent in payload for distributed tracing
+            traceparent = None
+            payload = kwargs.get("payload") or (args[0] if args else None)
+            if payload is not None and hasattr(payload, "client_traceparent"):
+                traceparent = getattr(payload, "client_traceparent", None)
+
+            parent_context = extract_trace_context(traceparent)
+
+            with tracer.start_as_current_span(
+                span_name, context=parent_context
+            ) as span:
+                span.set_attribute("component", "api")
+                span.set_attribute("endpoint.name", endpoint_name)
+                span.set_attribute("operation.type", "api_request")
+
+                start_time = time.perf_counter()
+
+                try:
+                    result = await func(*args, **kwargs)
+
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    span.set_attribute("execution_duration_ms", duration_ms)
+                    span.set_attribute("operation.success", True)
+
+                    # Capture run_id from response if available
+                    if hasattr(result, "run_id"):
+                        span.set_attribute("run_id", str(getattr(result, "run_id")))
+
+                    return result
+
+                except Exception as exc:
+                    duration_ms = int((time.perf_counter() - start_time) * 1000)
+                    span.set_attribute("execution_duration_ms", duration_ms)
+                    span.set_attribute("operation.success", False)
+                    span.set_attribute("error_type", type(exc).__name__)
+                    span.set_attribute("error_message", str(exc))
+                    span.record_exception(exc)
+                    raise
+
+        return wrapper
+
+    return decorator

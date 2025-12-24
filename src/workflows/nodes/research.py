@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from src.agents.researcher import run_researcher_agent
 from src.core.memory import MemoryManager
+from src.core.telemetry import trace_langgraph_node
 from src.models.agent_response import AgentResponse, ToolCallRecord
 from src.models.research_state import ResearchState, ResearchStatus
 from src.models.source_reference import SourceReference
@@ -52,6 +53,7 @@ def _extract_sources(tool_calls: Iterable[ToolCallRecord]) -> list[SourceReferen
     return sources
 
 
+@trace_langgraph_node("research")
 async def research_node(
     state: ResearchState,
     *,

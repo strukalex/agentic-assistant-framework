@@ -4,10 +4,12 @@ from typing import Optional
 from uuid import UUID
 
 from src.core.memory import MemoryManager
+from src.core.telemetry import trace_langgraph_node
 from src.models.research_state import ResearchState, ResearchStatus
 from src.workflows.report_formatter import format_research_report, render_markdown
 
 
+@trace_langgraph_node("finish")
 async def finish_node(
     state: ResearchState, *, memory_manager: Optional[MemoryManager] = None
 ) -> ResearchState:

@@ -20,6 +20,7 @@ from src.api.schemas.workflow_api import (
     RunStatusResponse,
 )
 from src.core.config import settings
+from src.core.telemetry import trace_api_endpoint
 from src.models.planned_action import PlannedAction
 from src.models.research_state import ResearchState
 from src.windmill.approval_handler import (
@@ -124,7 +125,10 @@ async def _execute_run(run_id: str, payload: CreateRunRequest) -> None:
     initial_state = ResearchState(topic=payload.topic, user_id=payload.user_id)
 
     try:
-        final_state: ResearchState = await app.ainvoke(initial_state)
+        # Pass client_traceparent for distributed tracing (T048)
+        final_state: ResearchState = await app.ainvoke(
+            initial_state, traceparent=payload.client_traceparent
+        )
         report = format_research_report(final_state)
         markdown = render_markdown(report)
 
@@ -213,6 +217,7 @@ async def _execute_run(run_id: str, payload: CreateRunRequest) -> None:
 
 
 @router.post("/runs", response_model=CreateRunResponse, status_code=202)
+@trace_api_endpoint("create_run")
 async def create_run(payload: CreateRunRequest) -> CreateRunResponse:
     """Create a new workflow run and start execution asynchronously."""
     run_id = str(uuid4())
@@ -239,6 +244,7 @@ async def create_run(payload: CreateRunRequest) -> CreateRunResponse:
 
 
 @router.get("/runs/{run_id}", response_model=RunStatusResponse)
+@trace_api_endpoint("get_run_status")
 async def get_run(run_id: str) -> RunStatusResponse:
     """Fetch the status for a workflow run."""
     record = _RUNS.get(run_id)
@@ -264,6 +270,7 @@ async def get_run(run_id: str) -> RunStatusResponse:
 
 
 @router.post("/runs/{run_id}/approve")
+@trace_api_endpoint("approve_run")
 async def approve_run(run_id: str, approver: str | None = None) -> dict[str, Any]:
     """Approve a pending action for a workflow run.
 
@@ -309,6 +316,7 @@ async def approve_run(run_id: str, approver: str | None = None) -> dict[str, Any
 
 
 @router.post("/runs/{run_id}/reject")
+@trace_api_endpoint("reject_run")
 async def reject_run(
     run_id: str,
     rejector: str | None = None,
@@ -360,6 +368,7 @@ async def reject_run(
 
 
 @router.get("/runs/{run_id}/report", response_model=ReportResponse)
+@trace_api_endpoint("get_report")
 async def get_report(run_id: str) -> ReportResponse:
     """Return the final report for a completed workflow run."""
     record = _RUNS.get(run_id)

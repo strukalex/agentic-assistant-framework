@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from src.core.telemetry import trace_langgraph_node
 from src.models.research_state import ResearchState, ResearchStatus
 
 
+@trace_langgraph_node("plan")
 async def plan_node(state: ResearchState) -> ResearchState:
     """
     Generate an initial research plan from the topic.
