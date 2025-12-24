@@ -22,6 +22,19 @@ python -m src.cli.test_agent "Query the database for all admin users"
 python -m src.cli.test_agent "Make a purchase of 100 shares of AAPL"
 ```
 
+### Workflows (Spec 003, US1 demo)
+
+Run the in-process demo for the DailyTrendingResearch workflow (no server required):
+```bash
+pip install .[dev]
+python scripts/demo_us1_workflow.py "AI governance trends"
+```
+
+What this does:
+- Spins up the FastAPI app in-process via ASGI transport
+- Creates a workflow run, polls until completion, and prints the Markdown report + metadata
+- Uses demo-friendly fallback sources (no external services, no Windmill)
+
 ### Example Output: AgentResponse (Normal Query)
 
 ```

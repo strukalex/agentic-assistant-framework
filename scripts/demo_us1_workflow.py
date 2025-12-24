@@ -9,6 +9,7 @@ separate server is required. It will:
 """
 
 import asyncio
+import sys
 from typing import Any, Dict
 from uuid import uuid4
 
@@ -69,5 +70,7 @@ async def main(topic: str = "AI governance trends", user_id: str | None = None) 
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    topic_arg = sys.argv[1] if len(sys.argv) > 1 else "AI governance trends"
+    user_arg = sys.argv[2] if len(sys.argv) > 2 else None
+    asyncio.run(main(topic=topic_arg, user_id=user_arg))
 

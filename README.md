@@ -63,6 +63,20 @@ For local development, use the provided CLI helper:
 python -m src.cli.run_api
 ```
 
+## US1 demo (no server required)
+
+Quickly exercise the DailyTrendingResearch workflow end-to-end without running a server:
+
+```bash
+pip install .[dev]  # if not already installed
+python scripts/demo_us1_workflow.py "your topic here"
+```
+
+What it does:
+- Spins up the FastAPI app in-process via ASGI transport
+- Creates a workflow run, polls until completion, and prints the Markdown report + metadata
+- Uses a demo-friendly agent fallback (no external calls, no Windmill required)
+
 ### Reset & DB re-init
 
 To fully reset local infra, re-create the DB schema, and set `PYTHONPATH` automatically:
