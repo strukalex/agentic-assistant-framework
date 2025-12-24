@@ -1,52 +1,53 @@
 <!--
 Sync Impact Report
 ==================
-Version Change: v2.1 → v2.2
-Amendment Date: 2025-12-22
-Amendment Type: MINOR (added unified telemetry principle)
+Version Change: v2.2 → v2.3
+Amendment Date: 2025-12-23
+Amendment Type: MINOR (added LLM utilities code reuse principle)
 
 Modified Sections:
-- Article I.H: Added explicit OpenTelemetry requirement
-  - Specified src/core/telemetry.py as single source of truth
-  - Prohibited duplicate telemetry modules (e.g., observability.py)
+- Article I.H: Added guidance on shared LLM utility module (src/core/llm.py)
+  - Specified location for Azure AI Foundry configuration
+  - Specified location for Pydantic AI result parsing utilities
+  - Prevents duplicate LLM setup code across components
 
 Added Principle:
-- Article II.H: Unified Telemetry Architecture
-  - MUST use single telemetry module (src/core/telemetry.py)
-  - Component-based tracing (memory, agent, mcp)
-  - Hierarchical span naming convention
-  - Prevents duplication and initialization conflicts
+- Article II.I: Shared LLM Utilities & Code Reuse
+  - MUST use src/core/llm.py for Azure model factory and result parsing
+  - Prevents duplicate environment variable reading and URL normalization
+  - Ensures consistent model configuration across all agents
+  - Single point of change for LLM provider configuration
 
 Rationale:
-- Prevents duplicate OpenTelemetry setup (occurred in Spec 002)
-- Ensures consistent tracing across all components
-- Single service name with component filtering
-- Simplifies testing and exporter configuration
+- Prevents duplicate Azure AI Foundry configuration code (occurred in Spec 002)
+- ResearcherAgent and ToolGapDetector both had identical LLM setup logic
+- Ensures consistency when changing LLM providers
+- Reduces maintenance burden and potential configuration drift
 
 Dependent Files Updated:
-- ✅ src/core/telemetry.py (enhanced with trace_agent_operation, trace_tool_call)
-- ✅ .env.example (OTEL_SERVICE_NAME: paias-agent-layer → paias)
-- ✅ docs/telemetry-refactoring.md (refactoring documentation created)
+- ✅ src/core/llm.py (new utility module created)
+- ✅ src/agents/researcher.py (refactored to use shared utilities)
+- ✅ src/core/tool_gap_detector.py (refactored to use shared utilities)
 
 Templates Requiring Updates:
-- ⚠️ .specify/templates/plan-template.md: Add telemetry architecture validation
-- ⚠️ .specify/templates/tasks-template.md: Reference unified telemetry in observability tasks
+- ⚠️ .specify/templates/plan-template.md: Add LLM utilities validation
+- ⚠️ .specify/templates/tasks-template.md: Reference shared LLM utilities pattern
 
 Follow-Up TODOs:
 - None (all critical updates complete)
 
 Commit Message Suggestion:
-docs: amend constitution to v2.2 (add unified telemetry architecture principle)
+docs: amend constitution to v2.3 (add shared LLM utilities code reuse principle)
 -->
 
-# Personal AI Assistant System: Project Constitution v2.2
+# Personal AI Assistant System: Project Constitution v2.3
 
 ## Executive Summary
 
 This constitution establishes the **immutable architectural rules** and **non-negotiable technology stack** for the Personal AI Assistant System (PAIAS). It serves as the persistent source of truth for all AI agents, developers, and technical decisions across the entire system lifecycle. Changes to this constitution require cross-functional review and documented rationale per Article V.
 
 **Ratification Date:** 2025-12-20
-**Last Amended:** 2025-12-22
+**Last Amended:** 2025-12-23
 **Status:** Active
 
 ---
@@ -101,8 +102,8 @@ This constitution establishes the **immutable architectural rules** and **non-ne
 
 ### I.D Memory Layer: PostgreSQL-First Architecture
 
-**Primary Database:** PostgreSQL 15+ with pgvector extension  
-**ORM:** SQLModel 
+**Primary Database:** PostgreSQL 15+ with pgvector extension
+**ORM:** SQLModel
 **Vector Store:** pgvector (in-database)
 
 **Data Architecture:**
@@ -146,8 +147,8 @@ Query Type                        → Storage
 
 ### I.E Tool Integration: Model Context Protocol (MCP)
 
-**Standard:** Model Context Protocol (MCP)  
-**Deployment:** MCP servers act as universal bridge between agents and external systems  
+**Standard:** Model Context Protocol (MCP)
+**Deployment:** MCP servers act as universal bridge between agents and external systems
 **Tool Discovery:** All tools listed via MCP's `list_resources` and `list_tools` patterns
 
 **Pre-Built MCP Ecosystem:**
@@ -177,7 +178,7 @@ MCP Servers: Execute actual API calls
 
 - **Framework:** Streamlit
 - **Version:** Latest stable (1.30+)
-- **Rationale:** 
+- **Rationale:**
   - Python-native: No JavaScript build chain; same developer builds agents and UI
   - Rapid prototyping: Deploy working chat interface in hours, not days
   - Native streaming support: `st.write_stream()` handles token-by-token output with zero boilerplate
@@ -229,6 +230,7 @@ MCP Servers: Execute actual API calls
 | **Linting** | Ruff + Black | Latest | Python 3.11+ compatible; 10x faster than flake8 |
 | **Async Database** | asyncpg (PostgreSQL driver) | 0.30+ | Non-blocking DB I/O; required for async agents |
 | **Observability** | OpenTelemetry + Logfire | Latest | **MUST use `src/core/telemetry.py` as single source**; traces all decisions; integrates with Langfuse/Datadog |
+| **LLM Utilities** | Custom (src/core/llm.py) | N/A | **MUST use for Azure AI Foundry model factory and Pydantic AI result parsing**; prevents duplicate configuration |
 | **Task Scheduling** | APScheduler | 3.10+ | Cron-style scheduling when Windmill not required |
 | **Document Loading** | Unstructured + PyPDF2 | Latest | Basic PDF/DOCX parsing; LlamaParse for complex layouts when accuracy demands it |
 | **UI (Phase 1-2)** | Streamlit | 1.30+ | Python-native rapid prototyping; native streaming support; observability dashboards |
@@ -403,6 +405,57 @@ memory.temporal_query(date_range="2024-Q4")  # Routes to PostgreSQL
 - CI linting can detect multiple `TracerProvider` initializations
 - Planning documents MUST reference this principle when adding observability
 
+### II.I Principle: Shared LLM Utilities & Code Reuse
+
+**Definition:** All LLM configuration and result parsing logic MUST use shared utility functions to prevent duplication and ensure consistency.
+
+**Implementation Requirements:**
+
+1. **Single Source of Truth:** `src/core/llm.py` is the ONLY module for LLM provider setup and result handling
+   - MUST NOT duplicate Azure AI Foundry configuration in individual agents or components
+   - MUST NOT duplicate Pydantic AI result parsing logic across files
+
+2. **Standard Functions:**
+   - `get_azure_model() -> OpenAIModel`: Factory for Azure AI Foundry model instances
+     - Reads environment variables (AZURE_AI_FOUNDRY_ENDPOINT, AZURE_AI_FOUNDRY_API_KEY, AZURE_DEPLOYMENT_NAME)
+     - Normalizes base URLs for serverless endpoints
+     - Creates OpenAIProvider and OpenAIModel instances
+   - `parse_agent_result(result) -> T`: Extract data from Pydantic AI RunResult
+     - Handles version differences (.data vs .output attributes)
+     - Raises descriptive errors if neither attribute exists
+
+3. **Usage Pattern:**
+   ```python
+   from src.core.llm import get_azure_model, parse_agent_result
+
+   # Get model instance
+   model = get_azure_model()
+   agent = Agent(model=model, ...)
+
+   # Parse result
+   result = await agent.run(query)
+   payload = parse_agent_result(result)
+   ```
+
+4. **No Direct Configuration:** Agent code MUST NOT:
+   - Read AZURE_* environment variables directly
+   - Import OpenAIProvider or OpenAIModel directly
+   - Implement custom result parsing with getattr chains
+   - Duplicate URL normalization logic
+
+**Rationale:**
+- Prevents duplicate configuration code (occurred in ResearcherAgent and ToolGapDetector)
+- Single point of change when switching LLM providers or updating configuration
+- Ensures consistent model setup across all agents and components
+- Reduces maintenance burden and potential configuration drift
+- Makes testing easier (mock once in llm.py vs in every component)
+
+**Enforcement:**
+- Code reviews MUST reject PRs with duplicate LLM configuration
+- All new agents MUST use get_azure_model() for model instantiation
+- All agent.run() result handling MUST use parse_agent_result()
+- Planning documents MUST reference this principle when adding new agents
+
 ---
 
 ## Article III: Operational Standards
@@ -454,8 +507,8 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
 
 ### III.D Database Migrations
 
-**Tool:** Alembic (SQLAlchemy migration framework)  
-**Non-Negotiable:** All schema changes MUST use migrations; no raw SQL in production code  
+**Tool:** Alembic (SQLAlchemy migration framework)
+**Non-Negotiable:** All schema changes MUST use migrations; no raw SQL in production code
 **Testing:** Migration up + down tested in CI; rollback capability verified
 
 ### III.E Documentation Standards
@@ -578,14 +631,16 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
   - [ ] Agents: Pydantic AI with @tool decorators?
   - [ ] Memory: PostgreSQL with async access?
   - [ ] Tools: All via MCP (no hardcoded integrations)?
+  - [ ] LLM utilities: Uses src/core/llm.py for model setup (Article I.H)?
 
-- [ ] **Article II: Principles** – Respects all 8 principles?
+- [ ] **Article II: Principles** – Respects all 9 principles?
   - [ ] Vertical slice deliverable?
   - [ ] Pluggable orchestration (framework-agnostic agent code)?
   - [ ] Human-in-the-loop for irreversible actions?
   - [ ] Observable: telemetry instrumented (Article II.D)?
   - [ ] Memory abstraction (no direct DB driver imports in agents)?
   - [ ] Unified telemetry: Uses src/core/telemetry.py only (Article II.H)?
+  - [ ] Shared LLM utilities: Uses src/core/llm.py for model config (Article II.I)?
 
 - [ ] **Article III: Standards** – Meets testing, observability, async requirements?
   - [ ] Tests: 80% coverage target enforced?
@@ -610,6 +665,7 @@ If ANY gate fails, escalate to tech lead before proceeding.
 | **Audit Trail** | Complete log of human decisions, approvals, and system actions |
 | **OpenTelemetry** | Standard for traces, metrics, logs; enables observability across all layers |
 | **Maturity Trigger** | Operational metric threshold that activates advanced features (e.g., cache layer, multi-storage) |
+| **LLM Utilities Module** | Shared module (`src/core/llm.py`) providing model factory and result parsing functions |
 
 ---
 
@@ -617,6 +673,6 @@ If ANY gate fails, escalate to tech lead before proceeding.
 ---
 
 **Ratified:** 2025-12-20
-**Last Amended:** 2025-12-22
-**Version:** v2.2
+**Last Amended:** 2025-12-23
+**Version:** v2.3
 **Next Review:** When Article V.A amendment proposal submitted

@@ -8,60 +8,19 @@ Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-03
 
 import asyncio
 import logging
-import os
 from typing import Any, Callable, List, Tuple
 from uuid import UUID
 
-from dotenv import load_dotenv
 from mcp import ClientSession
 from pydantic_ai import Agent, RunContext
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openai import OpenAIProvider
 
+from src.core.llm import get_azure_model, parse_agent_result
 from src.core.memory import MemoryManager
 from src.core.telemetry import get_tracer, trace_tool_call
 from src.core.tool_gap_detector import ToolGapDetector
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
 from src.models.tool_gap_report import ToolGapReport
-
-
-def _get_azure_model():
-    """Create a model instance for Azure AI Foundry (Serverless/MaaS).
-
-    Reads configuration from environment variables:
-    - AZURE_AI_FOUNDRY_ENDPOINT: The base URL for the model (e.g., https://<...>.services.ai.azure.com/models)
-    - AZURE_AI_FOUNDRY_API_KEY: The key for the specific deployment
-    - AZURE_DEPLOYMENT_NAME: The model name (e.g., "DeepSeek-V3.2")
-    """
-    load_dotenv()
-
-    endpoint = os.getenv("AZURE_AI_FOUNDRY_ENDPOINT")
-    api_key = os.getenv("AZURE_AI_FOUNDRY_API_KEY")
-    model_name = os.getenv("AZURE_DEPLOYMENT_NAME", "DeepSeek-V3.2")
-
-    if not endpoint:
-        raise ValueError("AZURE_AI_FOUNDRY_ENDPOINT environment variable is required")
-    if not api_key:
-        raise ValueError("AZURE_AI_FOUNDRY_API_KEY environment variable is required")
-
-    # Normalize the base URL for serverless endpoints.
-    base_url = endpoint
-    if "/chat/completions" in base_url:
-        base_url = base_url.split("/chat/completions")[0]
-
-    if "services.ai.azure.com" in base_url and not base_url.endswith("/models"):
-        base_url = f"{base_url.rstrip('/')}/models"
-
-    provider = OpenAIProvider(
-        base_url=base_url,
-        api_key=api_key,
-    )
-
-    return OpenAIModel(
-        model_name,
-        provider=provider,
-    )
 
 
 def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]:
@@ -96,7 +55,7 @@ def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]
     return embedding
 
 
-model = _get_azure_model()
+model = get_azure_model()
 
 
 def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
@@ -368,16 +327,7 @@ async def run_agent_with_tracing(
 
         # Normalize payload shape across pydantic-ai versions
         logger.info("🔍 Extracting payload from result...")
-        payload = getattr(result, "data", None)
-        if payload is None:
-            payload = getattr(result, "output", None)
-        if payload is None:
-            logger.error(
-                "Unexpected agent.run result shape; has no .data/.output. attrs=%s",
-                dir(result),
-            )
-            raise AttributeError("agent.run result missing data/output")
-
+        payload = parse_agent_result(result)
         logger.info("✅ Payload extracted successfully")
 
         # Set result attributes

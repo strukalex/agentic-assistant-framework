@@ -8,12 +8,12 @@ hallucinated execution.
 Per Spec 002 research.md RQ-005, tasks.md T204-T209 (FR-009 to FR-014, SC-003)
 """
 
-import json
 from typing import List, Optional
 
 from mcp import ClientSession
 from pydantic_ai import Agent
 
+from src.core.llm import get_azure_model, parse_agent_result
 from src.models.tool_gap_report import ToolGapReport
 
 
@@ -105,30 +105,9 @@ class ToolGapDetector:
 
         Per tasks.md T206 (FR-011), research.md RQ-005
         """
-        # Import at runtime to avoid circular dependencies
-        import os
-        from pydantic_ai.models.openai import OpenAIModel
-        from pydantic_ai.providers.openai import OpenAIProvider
-
         # Create a simple agent for capability extraction
         # NOTE: This uses the same Azure AI Foundry configuration as ResearcherAgent
-        endpoint = os.getenv("AZURE_AI_FOUNDRY_ENDPOINT")
-        api_key = os.getenv("AZURE_AI_FOUNDRY_API_KEY")
-        model_name = os.getenv("AZURE_DEPLOYMENT_NAME", "DeepSeek-V3.2")
-
-        # Normalize the base URL for serverless endpoints
-        base_url = endpoint
-        if "/chat/completions" in base_url:
-            base_url = base_url.split("/chat/completions")[0]
-        if "services.ai.azure.com" in base_url and not base_url.endswith("/models"):
-            base_url = f"{base_url.rstrip('/')}/models"
-
-        provider = OpenAIProvider(
-            base_url=base_url,
-            api_key=api_key,
-        )
-
-        model = OpenAIModel(model_name, provider=provider)
+        model = get_azure_model()
         extraction_agent = Agent(model=model, output_type=List[str], retries=1)
 
         prompt = f"""Analyze this task and list the required tool capabilities.
@@ -150,14 +129,7 @@ Return ONLY the JSON array, no additional text.
             result = await extraction_agent.run(prompt)
 
             # Normalize payload shape across pydantic-ai versions
-            # (same pattern as researcher.py:370-379)
-            capabilities = getattr(result, "data", None)
-            if capabilities is None:
-                capabilities = getattr(result, "output", None)
-            if capabilities is None:
-                raise AttributeError(
-                    f"agent.run result missing data/output. Available attrs: {dir(result)}"
-                )
+            capabilities = parse_agent_result(result)
 
             # Validate result is a list
             if not isinstance(capabilities, list):
