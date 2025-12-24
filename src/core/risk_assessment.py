@@ -1,12 +1,17 @@
 """Risk assessment functions for tool action categorization."""
 
+import logging
+
 from src.models.risk_level import RiskLevel
+
+logger = logging.getLogger(__name__)
 
 # Static mapping of known tools to risk levels
 TOOL_RISK_MAP: dict[str, RiskLevel] = {
     # Reversible (read-only, no side effects)
     "web_search": RiskLevel.REVERSIBLE,
     "search_web": RiskLevel.REVERSIBLE,
+    "search": RiskLevel.REVERSIBLE,  # MCP tool name from open-websearch
     "read_file": RiskLevel.REVERSIBLE,
     "get_current_time": RiskLevel.REVERSIBLE,
     "search_memory": RiskLevel.REVERSIBLE,
@@ -55,6 +60,10 @@ def categorize_action_risk(tool_name: str, parameters: dict) -> RiskLevel:
         return base_risk
 
     # Conservative default: treat unknown tools as irreversible
+    logger.warning(
+        "⚠️ Unknown tool '%s' detected. Defaulting to IRREVERSIBLE risk for safety.",
+        tool_name,
+    )
     return RiskLevel.IRREVERSIBLE
 
 
