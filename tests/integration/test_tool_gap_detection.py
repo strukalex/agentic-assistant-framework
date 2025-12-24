@@ -12,7 +12,7 @@ Per Spec 002 tasks.md T203 (FR-009 to FR-014, SC-003)
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.core.tool_gap_detector import ToolGapDetector
+from src.core.tool_gap_detector import CapabilityAnalysisResult, ToolGapDetector
 from src.models.tool_gap_report import ToolGapReport
 
 
@@ -57,11 +57,14 @@ async def test_end_to_end_gap_detection_with_missing_tool():
 
     detector = ToolGapDetector(mcp_session=mock_session)
 
-    # Mock capability extraction to identify financial API requirement
+    # Mock capability analysis to identify financial API requirement
     with patch.object(
-        detector, "_extract_capabilities", new_callable=AsyncMock
-    ) as mock_extract:
-        mock_extract.return_value = ["financial_data_api", "account_access"]
+        detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+    ) as mock_analyze:
+        mock_analyze.return_value = CapabilityAnalysisResult(
+            missing_capabilities=["financial_data_api", "account_access"],
+            reasoning="Financial tools are required but not available",
+        )
 
         # Task requiring missing tools
         task = "Retrieve my stock portfolio performance for Q3 2024"
@@ -110,11 +113,14 @@ async def test_end_to_end_gap_detection_all_tools_available():
 
     detector = ToolGapDetector(mcp_session=mock_session)
 
-    # Mock capability extraction to identify requirements that exist
+    # Mock capability analysis to identify requirements that exist
     with patch.object(
-        detector, "_extract_capabilities", new_callable=AsyncMock
-    ) as mock_extract:
-        mock_extract.return_value = ["web_search", "search_memory"]
+        detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+    ) as mock_analyze:
+        mock_analyze.return_value = CapabilityAnalysisResult(
+            missing_capabilities=[],
+            reasoning="All required capabilities are available",
+        )
 
         # Task requiring only available tools
         task = "Search the web for Python best practices and check my memory"
@@ -152,9 +158,12 @@ async def test_gap_detection_prevents_hallucinated_execution():
     detector = ToolGapDetector(mcp_session=mock_session)
 
     with patch.object(
-        detector, "_extract_capabilities", new_callable=AsyncMock
-    ) as mock_extract:
-        mock_extract.return_value = ["database_query", "sql_executor"]
+        detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+    ) as mock_analyze:
+        mock_analyze.return_value = CapabilityAnalysisResult(
+            missing_capabilities=["database_query", "sql_executor"],
+            reasoning="Database access tools are not available",
+        )
 
         # Task requiring database access (not available)
         task = "Query the database for all users with admin privileges"
@@ -162,7 +171,8 @@ async def test_gap_detection_prevents_hallucinated_execution():
 
         # CRITICAL: Must return gap report, NOT fabricated results
         assert report is not None
-        assert "database_query" in report.missing_tools or "sql_executor" in report.missing_tools
+        assert "database_query" in report.missing_tools
+        assert "sql_executor" in report.missing_tools
 
         # Verify transparency: user is informed about missing capabilities
         assert report.attempted_task == task
@@ -192,10 +202,10 @@ async def test_gap_detection_with_llm_extraction_failure():
     detector = ToolGapDetector(mcp_session=mock_session)
 
     with patch.object(
-        detector, "_extract_capabilities", new_callable=AsyncMock
-    ) as mock_extract:
-        # Simulate LLM extraction failure
-        mock_extract.side_effect = Exception("LLM API timeout")
+        detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+    ) as mock_analyze:
+        # Simulate LLM analysis failure
+        mock_analyze.side_effect = Exception("LLM API timeout")
 
         task = "Do something complex"
 

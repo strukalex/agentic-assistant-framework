@@ -15,7 +15,7 @@ Per Spec 002 tasks.md T201, T202 (FR-009 to FR-014, SC-003)
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.core.tool_gap_detector import ToolGapDetector
+from src.core.tool_gap_detector import CapabilityAnalysisResult, ToolGapDetector
 from src.models.tool_gap_report import ToolGapReport
 
 
@@ -60,11 +60,14 @@ class TestDetectMissingTools:
 
         detector = ToolGapDetector(mcp_session=mock_session)
 
-        # Mock LLM capability extraction to return required capabilities
+        # Mock LLM capability analysis to return required capabilities
         with patch.object(
-            detector, "_extract_capabilities", new_callable=AsyncMock
-        ) as mock_extract:
-            mock_extract.return_value = ["financial_data_api", "account_access"]
+            detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+        ) as mock_analyze:
+            mock_analyze.return_value = CapabilityAnalysisResult(
+                missing_capabilities=["financial_data_api", "account_access"],
+                reasoning="Financial tools are required but not available",
+            )
 
             # Task requiring financial tools (which don't exist)
             task = "Retrieve my stock portfolio performance for Q3 2024"
@@ -100,11 +103,14 @@ class TestDetectMissingTools:
 
         detector = ToolGapDetector(mcp_session=mock_session)
 
-        # Mock LLM capability extraction to return capabilities we have
+        # Mock LLM capability analysis to return capabilities we have
         with patch.object(
-            detector, "_extract_capabilities", new_callable=AsyncMock
-        ) as mock_extract:
-            mock_extract.return_value = ["web_search", "search_memory"]
+            detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+        ) as mock_analyze:
+            mock_analyze.return_value = CapabilityAnalysisResult(
+                missing_capabilities=[],
+                reasoning="All required capabilities are available",
+            )
 
             # Task requiring only available tools
             task = "Search the web for information about Python and check my memory"
@@ -126,9 +132,12 @@ class TestDetectMissingTools:
         detector = ToolGapDetector(mcp_session=mock_session)
 
         with patch.object(
-            detector, "_extract_capabilities", new_callable=AsyncMock
-        ) as mock_extract:
-            mock_extract.return_value = ["web_search"]
+            detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+        ) as mock_analyze:
+            mock_analyze.return_value = CapabilityAnalysisResult(
+                missing_capabilities=[],
+                reasoning="Web search capability is available",
+            )
 
             # First call
             await detector.detect_missing_tools("task 1")
@@ -152,10 +161,13 @@ class TestDetectMissingTools:
         detector = ToolGapDetector(mcp_session=mock_session)
 
         with patch.object(
-            detector, "_extract_capabilities", new_callable=AsyncMock
-        ) as mock_extract:
+            detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+        ) as mock_analyze:
             # Require 3 tools: 2 available, 1 missing
-            mock_extract.return_value = ["web_search", "read_file", "send_email"]
+            mock_analyze.return_value = CapabilityAnalysisResult(
+                missing_capabilities=["send_email"],
+                reasoning="Web search and file read are available, but email sending is not",
+            )
 
             task = "Search web, read file, and send results via email"
             report = await detector.detect_missing_tools(task)
@@ -176,9 +188,12 @@ class TestDetectMissingTools:
         detector = ToolGapDetector(mcp_session=mock_session)
 
         with patch.object(
-            detector, "_extract_capabilities", new_callable=AsyncMock
-        ) as mock_extract:
-            mock_extract.return_value = ["web_search"]
+            detector, "_analyze_capabilities_with_tools", new_callable=AsyncMock
+        ) as mock_analyze:
+            mock_analyze.return_value = CapabilityAnalysisResult(
+                missing_capabilities=["web_search"],
+                reasoning="No tools available in empty registry",
+            )
 
             task = "Search the web"
             report = await detector.detect_missing_tools(task)
@@ -191,16 +206,16 @@ class TestDetectMissingTools:
 
 
 class TestCapabilityExtraction:
-    """Test _extract_capabilities() LLM-based extraction."""
+    """Test _analyze_capabilities_with_tools() LLM-based analysis."""
 
     @pytest.mark.asyncio
-    async def test_extract_capabilities_simple_task(self):
-        """Test capability extraction for simple task."""
+    async def test_analyze_capabilities_with_tools_exists(self):
+        """Test that _analyze_capabilities_with_tools method exists and is callable."""
         # This will be tested via integration tests with real LLM
         # Unit test just ensures method exists and is callable
         mock_session = MagicMock()
         detector = ToolGapDetector(mcp_session=mock_session)
 
-        # _extract_capabilities will be implemented as part of T206
-        # For now, verify it's defined
-        assert hasattr(detector, "_extract_capabilities")
+        # Verify the method is defined
+        assert hasattr(detector, "_analyze_capabilities_with_tools")
+        assert callable(getattr(detector, "_analyze_capabilities_with_tools"))
