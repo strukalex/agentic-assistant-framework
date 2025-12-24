@@ -103,7 +103,7 @@ def compile_research_graph(
     """Compile the research graph into an executable app."""
     graph = build_research_graph(memory_manager=memory_manager, agent_runner=agent_runner)
     if hasattr(graph, "compile"):
-        return graph.compile()
+        return _LangGraphRunner(graph.compile())
     # Fallback graph already returns a runner
     return graph  # type: ignore[return-value]
 
@@ -145,4 +145,31 @@ class _FallbackGraph:
 
     def compile(self) -> "_FallbackRunner":
         return self._runner
+
+
+class _LangGraphRunner:
+    """Adapter to ensure LangGraph compiled apps return ResearchState."""
+
+    def __init__(self, compiled_app: Any):
+        self._app = compiled_app
+
+    async def ainvoke(self, state: ResearchState) -> ResearchState:
+        result = await self._app.ainvoke(state)
+        return self._coerce(result)
+
+    def invoke(self, state: ResearchState) -> ResearchState:
+        result = self._app.invoke(state)
+        return self._coerce(result)
+
+    def _coerce(self, result: Any) -> ResearchState:
+        if isinstance(result, ResearchState):
+            return result
+        if isinstance(result, dict):
+            return ResearchState(**result)
+        if hasattr(result, "model_dump"):
+            try:
+                return ResearchState(**result.model_dump())
+            except Exception:
+                pass
+        raise TypeError(f"Unexpected result type from LangGraph runner: {type(result)}")
 

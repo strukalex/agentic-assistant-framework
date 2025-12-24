@@ -291,9 +291,10 @@ class MemoryManager:
         stmt = select(Document)
         if conditions:
             stmt = stmt.where(and_(*conditions))
-        stmt = stmt.order_by(vector_column.cosine_distance(validated_embedding)).limit(
-            top_k
-        )
+        stmt = stmt.order_by(
+            vector_column.cosine_distance(validated_embedding),
+            cast(Any, Document.created_at).asc(),
+        ).limit(top_k)
 
         start_time = perf_counter()
         async with self._session_factory() as db:
