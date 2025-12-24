@@ -143,7 +143,19 @@ Non-negotiables to satisfy while implementing tasks below:
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Phase 6: Windmill Orchestration Integration
+
+**Purpose**: Replace in-process execution with real Windmill orchestration; ensure infra, docs, and API routes depend on a running Windmill instance.
+
+- [ ] T053 Update `docker-compose.yml` to include Windmill service/workers with required env (WINDMILL_*), ports, and resource limits per FR-010; document startup sequence
+- [ ] T054 Wire API routes in `src/api/routes/daily_trending_research.py` to trigger Windmill via `WindmillClient` (create job, poll status/result); remove in-process run registry, remove any demo code
+- [ ] T055 Register/export the Windmill flow from `src/windmill/daily_research.py` so Windmill can execute it (entrypoint compatibility, traceparent handling, memory output shape)
+- [ ] T056 Add Windmill usage docs to `README.md` and `specs/003-daily-research-workflow/quickstart.md` (prereqs, env vars, how to start Windmill, how to deploy flow, how to trigger runs)
+- [ ] T057 Add integration test (skipped unless WINDMILL_* are set) in `tests/integration/test_windmill_e2e.py` that triggers a real Windmill job via the API and asserts status/report mapping
+
+---
+
+## Phase 7: Polish & Cross-Cutting Concerns
 
 **Purpose**: Documentation, hardening, and quality improvements across stories.
 
@@ -163,7 +175,8 @@ Non-negotiables to satisfy while implementing tasks below:
 - **US1 (Phase 3)**: Depends on Foundational
 - **US2 (Phase 4)**: Depends on US1 (approval fields integrate into run lifecycle + status shape)
 - **US3 (Phase 5)**: Depends on US1 (needs real nodes/graph); can be developed in parallel with US2 once US1 exists
-- **Polish (Phase 6)**: Depends on whichever stories are in scope for the release
+- **Windmill Orchestration (Phase 6)**: Depends on US1+ (endpoints, flow, and config must exist before switching to external orchestration)
+- **Polish (Phase 7)**: Depends on whichever stories are in scope for the release
 
 ### User Story Dependencies (Graph)
 
