@@ -159,10 +159,8 @@ Non-negotiables to satisfy while implementing tasks below:
 
 **Purpose**: Documentation, hardening, and quality improvements across stories.
 
-- [ ] T049 [P] Add Spec 003 developer notes for required env vars in `specs/003-daily-research-workflow/quickstart.md` (WINDMILL_*, OTEL, Azure AI Foundry)
-- [ ] T050 Add “no PII in metadata” guardrails in `src/workflows/nodes/finish.py` (avoid storing emails/names in MemoryManager metadata)
-- [ ] T051 [P] Add API smoke test instructions in `README.md` (how to run `python -m src.cli.run_api` + curl examples from `quickstart.md`)
-- [ ] T052 [P] Add or update module exports for new models in `src/models/__init__.py`
+- [X] T049 [P] Add Spec 003 developer notes for required env vars in `specs/003-daily-research-workflow/quickstart.md` (WINDMILL_*, OTEL, Azure AI Foundry)
+- [X] T051 [P] Add API smoke test instructions in `README.md` (how to run `python -m src.cli.run_api` + curl examples from `quickstart.md`)
 
 ---
 

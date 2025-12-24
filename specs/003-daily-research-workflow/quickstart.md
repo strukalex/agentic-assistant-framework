@@ -289,6 +289,78 @@ curl -H "Authorization: Bearer $WINDMILL_TOKEN" \
   http://localhost:8100/api/w/default/scripts/list
 ```
 
+## Developer Notes
+
+### Required Environment Variables Reference
+
+The following environment variables are required or optional for Spec 003 functionality:
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| **Database** ||||
+| `DATABASE_URL` | Yes | - | PostgreSQL connection string with asyncpg driver |
+| **LLM (Azure AI Foundry)** ||||
+| `AZURE_AI_FOUNDRY_ENDPOINT` | Yes | - | Azure OpenAI endpoint URL |
+| `AZURE_AI_FOUNDRY_API_KEY` | Yes | - | Azure OpenAI API key |
+| `AZURE_DEPLOYMENT_NAME` | Yes | - | Model deployment name (e.g., `deepseek-3.2`) |
+| **Windmill Orchestration** ||||
+| `WINDMILL_ENABLED` | No | `false` | Enable Windmill orchestration (vs in-process) |
+| `WINDMILL_BASE_URL` | When enabled | - | Windmill server URL (e.g., `http://localhost:8100`) |
+| `WINDMILL_WORKSPACE` | When enabled | `default` | Windmill workspace name |
+| `WINDMILL_TOKEN` | When enabled | - | API token from Windmill UI |
+| `WINDMILL_FLOW_PATH` | No | `research/daily_research` | Script path in Windmill |
+| `APPROVAL_TIMEOUT_SECONDS` | No | `300` | Approval gate timeout (5 minutes) |
+| **OpenTelemetry** ||||
+| `OTEL_SERVICE_NAME` | No | `paias` | Service name for traces |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | - | OTLP collector endpoint (e.g., `http://localhost:4317`) |
+| **API Server** ||||
+| `API_HOST` | No | `127.0.0.1` | Server bind host |
+| `API_PORT` | No | `8000` | Server bind port |
+| `API_RELOAD` | No | `true` | Enable hot-reload (dev mode) |
+
+### Development vs Production Mode
+
+**Development (in-process mode)**:
+- Set `WINDMILL_ENABLED=false` (default)
+- Workflows execute directly in the API process
+- Approval gates use in-memory tracking
+- Faster iteration, no external dependencies beyond Postgres
+
+**Production (Windmill mode)**:
+- Set `WINDMILL_ENABLED=true`
+- Workflows are durable (survive API restarts)
+- Approval gates use Windmill's native suspend/resume
+- Resource isolation per worker (1 CPU, 2GB memory)
+- Full observability via Windmill UI
+
+### Configuring Windmill Workers
+
+Workers in `docker-compose.yml` are pre-configured with resource limits per FR-010:
+
+```yaml
+deploy:
+  resources:
+    limits:
+      cpus: "1.0"
+      memory: 2G
+```
+
+For higher throughput, start additional workers:
+
+```bash
+docker-compose --profile scale up -d
+```
+
+### Trace Context Propagation
+
+The API propagates trace context to Windmill via the `traceparent` argument. This enables end-to-end distributed tracing from API request → Windmill job → LangGraph nodes → agent tool calls.
+
+To view traces:
+1. Ensure `OTEL_EXPORTER_OTLP_ENDPOINT` is set
+2. Run a workflow
+3. Open Jaeger UI at http://localhost:16686
+4. Search for service `paias`
+
 ## Next steps
 
 - Use `data-model.md` for the entity definitions and validation rules.

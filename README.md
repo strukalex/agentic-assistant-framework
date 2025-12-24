@@ -133,6 +133,36 @@ For local development, use the provided CLI helper:
 python -m src.cli.run_api
 ```
 
+This starts the FastAPI server at http://localhost:8000 with auto-reload enabled.
+
+### API Smoke Test
+
+After starting the server, verify the API is working with these curl commands:
+
+```bash
+# 1. Health check
+curl http://localhost:8000/healthz
+# Expected: {"status":"ok"}
+
+# 2. Start a research workflow
+curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs \
+  -H 'Content-Type: application/json' \
+  -d '{"topic": "AI trends 2025", "user_id": "550e8400-e29b-41d4-a716-446655440000"}'
+# Expected: {"run_id":"...","status":"queued",...}
+
+# 3. Check run status (replace {run_id} with actual ID from step 2)
+curl http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}
+# Expected: {"run_id":"...","status":"running|completed",...}
+
+# 4. Get report when completed
+curl http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/report
+# Expected: {"markdown":"# Research Report\n...","sources":[...]}
+```
+
+For interactive API documentation, visit http://localhost:8000/docs (Swagger UI).
+
+See `specs/003-daily-research-workflow/quickstart.md` for complete API usage including approval flows.
+
 ## US1 demo (no server required)
 
 Quickly exercise the DailyTrendingResearch workflow end-to-end without running a server:
