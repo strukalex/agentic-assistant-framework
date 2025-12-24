@@ -206,8 +206,12 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
 2. Use memory results when available. If search_memory() returns relevant past
    research, use that knowledge in your answer and cite the memory source in
    your reasoning (e.g., "Based on prior research stored on [date]...").
-   IMPORTANT: If search_memory() returns results, STOP searching and answer
-   immediately. Do NOT call search_memory() again with the same query.
+   IMPORTANT:
+   - If search_memory() returns relevant facts that answer the question,
+     STOP and answer immediately. Do NOT call search_memory() again with
+     the same query.
+   - If search_memory() returns irrelevant data, query logs, or placeholders
+     (e.g., "NO RESULTS FOUND"), proceed directly to web_search.
 
 3. Research when needed. Only use web_search or other expensive tools when
    memory does not have the answer (i.e., search_memory() returned empty results
@@ -219,6 +223,8 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
    - topic: Brief topic description
    - timestamp: Current date/time from get_current_time()
    - sources: List of tools used (e.g., ["web_search"])
+   CRITICAL: ONLY store verified facts or synthesized answers. NEVER store
+   queries, status updates, "no results" messages, or intermediate reasoning.
 
 5. Provide accurate answers. Return structured responses with confidence scores
    based on source reliability.
@@ -296,6 +302,23 @@ async def store_memory(
     Per tasks.md T106 (FR-025)
     """
     params = {"content_preview": content[:80], "metadata_keys": list(metadata.keys())}
+
+    # Guardrail: skip meta/log/no-result entries to avoid memory pollution
+    lowered = content.lower()
+    if any(
+        phrase in lowered
+        for phrase in [
+            "no results found",
+            "no_results",
+            "initial query",
+            "status:",
+            "query:",
+        ]
+    ) or "status" in metadata or "query" in metadata:
+        return (
+            "SKIPPED: Not storing meta/log content. "
+            "Only verified facts and synthesized answers are persisted."
+        )
 
     async def _execute() -> str:
         # Call MemoryManager.store_document
