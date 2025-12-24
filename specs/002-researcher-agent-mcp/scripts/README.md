@@ -2,7 +2,7 @@
 
 ## manual_test_agent.py
 
-Tests both **User Story 1** (basic research queries) and **User Story 2** (tool gap detection).
+Tests **User Story 1** (basic research queries), **User Story 2** (tool gap detection), and **User Story 3** (risk-based action approval).
 
 ### Usage
 
@@ -102,9 +102,105 @@ npx --version  # Should output version number
 docker-compose ps  # Check postgres container is "Up"
 ```
 
+## Testing User Story 3: Risk-Based Action Approval
+
+**Note**: The risk assessment system is now integrated! All MCP tool invocations are automatically assessed for risk level.
+
+### How Risk Assessment Works
+
+The agent categorizes every tool action into three risk levels:
+
+1. **REVERSIBLE** (auto-executes with logging):
+   - `web_search`, `read_file` (safe paths), `get_current_time`, `search_memory`
+   - Example: Searching the web is read-only and safe
+
+2. **REVERSIBLE_WITH_DELAY** (requires approval if confidence < 0.85):
+   - `send_email`, `create_calendar_event`, `schedule_task`
+   - Example: Sending an email can be recalled within a time window
+
+3. **IRREVERSIBLE** (always requires approval):
+   - `delete_file`, `make_purchase`, `send_money`, `modify_production`
+   - Unknown/unrecognized tools default to IRREVERSIBLE (conservative safety)
+
+### Special Cases: Context-Dependent Risk
+
+Reading sensitive files escalates from REVERSIBLE → REVERSIBLE_WITH_DELAY:
+- Paths containing: `/etc/shadow`, `api_key`, `secret`, `credentials`, `password`
+
+### Observing Risk Assessment in Logs
+
+When you run the test script, watch for these log messages:
+
+**Auto-executed REVERSIBLE actions:**
+```
+[INFO] ✅ Auto-executing REVERSIBLE action - tool: web_search, parameters: {'query': 'capital of France'}
+```
+
+**Approval required (IRREVERSIBLE or low-confidence REVERSIBLE_WITH_DELAY):**
+```
+[WARNING] ⚠️ Action requires approval - tool: delete_file, risk: irreversible, confidence: 1.00
+```
+
+**Tool response when approval is required:**
+```
+Answer: APPROVAL REQUIRED: Tool 'delete_file' with risk level 'irreversible'
+        requires human approval before execution. Parameters: {'path': '/data/file.txt'}
+```
+
+### Testing Different Risk Scenarios
+
+```bash
+# 1. REVERSIBLE: Should auto-execute (check logs for "Auto-executing REVERSIBLE action")
+python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "What is the capital of France?"
+
+# 2. Sensitive file read: Currently treats as REVERSIBLE in this MVP
+#    (file reading via MCP uses read_file tool from mcp-server-filesystem)
+python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Read the file at /etc/shadow"
+
+# 3. Tool gap for IRREVERSIBLE actions: Should detect missing tool
+#    (These tools don't exist, so gap detection triggers first)
+python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Delete the file /data/important.txt"
+python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Send an email to john@example.com saying hello"
+python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Make a purchase of 100 shares of AAPL"
+
+# 4. REVERSIBLE_WITH_DELAY: Currently would require approval if tool existed
+#    (These will trigger tool gap detection since send_email isn't in MCP tools)
+python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Schedule a meeting for tomorrow at 2pm"
+```
+
+### Expected Behavior
+
+**Current Implementation (Phase 5 MVP):**
+
+Since the agent only has REVERSIBLE tools available (web_search, read_file, get_current_time):
+- ✅ All web searches will auto-execute with logging
+- ✅ File reads will auto-execute (unless you add a tool that supports delete/send operations)
+- ⚠️ Requests for IRREVERSIBLE/REVERSIBLE_WITH_DELAY tools will trigger **tool gap detection** (User Story 2) before risk assessment even runs
+
+**To See Approval Blocking in Action:**
+
+You would need to add MCP tools for IRREVERSIBLE actions (like `delete_file` or `send_email`). When you do:
+1. The tool gap detection will pass (tool is available)
+2. Risk assessment will categorize the action
+3. If requires_approval() returns True, the agent will return an approval request message instead of executing
+
+### Monitoring via Logs and Jaeger
+
+**Check logs for risk assessment:**
+```bash
+# Look for these log patterns:
+grep "Auto-executing REVERSIBLE" logs.txt
+grep "Action requires approval" logs.txt
+```
+
+**View in Jaeger UI:**
+- Navigate to http://localhost:16686
+- Find traces with span attributes showing risk assessment decisions
+
 ## Next Steps
 
 After successful manual testing:
-1. Run automated test suite: `pytest --cov=src --cov-fail-under=80 tests/`
-2. View traces in Jaeger UI: http://localhost:16686
-3. Proceed to Phase 5 (Risk-Based Action Approval) implementation
+1. Run automated test suite: `pytest tests/unit/test_risk_assessment.py -v`
+2. Run contract tests: `pytest tests/contract/test_agent_api_contract.py::TestRiskAssessmentContract -v`
+3. View traces in Jaeger UI: http://localhost:16686
+4. Proceed to Phase 6 (Memory Integration for Knowledge Persistence) implementation

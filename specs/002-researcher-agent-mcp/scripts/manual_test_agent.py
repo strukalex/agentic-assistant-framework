@@ -1,6 +1,9 @@
-"""Manual validation script for ResearcherAgent Q&A and tool gap detection.
+"""Manual validation script for ResearcherAgent Q&A, tool gap detection, and risk assessment.
 
-Tests both User Story 1 (basic research queries) and User Story 2 (tool gap detection).
+Tests:
+- User Story 1: Basic research queries with MCP tools
+- User Story 2: Tool gap detection for missing capabilities
+- User Story 3: Risk-based action approval workflow
 """
 
 import argparse
@@ -25,6 +28,10 @@ async def main(question: str) -> None:
     The result can be either:
     - AgentResponse: Normal answer with reasoning and tool calls
     - ToolGapReport: When required tools are missing (prevents hallucination)
+
+    Risk Assessment (User Story 3):
+    All MCP tool invocations are automatically assessed for risk level.
+    Check logs for "Auto-executing REVERSIBLE action" or "Action requires approval" messages.
     """
     import logging
     logging.basicConfig(
@@ -32,6 +39,18 @@ async def main(question: str) -> None:
         format="[%(levelname)s] %(message)s"
     )
     logger = logging.getLogger(__name__)
+
+    # Print risk assessment guide for user reference
+    print("\n" + "="*60)
+    print("RISK ASSESSMENT ACTIVE (User Story 3)")
+    print("="*60)
+    print("All tool invocations are assessed for risk level:")
+    print("  • REVERSIBLE → Auto-execute with logging")
+    print("  • REVERSIBLE_WITH_DELAY → Require approval if confidence < 0.85")
+    print("  • IRREVERSIBLE → Always require approval")
+    print("  • Unknown tools → Default to IRREVERSIBLE (conservative)")
+    print("\nWatch logs for risk assessment decisions...")
+    print("="*60 + "\n")
 
     logger.info("📝 Question: %s", question)
     logger.info("🔧 Initializing MemoryManager...")
@@ -69,11 +88,23 @@ async def main(question: str) -> None:
             if result.tool_calls:
                 print("\nTool calls:")
                 for call in result.tool_calls:
-                    print(f"- {call.tool_name} ({call.status}) "
-                          f"{call.duration_ms}ms params={call.parameters}")
+                    print(f"  • {call.tool_name} ({call.status.value}) - {call.duration_ms}ms")
+                    print(f"    Parameters: {call.parameters}")
+                    # Show if approval was required in the result
+                    if call.result and "APPROVAL REQUIRED" in str(call.result):
+                        print(f"    ⚠️  Result: {call.result[:100]}...")
             else:
                 print("\nTool calls: none recorded")
             print(f"{'='*60}\n")
+
+            # Check if any tool calls required approval
+            approval_needed = any(
+                call.result and "APPROVAL REQUIRED" in str(call.result)
+                for call in result.tool_calls
+            )
+            if approval_needed:
+                print("⚠️  NOTE: One or more actions required approval and were blocked.")
+                print("    Check the tool call results above for details.\n")
     finally:
         logger.info("🧹 Shutting down MCP session...")
 
