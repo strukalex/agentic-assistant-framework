@@ -54,6 +54,15 @@ docker-compose up -d
 pytest
 ```
 
+## Running the API server
+
+For local development, use the provided CLI helper:
+
+```bash
+# From project root
+python -m src.cli.run_api
+```
+
 ### Reset & DB re-init
 
 To fully reset local infra, re-create the DB schema, and set `PYTHONPATH` automatically:
