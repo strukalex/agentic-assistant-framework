@@ -32,6 +32,31 @@ This quickstart is for developers who want to run/trigger the DailyTrendingResea
   - `OTEL_SERVICE_NAME=paias`
   - `OTEL_EXPORTER_OTLP_ENDPOINT` (points to your collector; Jaeger/collector per repo setup)
 
+## Running the API server
+
+For local development, use the provided CLI helper:
+
+```bash
+# From project root
+python -m src.cli.run_api
+```
+
+This will:
+- Load environment variables from `.env` file (if present)
+- Start the FastAPI server on `http://127.0.0.1:8000` by default
+- Enable auto-reload on code changes (development mode)
+- Provide interactive API docs at `http://127.0.0.1:8000/docs`
+
+**Configuration via environment variables:**
+- `API_HOST`: Server host (default: `127.0.0.1`)
+- `API_PORT`: Server port (default: `8000`)
+- `API_RELOAD`: Enable auto-reload (default: `true`)
+
+**Alternative (production):**
+```bash
+uvicorn src.api.app:app --host 0.0.0.0 --port 8000
+```
+
 ## Trigger the workflow (API contract)
 
 The Phase 1 contract lives at:

@@ -33,14 +33,14 @@ Non-negotiables to satisfy while implementing tasks below:
 
 **Purpose**: Add missing dependencies and scaffold new modules for Spec 003 (no business logic yet).
 
-- [ ] T001 Update runtime deps for Spec 003 in `pyproject.toml` (add `fastapi`, `uvicorn`, `langgraph`, `wmill`, `httpx`)
-- [ ] T002 Update dev/test deps in `pyproject.toml` (add `pyyaml` for OpenAPI contract parsing in tests)
-- [ ] T003 [P] Create workflow package scaffolding in `src/workflows/__init__.py`, `src/workflows/nodes/__init__.py`
-- [ ] T004 [P] Create Windmill package scaffolding in `src/windmill/__init__.py`
-- [ ] T005 [P] Create API package scaffolding in `src/api/__init__.py`, `src/api/routes/__init__.py`, `src/api/schemas/__init__.py`
-- [ ] T006 Create FastAPI app entrypoint in `src/api/app.py` (app factory + router inclusion + basic `/healthz`)
-- [ ] T007 Add API run helper for local dev in `src/cli/run_api.py` (documented uvicorn command + env loading)
-- [ ] T008 Update developer docs to mention API runner in `specs/003-daily-research-workflow/quickstart.md`
+- [X] T001 Update runtime deps for Spec 003 in `pyproject.toml` (add `fastapi`, `uvicorn`, `langgraph`, `wmill`, `httpx`)
+- [X] T002 Update dev/test deps in `pyproject.toml` (add `pyyaml` for OpenAPI contract parsing in tests)
+- [X] T003 [P] Create workflow package scaffolding in `src/workflows/__init__.py`, `src/workflows/nodes/__init__.py`
+- [X] T004 [P] Create Windmill package scaffolding in `src/windmill/__init__.py`
+- [X] T005 [P] Create API package scaffolding in `src/api/__init__.py`, `src/api/routes/__init__.py`, `src/api/schemas/__init__.py`
+- [X] T006 Create FastAPI app entrypoint in `src/api/app.py` (app factory + router inclusion + basic `/healthz`)
+- [X] T007 Add API run helper for local dev in `src/cli/run_api.py` (documented uvicorn command + env loading)
+- [X] T008 Update developer docs to mention API runner in `specs/003-daily-research-workflow/quickstart.md`
 
 ---
 
