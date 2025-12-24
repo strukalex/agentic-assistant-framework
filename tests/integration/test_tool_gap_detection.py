@@ -24,6 +24,13 @@ class MockTool:
         self.description = description
 
 
+class MockListToolsResult:
+    """Mock MCP list_tools() response matching production structure."""
+
+    def __init__(self, tools: list):
+        self.tools = tools
+
+
 @pytest.mark.asyncio
 async def test_end_to_end_gap_detection_with_missing_tool():
     """
@@ -38,12 +45,14 @@ async def test_end_to_end_gap_detection_with_missing_tool():
     # Mock MCP session with limited tools (no financial API)
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
-        return_value=[
-            MockTool("web_search", "Search the web"),
-            MockTool("read_file", "Read a file"),
-            MockTool("get_current_time", "Get current time"),
-            MockTool("search_memory", "Search semantic memory"),
-        ]
+        return_value=MockListToolsResult(
+            tools=[
+                MockTool("web_search", "Search the web"),
+                MockTool("read_file", "Read a file"),
+                MockTool("get_current_time", "Get current time"),
+                MockTool("search_memory", "Search semantic memory"),
+            ]
+        )
     )
 
     detector = ToolGapDetector(mcp_session=mock_session)
@@ -89,12 +98,14 @@ async def test_end_to_end_gap_detection_all_tools_available():
     # Mock MCP session with comprehensive tools
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
-        return_value=[
-            MockTool("web_search", "Search the web"),
-            MockTool("read_file", "Read a file"),
-            MockTool("get_current_time", "Get current time"),
-            MockTool("search_memory", "Search semantic memory"),
-        ]
+        return_value=MockListToolsResult(
+            tools=[
+                MockTool("web_search", "Search the web"),
+                MockTool("read_file", "Read a file"),
+                MockTool("get_current_time", "Get current time"),
+                MockTool("search_memory", "Search semantic memory"),
+            ]
+        )
     )
 
     detector = ToolGapDetector(mcp_session=mock_session)
@@ -131,9 +142,11 @@ async def test_gap_detection_prevents_hallucinated_execution():
     # Mock MCP session with NO database tools
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
-        return_value=[
-            MockTool("web_search", "Search the web"),
-        ]
+        return_value=MockListToolsResult(
+            tools=[
+                MockTool("web_search", "Search the web"),
+            ]
+        )
     )
 
     detector = ToolGapDetector(mcp_session=mock_session)
@@ -169,9 +182,11 @@ async def test_gap_detection_with_llm_extraction_failure():
     """
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
-        return_value=[
-            MockTool("web_search", "Search the web"),
-        ]
+        return_value=MockListToolsResult(
+            tools=[
+                MockTool("web_search", "Search the web"),
+            ]
+        )
     )
 
     detector = ToolGapDetector(mcp_session=mock_session)
