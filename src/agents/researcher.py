@@ -76,6 +76,15 @@ _tool_call_log: contextvars.ContextVar[
 _tool_result_cache: contextvars.ContextVar[
     Optional[Dict[str, Any]]
 ] = contextvars.ContextVar("tool_result_cache", default=None)
+_web_search_seen: contextvars.ContextVar[
+    Optional[set[str]]
+] = contextvars.ContextVar("web_search_seen", default=None)
+_stored_hashes: contextvars.ContextVar[
+    Optional[set[str]]
+] = contextvars.ContextVar("stored_hashes", default=None)
+_answer_committed: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "answer_committed", default=False
+)
 
 
 def _make_cache_key(tool_name: str, parameters: dict) -> str:
@@ -103,6 +112,22 @@ def _get_tool_cache() -> Dict[str, Any]:
     return cache
 
 
+def _get_web_search_seen() -> set[str]:
+    seen = _web_search_seen.get()
+    if seen is None:
+        seen = set()
+        _web_search_seen.set(seen)
+    return seen
+
+
+def _get_stored_hashes() -> set[str]:
+    hashes = _stored_hashes.get()
+    if hashes is None:
+        hashes = set()
+        _stored_hashes.set(hashes)
+    return hashes
+
+
 def _record_tool_call(
     tool_name: str,
     parameters: dict,
@@ -125,6 +150,9 @@ def _reset_run_context() -> None:
     """Reset the per-run tool call log and cache. Used for testing and run initialization."""
     _tool_call_log.set([])
     _tool_result_cache.set({})
+    _web_search_seen.set(set())
+    _stored_hashes.set(set())
+    _answer_committed.set(False)
 
 
 async def _with_tool_logging_and_cache(
@@ -320,11 +348,19 @@ async def store_memory(
             "Only verified facts and synthesized answers are persisted."
         )
 
+    # Guardrail: avoid duplicate storage of identical content in the same run
+    content_hash = hash(content.strip())
+    stored_hashes = _get_stored_hashes()
+    if content_hash in stored_hashes:
+        return "SKIPPED: Duplicate content already stored this run."
+
     async def _execute() -> str:
         # Call MemoryManager.store_document
         doc_id: UUID = await ctx.deps.store_document(
             content=content, metadata=metadata
         )
+        stored_hashes.add(content_hash)
+        _answer_committed.set(True)
         return str(doc_id)
 
     return await _with_tool_logging_and_cache("store_memory", params, _execute)
@@ -417,6 +453,18 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
         params = dict(kwargs)
 
         async def _execute() -> str:
+            # Global stop: if answer already committed, skip further expensive calls
+            if _answer_committed.get() and tool_name in {"web_search", "search_memory", "search"}:
+                return "SKIPPED: Answer already committed; proceed to final_result."
+
+            # Prevent duplicate web_search queries in the same run
+            if tool_name in {"web_search", "search"}:
+                query = str(kwargs.get("query", "")).strip().lower()
+                seen = _get_web_search_seen()
+                if query in seen:
+                    return "SKIPPED: Duplicate web_search this run (cached result already available)."
+                seen.add(query)
+
             # T308: Integrate risk assessment before tool invocation
             risk_level = categorize_action_risk(tool_name, kwargs)
 
