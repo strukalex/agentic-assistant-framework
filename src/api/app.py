@@ -6,7 +6,8 @@ and basic health check endpoint.
 
 from fastapi import FastAPI
 
-from src.api.routes import daily_trending_research
+# Router imports will be added in Phase 3 when routes are implemented
+# from src.api.routes import daily_trending_research
 
 
 def create_app() -> FastAPI:

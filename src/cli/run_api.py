@@ -29,10 +29,8 @@ if env_file.exists():
 else:
     print(f"⚠️  No .env file found at {env_file} (using system environment only)")
 
-# Now import uvicorn and app
+# Now import uvicorn
 import uvicorn
-
-from src.api.app import create_app
 
 
 def main() -> None:
@@ -49,17 +47,29 @@ def main() -> None:
     print(f"   API docs: http://{host}:{port}/docs")
     print(f"   Health check: http://{host}:{port}/healthz\n")
 
-    # Create app instance
-    app = create_app()
+    # When reload is enabled, uvicorn requires an import string
+    # When reload is disabled, we can pass the app object directly
+    if reload:
+        # Use import string for reload support
+        uvicorn.run(
+            "src.api.app:app",
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info",
+        )
+    else:
+        # Import and create app instance for non-reload mode
+        from src.api.app import create_app
 
-    # Run with uvicorn
-    uvicorn.run(
-        app,
-        host=host,
-        port=port,
-        reload=reload,
-        log_level="info",
-    )
+        app = create_app()
+        uvicorn.run(
+            app,
+            host=host,
+            port=port,
+            reload=reload,
+            log_level="info",
+        )
 
 
 if __name__ == "__main__":
