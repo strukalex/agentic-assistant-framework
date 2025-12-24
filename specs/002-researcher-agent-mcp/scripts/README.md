@@ -72,9 +72,9 @@ Before running the script, ensure:
    ```bash
    docker-compose up -d
    ```
-3. **Dependencies installed**: Poetry or pip install complete
+3. **Dependencies installed**: Editable install complete
    ```bash
-   poetry install --extras "azure mcp otel"
+   pip install -e .[dev]
    ```
 
 ## Troubleshooting

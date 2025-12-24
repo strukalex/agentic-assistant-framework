@@ -2,6 +2,10 @@
 requires = ["setuptools>=70.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
 [project]
 name = "paias"
 version = "0.1.0"

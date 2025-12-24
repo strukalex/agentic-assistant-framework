@@ -46,9 +46,6 @@ docker-compose up -d
 
 # TESTING
 
-# Add the project root to PYTHONPATH
-export PYTHONPATH="$PWD/src:$PYTHONPATH"
-
 # Run tests with coverage gate
 pytest
 ```
@@ -65,7 +62,6 @@ What the script does:
 - Stops containers, removes volumes, restarts infra (`docker compose` fallback to `docker-compose`)
 - Waits for Postgres health
 - Runs `alembic upgrade head` to initialize the schema
-- Exports `PYTHONPATH="$PWD/src:$PYTHONPATH"` for the session
 
 Manual re-init (if you prefer the long form):
 ```bash
@@ -75,12 +71,12 @@ docker compose up -d
 alembic upgrade head
 ```
 
-### Running tests (PYTHONPATH automated)
+### Running tests
 
-Use the helper to avoid manually exporting `PYTHONPATH` and to auto-activate `venv` when present:
+Use the npm wrappers to auto-activate `venv` when present:
 
 ```bash
-# npm wrappers (PYTHONPATH handled by the script)
+# npm wrappers
 npm test              # alias to npm run test:py
 npm run test:py -q tests/integration
 
@@ -88,9 +84,8 @@ npm run test:py -q tests/integration
 npm run test:agent "What is the capital of France?"
 ```
 
-If you want to run pytest directly, set `PYTHONPATH` first:
+Or run pytest directly:
 ```bash
-export PYTHONPATH="$PWD/src:$PYTHONPATH"
 pytest
 ```
 
