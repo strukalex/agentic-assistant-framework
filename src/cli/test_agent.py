@@ -85,15 +85,58 @@ async def main(question: str) -> None:
             print(f"Reasoning:  {result.reasoning}")
             if result.tool_calls:
                 print("\nTool calls:")
-                for call in result.tool_calls:
+                for i, call in enumerate(result.tool_calls, 1):
+                    # Header with tool name, status, duration
+                    cached_marker = " (cached)" if call.parameters.get("_cached") else ""
                     print(
-                        f"  • {call.tool_name} ({call.status.value}) "
-                        f"- {call.duration_ms}ms"
+                        f"  {i}. {call.tool_name} ({call.status.value}){cached_marker} - {call.duration_ms}ms"
                     )
-                    print(f"    Parameters: {call.parameters}")
-                    # Show if approval was required in the result
-                    if call.result and "APPROVAL REQUIRED" in str(call.result):
-                        print(f"    ⚠️  Result: {call.result[:100]}...")
+                    
+                    # Full parameters (remove _cached from display if present)
+                    params_display = {k: v for k, v in call.parameters.items() if k != "_cached"}
+                    if params_display:
+                        print(f"     Input Parameters:")
+                        import json
+                        try:
+                            # Pretty print JSON if possible
+                            params_str = json.dumps(params_display, indent=8, ensure_ascii=False)
+                            for line in params_str.split('\n'):
+                                print(f"     {line}")
+                        except (TypeError, ValueError):
+                            # Fallback to string representation
+                            for key, value in params_display.items():
+                                value_str = str(value)
+                                if len(value_str) > 200:
+                                    value_str = value_str[:200] + "... [truncated]"
+                                print(f"       {key}: {value_str}")
+                    
+                    # Full result/output
+                    if call.result is not None:
+                        print(f"     Output Result:")
+                        result_str = str(call.result)
+                        
+                        # Truncate very long results but show substantial content
+                        max_result_length = 1000
+                        if len(result_str) > max_result_length:
+                            truncated = result_str[:max_result_length]
+                            # Try to truncate at a reasonable boundary
+                            last_newline = truncated.rfind('\n', 0, max_result_length - 100)
+                            if last_newline > max_result_length // 2:
+                                truncated = result_str[:last_newline]
+                            result_str = truncated + f"\n     ... [truncated, total length: {len(str(call.result))} chars]"
+                        
+                        # Print result with indentation
+                        for line in result_str.split('\n'):
+                            if line.strip():
+                                print(f"       {line}")
+                            else:
+                                print()
+                    else:
+                        print(f"     Output Result: None")
+                    
+                    # Add separator between tool calls
+                    if i < len(result.tool_calls):
+                        print()
             else:
                 print("\nTool calls: none recorded")
             print(f"{'='*60}\n")
