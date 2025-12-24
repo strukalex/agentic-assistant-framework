@@ -8,9 +8,11 @@ FR-031, FR-034)
 """
 
 import asyncio
+import contextvars
 import json
 import logging
-from typing import Any, Callable, List, Optional, Tuple
+import time
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from mcp import ClientSession
@@ -24,7 +26,11 @@ from src.core.risk_assessment import categorize_action_risk, requires_approval
 from src.core.telemetry import get_tracer, trace_tool_call
 from src.core.tool_gap_detector import ToolGapDetector
 from src.mcp_integration.setup import setup_mcp_tools
-from src.models.agent_response import AgentResponse
+from src.models.agent_response import (
+    AgentResponse,
+    ToolCallRecord,
+    ToolCallStatus,
+)
 from src.models.tool_gap_report import ToolGapReport
 
 
@@ -61,6 +67,114 @@ def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]
 
 
 model = get_azure_model()
+
+# Limits and per-run state to prevent thrashing and to capture executed tools.
+MAX_TOOL_CALLS_PER_RUN = 50
+_tool_call_log: contextvars.ContextVar[
+    Optional[List[ToolCallRecord]]
+] = contextvars.ContextVar("tool_call_log", default=None)
+_tool_result_cache: contextvars.ContextVar[
+    Optional[Dict[str, Any]]
+] = contextvars.ContextVar("tool_result_cache", default=None)
+
+
+def _make_cache_key(tool_name: str, parameters: dict) -> str:
+    """Create a stable cache key for a tool invocation."""
+    try:
+        normalized = json.dumps(parameters, sort_keys=True, default=str)
+    except TypeError:
+        normalized = str(sorted(parameters.items()))
+    return f"{tool_name}:{normalized}"
+
+
+def _get_tool_log() -> List[ToolCallRecord]:
+    log = _tool_call_log.get()
+    if log is None:
+        log = []
+        _tool_call_log.set(log)
+    return log
+
+
+def _get_tool_cache() -> Dict[str, Any]:
+    cache = _tool_result_cache.get()
+    if cache is None:
+        cache = {}
+        _tool_result_cache.set(cache)
+    return cache
+
+
+def _record_tool_call(
+    tool_name: str,
+    parameters: dict,
+    result: Any,
+    duration_ms: int,
+    status: ToolCallStatus,
+) -> None:
+    _get_tool_log().append(
+        ToolCallRecord(
+            tool_name=tool_name,
+            parameters=parameters,
+            result=result,
+            duration_ms=duration_ms,
+            status=status,
+        )
+    )
+
+
+async def _with_tool_logging_and_cache(
+    tool_name: str, parameters: dict, func: Callable[[], Awaitable[Any]]
+) -> Any:
+    """Execute a tool with deduplication and logging to AgentResponse."""
+    cache = _get_tool_cache()
+    key = _make_cache_key(tool_name, parameters)
+    start = time.perf_counter()
+
+    if len(_get_tool_log()) >= MAX_TOOL_CALLS_PER_RUN:
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        message = "Tool call budget exceeded for this run."
+        _record_tool_call(
+            tool_name=tool_name,
+            parameters=parameters,
+            result=message,
+            duration_ms=duration_ms,
+            status=ToolCallStatus.FAILED,
+        )
+        raise RuntimeError(message)
+
+    if key in cache:
+        cached_result = cache[key]
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        _record_tool_call(
+            tool_name=tool_name,
+            parameters={**parameters, "_cached": True},
+            result=cached_result,
+            duration_ms=duration_ms,
+            status=ToolCallStatus.SUCCESS,
+        )
+        return cached_result
+
+    try:
+        result = await func()
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        cache[key] = result
+        _record_tool_call(
+            tool_name=tool_name,
+            parameters=parameters,
+            result=result,
+            duration_ms=duration_ms,
+            status=ToolCallStatus.SUCCESS,
+        )
+        return result
+    except Exception as exc:
+        duration_ms = int((time.perf_counter() - start) * 1000)
+        _record_tool_call(
+            tool_name=tool_name,
+            parameters=parameters,
+            result=str(exc),
+            duration_ms=duration_ms,
+            status=ToolCallStatus.FAILED,
+        )
+        raise
 
 
 def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
@@ -133,16 +247,23 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
     """
     from src.core.config import settings
 
-    try:
-        # Preferred path per spec: pass raw query string
-        documents = await ctx.deps.semantic_search(query, top_k=5)
-    except Exception:
-        # Fallback for backends that expect embeddings
-        query_embedding = _generate_simple_embedding(query, settings.vector_dimension)
-        documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
+    params = {"query": query}
 
-    # Convert Document objects to dict format
-    return [{"content": doc.content, "metadata": doc.metadata_} for doc in documents]
+    async def _execute() -> List[dict]:
+        try:
+            # Preferred path per spec: pass raw query string
+            documents = await ctx.deps.semantic_search(query, top_k=5)
+        except Exception:
+            # Fallback for backends that expect embeddings
+            query_embedding = _generate_simple_embedding(
+                query, settings.vector_dimension
+            )
+            documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
+
+        # Convert Document objects to dict format
+        return [{"content": doc.content, "metadata": doc.metadata_} for doc in documents]
+
+    return await _with_tool_logging_and_cache("search_memory", params, _execute)
 
 
 @trace_tool_call
@@ -161,9 +282,16 @@ async def store_memory(
 
     Per tasks.md T106 (FR-025)
     """
-    # Call MemoryManager.store_document
-    doc_id: UUID = await ctx.deps.store_document(content=content, metadata=metadata)
-    return str(doc_id)
+    params = {"content_preview": content[:80], "metadata_keys": list(metadata.keys())}
+
+    async def _execute() -> str:
+        # Call MemoryManager.store_document
+        doc_id: UUID = await ctx.deps.store_document(
+            content=content, metadata=metadata
+        )
+        return str(doc_id)
+
+    return await _with_tool_logging_and_cache("store_memory", params, _execute)
 
 
 def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
@@ -249,66 +377,77 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
         # Log tool call initiation
         logger.info("🔧 [AGENTIC STEP] Tool call initiated: %s", tool_name)
         logger.debug("   Parameters: %s", kwargs)
-        
-        # T308: Integrate risk assessment before tool invocation
-        risk_level = categorize_action_risk(tool_name, kwargs)
 
-        # Get confidence from context if available (fallback to 1.0 for
-        # high-confidence tools). In a full implementation, confidence would come
-        # from the agent's inference. For now, use a conservative default that
-        # doesn't block REVERSIBLE actions.
-        confidence = 1.0  # Conservative: assume high confidence for auto-execution
+        params = dict(kwargs)
 
-        # T309: Implement approval check
-        if requires_approval(risk_level, confidence):
-            # Action requires human approval - return approval request message
-            # In a full implementation, this would trigger an approval workflow
-            logger.warning(
-                "⚠️ Action requires approval - tool: %s, risk: %s, confidence: %.2f",
-                tool_name,
-                risk_level.value,
-                confidence,
-            )
-            return (
-                "APPROVAL REQUIRED: Tool "
-                f"'{tool_name}' with risk level '{risk_level.value}' "
-                "requires human approval before execution. "
-                f"Parameters: {kwargs}"
-            )
+        async def _execute() -> str:
+            # T308: Integrate risk assessment before tool invocation
+            risk_level = categorize_action_risk(tool_name, kwargs)
 
-        # T310: Log auto-executed REVERSIBLE actions
-        if risk_level.value == "reversible":
-            logger.info(
-                "✅ Auto-executing REVERSIBLE action - tool: %s, parameters: %s",
-                tool_name,
-                kwargs,
-            )
+            # Get confidence from context if available (fallback to 1.0 for
+            # high-confidence tools). In a full implementation, confidence would come
+            # from the agent's inference. For now, use a conservative default that
+            # doesn't block REVERSIBLE actions.
+            confidence = 1.0  # Conservative: assume high confidence for auto-execution
 
-        # Execute the tool
-        try:
-            logger.debug("   [AGENTIC STEP] Executing MCP tool call...")
-            result = await asyncio.wait_for(
-                mcp_session.call_tool(tool_name, arguments=kwargs),
-                timeout=timeout_seconds,
-            )
-            formatted_result = _format_mcp_result(result)
-            
-            # Log tool result (truncate if too long)
-            result_preview = formatted_result[:200] + "..." if len(formatted_result) > 200 else formatted_result
-            logger.info("✅ [AGENTIC STEP] Tool call completed: %s", tool_name)
-            logger.debug("   Result preview: %s", result_preview)
-            
-            return formatted_result
-        except asyncio.TimeoutError as exc:
-            logger.error("⏱️ [AGENTIC STEP] Tool call timed out: %s", tool_name)
-            raise TimeoutError(
-                f"Tool '{tool_name}' timed out after {timeout_seconds}s"
-            ) from exc
-        except Exception as exc:
-            logger.error("❌ [AGENTIC STEP] Tool call failed: %s - %s", tool_name, exc)
-            raise RuntimeError(
-                f"Tool '{tool_name}' failed during execution: {exc}"
-            ) from exc
+            # T309: Implement approval check
+            if requires_approval(risk_level, confidence):
+                # Action requires human approval - return approval request message
+                # In a full implementation, this would trigger an approval workflow
+                logger.warning(
+                    "⚠️ Action requires approval - tool: %s, risk: %s, confidence: %.2f",
+                    tool_name,
+                    risk_level.value,
+                    confidence,
+                )
+                return (
+                    "APPROVAL REQUIRED: Tool "
+                    f"'{tool_name}' with risk level '{risk_level.value}' "
+                    "requires human approval before execution. "
+                    f"Parameters: {kwargs}"
+                )
+
+            # T310: Log auto-executed REVERSIBLE actions
+            if risk_level.value == "reversible":
+                logger.info(
+                    "✅ Auto-executing REVERSIBLE action - tool: %s, parameters: %s",
+                    tool_name,
+                    kwargs,
+                )
+
+            # Execute the tool
+            try:
+                logger.debug("   [AGENTIC STEP] Executing MCP tool call...")
+                result = await asyncio.wait_for(
+                    mcp_session.call_tool(tool_name, arguments=kwargs),
+                    timeout=timeout_seconds,
+                )
+                formatted_result = _format_mcp_result(result)
+
+                # Log tool result (truncate if too long)
+                result_preview = (
+                    formatted_result[:200] + "..."
+                    if len(formatted_result) > 200
+                    else formatted_result
+                )
+                logger.info("✅ [AGENTIC STEP] Tool call completed: %s", tool_name)
+                logger.debug("   Result preview: %s", result_preview)
+
+                return formatted_result
+            except asyncio.TimeoutError as exc:
+                logger.error("⏱️ [AGENTIC STEP] Tool call timed out: %s", tool_name)
+                raise TimeoutError(
+                    f"Tool '{tool_name}' timed out after {timeout_seconds}s"
+                ) from exc
+            except Exception as exc:
+                logger.error(
+                    "❌ [AGENTIC STEP] Tool call failed: %s - %s", tool_name, exc
+                )
+                raise RuntimeError(
+                    f"Tool '{tool_name}' failed during execution: {exc}"
+                ) from exc
+
+        return await _with_tool_logging_and_cache(tool_name, params, _execute)
 
     mcp_tool_wrapper.__name__ = tool_name
     mcp_tool_wrapper.__doc__ = description
@@ -420,6 +559,9 @@ async def run_agent_with_tracing(
         logger.info("   Task: %s", task)
         logger.info("   [AGENTIC LOOP] Agent will make LLM calls to reason and use tools")
         logger.info("   [AGENTIC LOOP] Each HTTP Request below is an LLM reasoning step")
+        # Initialize per-run tool tracking
+        tool_log_token = _tool_call_log.set([])
+        tool_cache_token = _tool_result_cache.set({})
         try:
             result = await agent.run(task, deps=deps)
             logger.info("✅ [AGENTIC LOOP] agent.run() completed")
@@ -432,13 +574,16 @@ async def run_agent_with_tracing(
             logger.info("🔍 [AGENTIC LOOP] Extracting payload from result...")
             payload = parse_agent_result(result)
             logger.info("✅ [AGENTIC LOOP] Payload extracted successfully")
-            
+            # Override tool_calls with the authoritative log from wrappers
+            wrapped_tool_calls = _get_tool_log()
+            if hasattr(payload, "tool_calls"):
+                payload.tool_calls = wrapped_tool_calls  # type: ignore[attr-defined]
             # Log agent's reasoning and tool calls
             if hasattr(payload, "reasoning"):
                 logger.info("🧠 [AGENTIC LOOP] Agent reasoning: %s", payload.reasoning[:500] + "..." if len(payload.reasoning) > 500 else payload.reasoning)
-            if hasattr(payload, "tool_calls") and payload.tool_calls:
-                logger.info("🔧 [AGENTIC LOOP] Total tool calls made: %d", len(payload.tool_calls))
-                for i, tool_call in enumerate(payload.tool_calls, 1):
+            if wrapped_tool_calls:
+                logger.info("🔧 [AGENTIC LOOP] Total tool calls made: %d", len(wrapped_tool_calls))
+                for i, tool_call in enumerate(wrapped_tool_calls, 1):
                     logger.info("   [AGENTIC LOOP] Tool call %d: %s (%s) - %dms", 
                               i, tool_call.tool_name, tool_call.status.value, tool_call.duration_ms)
             if hasattr(payload, "confidence"):
@@ -456,7 +601,7 @@ async def run_agent_with_tracing(
             return AgentResponse(
                 answer="Tool execution timed out.",
                 reasoning=message,
-                tool_calls=[],
+                tool_calls=_get_tool_log(),
                 confidence=0.0,
             )
         except (
@@ -478,9 +623,13 @@ async def run_agent_with_tracing(
             return AgentResponse(
                 answer="Tool response could not be parsed.",
                 reasoning=message,
-                tool_calls=[],
+                tool_calls=_get_tool_log(),
                 confidence=0.0,
             )
+        finally:
+            # Reset contextvars to avoid cross-run leakage
+            _tool_call_log.reset(tool_log_token)
+            _tool_result_cache.reset(tool_cache_token)
 
         # Set result attributes
         confidence_val = getattr(payload, "confidence", None)
