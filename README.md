@@ -45,7 +45,7 @@ npm install
 # Copy environment defaults
 cp .env.example .env
 
-# Launch infra (PostgreSQL + Jaeger)
+# Launch infra (PostgreSQL + Jaeger + Windmill)
 docker-compose up -d
 
 # TESTING
@@ -53,6 +53,76 @@ docker-compose up -d
 # Run tests with coverage gate
 pytest
 ```
+
+## Windmill Orchestration (Spec 003)
+
+The DailyTrendingResearch workflow uses **Windmill** for durable workflow orchestration with human-in-the-loop approval gates.
+
+### Starting Windmill
+
+```bash
+# Start all services including Windmill
+docker-compose up -d
+
+# Or start with additional workers for parallel execution
+docker-compose --profile scale up -d
+```
+
+**Services started:**
+- **Windmill UI**: http://localhost:8100 (workflow management, approvals)
+- **PostgreSQL**: localhost:5432 (shared with app)
+- **Jaeger**: http://localhost:16686 (tracing)
+
+### Windmill Configuration
+
+Add these to your `.env` file to enable Windmill orchestration:
+
+```bash
+# Enable Windmill (default: false for in-process testing)
+WINDMILL_ENABLED=true
+
+# Windmill connection (matches docker-compose settings)
+WINDMILL_BASE_URL=http://localhost:8100
+WINDMILL_WORKSPACE=default
+WINDMILL_TOKEN=  # Generate in Windmill UI: Settings > Tokens
+
+# Flow path (where the research workflow is registered)
+WINDMILL_FLOW_PATH=research/daily_research
+```
+
+### Deploying the Research Flow
+
+1. Open Windmill UI at http://localhost:8100
+2. Create a new workspace or use `default`
+3. Create a new Script at path `f/research/daily_research`
+4. Copy the contents of `src/windmill/daily_research.py`
+5. Set the script language to Python
+6. Configure environment variables in Windmill:
+   - `DATABASE_URL`
+   - `AZURE_AI_FOUNDRY_ENDPOINT`, `AZURE_AI_FOUNDRY_API_KEY`, `AZURE_DEPLOYMENT_NAME`
+
+### Triggering Workflows
+
+**Via API (recommended):**
+```bash
+curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs \
+  -H 'Content-Type: application/json' \
+  -d '{"topic": "AI trends 2025", "user_id": "550e8400-e29b-41d4-a716-446655440000"}'
+```
+
+**Via Windmill UI:**
+1. Navigate to the flow in Windmill UI
+2. Click "Run" and provide `topic` and `user_id` parameters
+
+### Approval Gates
+
+When a workflow requires human approval (for `REVERSIBLE_WITH_DELAY` actions):
+1. The workflow suspends and status becomes `suspended_approval`
+2. Poll the run status to get `approval.approval_page_url`
+3. Open the URL in Windmill UI to approve/reject
+4. Workflow resumes after approval or times out after 5 minutes
+
+See `specs/003-daily-research-workflow/quickstart.md` for detailed API usage.
 
 ## Running the API server
 

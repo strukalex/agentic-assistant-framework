@@ -29,6 +29,109 @@ services:
       timeout: 5s
       retries: 5
 
+  # ============================================================================
+  # Windmill Orchestration (Spec 003)
+  # ============================================================================
+  # Windmill provides workflow orchestration with:
+  # - DAG-based execution for linear/parallel steps
+  # - Human-in-the-loop approval gates (suspend/resume)
+  # - Resource limits per worker (1 CPU, 2GB memory per FR-010)
+  # - Job scheduling and monitoring UI
+  #
+  # Startup sequence:
+  # 1. postgres must be healthy first
+  # 2. windmill_server starts and creates schema
+  # 3. windmill_worker connects and processes jobs
+  # ============================================================================
+
+  windmill_server:
+    image: ghcr.io/windmill-labs/windmill:main
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8100:8000"  # Windmill UI at http://localhost:8100
+    environment:
+      # Database connection (uses same postgres instance)
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
+      # Base URL for webhooks and resume URLs
+      BASE_URL: http://localhost:8100
+      # Disable email (not needed for local dev)
+      RUST_LOG: info
+      # Server mode
+      MODE: server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/version"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    volumes:
+      # Mount for custom scripts (optional - for deploying flows)
+      - ./src/windmill:/app/scripts:ro
+
+  windmill_worker:
+    image: ghcr.io/windmill-labs/windmill:main
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
+      BASE_URL: http://localhost:8100
+      RUST_LOG: info
+      MODE: worker
+      WORKER_GROUP: default
+      # Resource limits per FR-010: 1 CPU, 2GB memory
+      # These are enforced at container level via deploy settings
+    depends_on:
+      windmill_server:
+        condition: service_healthy
+    # Resource limits per FR-010 (Constitution Article II.F)
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    volumes:
+      # Mount project source for script execution
+      - ./src:/app/src:ro
+      # Worker cache
+      - windmill_worker_cache:/tmp/windmill/cache
+
+  # Optional: Additional worker for parallel execution
+  windmill_worker_2:
+    image: ghcr.io/windmill-labs/windmill:main
+    pull_policy: always
+    restart: unless-stopped
+    profiles:
+      - scale  # Only starts with: docker compose --profile scale up
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
+      BASE_URL: http://localhost:8100
+      RUST_LOG: info
+      MODE: worker
+      WORKER_GROUP: default
+    depends_on:
+      windmill_server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 1G
+    volumes:
+      - ./src:/app/src:ro
+      - windmill_worker_cache_2:/tmp/windmill/cache
+
 volumes:
   postgres_data:
+  windmill_worker_cache:
+  windmill_worker_cache_2:
 

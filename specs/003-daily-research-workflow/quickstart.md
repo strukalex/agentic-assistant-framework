@@ -13,24 +13,110 @@ This quickstart is for developers who want to run/trigger the DailyTrendingResea
 ## Prerequisites
 
 - **Python**: 3.11+
-- **Docker Compose**: required for local Postgres + Jaeger (per project context)
-- **Windmill**: running locally or reachable from your environment (workers execute the Python steps)
+- **Docker Compose**: required for local Postgres + Jaeger + Windmill
+- **Windmill**: included in docker-compose.yml (runs on port 8100)
 - **Env vars**: configured for LLM, DB, and telemetry
 
-## Environment configuration (minimum)
+## Starting the Infrastructure
 
-- **Database / Memory**
-  - `DATABASE_URL` (PostgreSQL 15+ with pgvector)
+```bash
+# Start all services (Postgres, Jaeger, Windmill)
+docker-compose up -d
 
-- **LLM (Azure AI Foundry / DeepSeek 3.2)**
-  - Configure via `src/core/llm.py` requirements:
-    - `AZURE_AI_FOUNDRY_ENDPOINT`
-    - `AZURE_AI_FOUNDRY_API_KEY`
-    - `AZURE_DEPLOYMENT_NAME`
+# Wait for services to be healthy
+docker-compose ps
 
-- **OpenTelemetry**
-  - `OTEL_SERVICE_NAME=paias`
-  - `OTEL_EXPORTER_OTLP_ENDPOINT` (points to your collector; Jaeger/collector per repo setup)
+# Expected output:
+# postgres         ... healthy
+# jaeger           ... healthy
+# windmill_server  ... healthy
+# windmill_worker  ... running
+```
+
+**Service URLs:**
+- **Windmill UI**: http://localhost:8100
+- **Jaeger UI**: http://localhost:16686
+- **API Server**: http://localhost:8000 (after starting with `python -m src.cli.run_api`)
+
+## Environment configuration
+
+### Minimum (in-process mode, no Windmill)
+
+```bash
+# Database / Memory
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/paias
+
+# LLM (Azure AI Foundry / DeepSeek 3.2)
+AZURE_AI_FOUNDRY_ENDPOINT=https://your-endpoint.openai.azure.com
+AZURE_AI_FOUNDRY_API_KEY=your-api-key
+AZURE_DEPLOYMENT_NAME=your-deployment
+
+# OpenTelemetry
+OTEL_SERVICE_NAME=paias
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+```
+
+### Full Windmill mode
+
+```bash
+# All of the above, plus:
+
+# Enable Windmill orchestration
+WINDMILL_ENABLED=true
+
+# Windmill connection
+WINDMILL_BASE_URL=http://localhost:8100
+WINDMILL_WORKSPACE=default
+WINDMILL_TOKEN=your-windmill-token  # Generate in Windmill UI
+
+# Flow path (where your script is registered)
+WINDMILL_FLOW_PATH=research/daily_research
+
+# Approval timeout (default: 300 seconds = 5 minutes)
+APPROVAL_TIMEOUT_SECONDS=300
+```
+
+## Deploying the Workflow to Windmill
+
+### Step 1: Create a Windmill Token
+
+1. Open Windmill UI: http://localhost:8100
+2. First time: Create a workspace (e.g., "default") and admin user
+3. Go to **Settings > Tokens**
+4. Create a new token and add it to your `.env` as `WINDMILL_TOKEN`
+
+### Step 2: Register the Research Script
+
+**Option A: Via Windmill UI**
+1. Navigate to **Scripts** in Windmill UI
+2. Click **+ New Script**
+3. Set path: `f/research/daily_research`
+4. Set language: Python
+5. Copy the contents of `src/windmill/daily_research.py`
+6. Save the script
+
+**Option B: Via Windmill CLI**
+```bash
+# Install Windmill CLI
+pip install wmill
+
+# Login to your Windmill instance
+wmill workspace add default http://localhost:8100
+
+# Push the script
+wmill script push f/research/daily_research src/windmill/daily_research.py
+```
+
+### Step 3: Configure Script Dependencies
+
+In Windmill, edit the script and add dependencies:
+```
+pydantic>=2.0
+httpx>=0.24
+langgraph>=0.0.1
+```
+
+Or configure the worker to use your project's virtual environment.
 
 ## Running the API server
 
@@ -108,7 +194,62 @@ If the workflow determines it should execute an action categorized as `REVERSIBL
 - Suspend execution in Windmill and request approval (FR-006)
 - Timeout after **5 minutes** and escalate: log + skip action (FR-007)
 
-In clients, show `approval.approval_page_url` to the user to approve/reject.
+### Approval flow
+
+1. **Workflow suspends**: When a risky action is detected, the workflow pauses
+
+2. **Check status**: Poll the run endpoint to see suspension
+   ```bash
+   curl http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}
+   ```
+   Response includes:
+   ```json
+   {
+     "status": "suspended_approval",
+     "approval": {
+       "status": "pending",
+       "action_type": "external_api_call",
+       "action_description": "Call external service",
+       "approval_page_url": "http://localhost:8100/runs/..."
+     }
+   }
+   ```
+
+3. **Approve via API** (programmatic):
+   ```bash
+   curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/approve
+   ```
+
+4. **Or reject**:
+   ```bash
+   curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/reject \
+     -H 'Content-Type: application/json' \
+     -d '{"reason": "Not authorized"}'
+   ```
+
+5. **Or approve via Windmill UI**: Open `approval.approval_page_url` in browser
+
+### Timeout behavior
+
+- If no action is taken within 5 minutes (configurable via `APPROVAL_TIMEOUT_SECONDS`)
+- The action is **skipped** and marked as `escalated`
+- The workflow continues with remaining actions
+- Escalation is logged for audit
+
+## In-Process Mode (Testing)
+
+For development without Windmill, set `WINDMILL_ENABLED=false` (default):
+
+```bash
+# .env
+WINDMILL_ENABLED=false
+```
+
+In this mode:
+- Workflows run directly in the API process
+- Approval gates use in-memory tracking
+- No Windmill infrastructure required
+- Useful for unit tests and local debugging
 
 ## Observability
 
@@ -119,9 +260,40 @@ You should see spans for:
 - MCP tool calls
 - Memory operations
 
+View traces at: http://localhost:16686 (Jaeger UI)
+
+## Troubleshooting
+
+### Windmill not connecting
+
+```bash
+# Check Windmill logs
+docker-compose logs windmill_server
+docker-compose logs windmill_worker
+
+# Verify health
+curl http://localhost:8100/api/version
+```
+
+### Workflow not found
+
+Ensure the script is registered at the correct path:
+- Path should match `WINDMILL_FLOW_PATH` setting
+- Default: `research/daily_research` (without `f/` prefix)
+
+### Authentication errors
+
+```bash
+# Verify your token works
+curl -H "Authorization: Bearer $WINDMILL_TOKEN" \
+  http://localhost:8100/api/w/default/scripts/list
+```
+
 ## Next steps
 
 - Use `data-model.md` for the entity definitions and validation rules.
 - Use `contracts/` as the contract-of-record while implementing the actual API + Windmill workflow scripts.
+- Review `src/windmill/client.py` for the Windmill API client implementation.
+- See `src/windmill/approval_handler.py` for approval gate logic.
 
 
