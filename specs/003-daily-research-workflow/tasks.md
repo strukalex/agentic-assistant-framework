@@ -104,17 +104,17 @@ Non-negotiables to satisfy while implementing tasks below:
 
 ### Tests for User Story 2 (REQUIRED) ⚠️
 
-- [ ] T035 [P] [US2] Add unit tests for approval handler with mocked `wmill` in `tests/unit/test_windmill_approval_handler.py` (approved/rejected/timed_out paths; timeout=300s)
-- [ ] T036 [P] [US2] Add unit tests for action risk gating in `tests/unit/test_planned_action_risk_gating.py` (REVERSIBLE auto, REVERSIBLE_WITH_DELAY/IRREVERSIBLE require approval)
-- [ ] T037 [P] [US2] Add integration test skeleton for approval flow in `tests/integration/test_windmill_approval_flow.py` (marked to skip unless WINDMILL_* env vars set)
+- [X] T035 [P] [US2] Add unit tests for approval handler with mocked `wmill` in `tests/unit/test_windmill_approval_handler.py` (approved/rejected/timed_out paths; timeout=300s)
+- [X] T036 [P] [US2] Add unit tests for action risk gating in `tests/unit/test_planned_action_risk_gating.py` (REVERSIBLE auto, REVERSIBLE_WITH_DELAY/IRREVERSIBLE require approval)
+- [X] T037 [P] [US2] Add integration test skeleton for approval flow in `tests/integration/test_windmill_approval_flow.py` (marked to skip unless WINDMILL_* env vars set)
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Implement approval gate helper in `src/windmill/approval_handler.py` using `wmill.suspend()` with timeout (default from `src/core/config.py`)
-- [ ] T039 [US2] Integrate approval gating into `src/windmill/daily_research.py` (iterate `planned_actions`, suspend when needed, handle approve/reject/timeout escalation per FR-006/FR-007)
-- [ ] T040 [US2] Extend API status mapping in `src/api/routes/daily_trending_research.py` to populate `RunStatusResponse.approval` when Windmill job is suspended
-- [ ] T041 [US2] Add programmatic resume client for tests in `tests/fixtures/windmill_client.py` (resume job approved/rejected, query suspended queue)
-- [ ] T042 [US2] Update contract test expectations for approval fields in `tests/contract/test_workflow_api_contract.py` (ApprovalStatus schema behavior)
+- [X] T038 [P] [US2] Implement approval gate helper in `src/windmill/approval_handler.py` using `wmill.suspend()` with timeout (default from `src/core/config.py`)
+- [X] T039 [US2] Integrate approval gating into `src/windmill/daily_research.py` (iterate `planned_actions`, suspend when needed, handle approve/reject/timeout escalation per FR-006/FR-007)
+- [X] T040 [US2] Extend API status mapping in `src/api/routes/daily_trending_research.py` to populate `RunStatusResponse.approval` when Windmill job is suspended
+- [X] T041 [US2] Add programmatic resume client for tests in `tests/fixtures/windmill_client.py` (resume job approved/rejected, query suspended queue)
+- [X] T042 [US2] Update contract test expectations for approval fields in `tests/contract/test_workflow_api_contract.py` (ApprovalStatus schema behavior)
 
 **Checkpoint**: US2 approval gating works and is independently testable (unit tests always; integration tests when Windmill configured).
 
