@@ -16,6 +16,14 @@ from src.core.tool_gap_detector import ToolGapDetector
 from src.models.tool_gap_report import ToolGapReport
 
 
+class MockTool:
+    """Mock MCP tool for testing."""
+
+    def __init__(self, name: str, description: str = ""):
+        self.name = name
+        self.description = description
+
+
 @pytest.mark.asyncio
 async def test_end_to_end_gap_detection_with_missing_tool():
     """
@@ -31,10 +39,10 @@ async def test_end_to_end_gap_detection_with_missing_tool():
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
         return_value=[
-            MagicMock(name="web_search", description="Search the web"),
-            MagicMock(name="read_file", description="Read a file"),
-            MagicMock(name="get_current_time", description="Get current time"),
-            MagicMock(name="search_memory", description="Search semantic memory"),
+            MockTool("web_search", "Search the web"),
+            MockTool("read_file", "Read a file"),
+            MockTool("get_current_time", "Get current time"),
+            MockTool("search_memory", "Search semantic memory"),
         ]
     )
 
@@ -82,10 +90,10 @@ async def test_end_to_end_gap_detection_all_tools_available():
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
         return_value=[
-            MagicMock(name="web_search", description="Search the web"),
-            MagicMock(name="read_file", description="Read a file"),
-            MagicMock(name="get_current_time", description="Get current time"),
-            MagicMock(name="search_memory", description="Search semantic memory"),
+            MockTool("web_search", "Search the web"),
+            MockTool("read_file", "Read a file"),
+            MockTool("get_current_time", "Get current time"),
+            MockTool("search_memory", "Search semantic memory"),
         ]
     )
 
@@ -124,7 +132,7 @@ async def test_gap_detection_prevents_hallucinated_execution():
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
         return_value=[
-            MagicMock(name="web_search", description="Search the web"),
+            MockTool("web_search", "Search the web"),
         ]
     )
 
@@ -162,7 +170,7 @@ async def test_gap_detection_with_llm_extraction_failure():
     mock_session = MagicMock()
     mock_session.list_tools = AsyncMock(
         return_value=[
-            MagicMock(name="web_search", description="Search the web"),
+            MockTool("web_search", "Search the web"),
         ]
     )
 

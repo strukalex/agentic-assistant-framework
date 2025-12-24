@@ -64,8 +64,12 @@ class ToolGapDetector:
         # Phase 1: Get available tools (with caching)
         if self.available_tools is None:
             tools_result = await self.mcp_session.list_tools()
-            # Extract tools from result object (same pattern as researcher.py:284-285)
-            self.available_tools = getattr(tools_result, "tools", [])
+            # Handle both direct list and object with .tools attribute
+            if hasattr(tools_result, "tools"):
+                self.available_tools = tools_result.tools
+            else:
+                # Direct list response (common in tests and some MCP implementations)
+                self.available_tools = tools_result
 
         # Phase 2: Extract required capabilities from task using LLM
         required_capabilities = await self._extract_capabilities(task_description)
