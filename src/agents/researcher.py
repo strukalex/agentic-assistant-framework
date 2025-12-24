@@ -188,7 +188,7 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
     return Agent[MemoryManager, AgentResponse](
         model=model,
         output_type=AgentResponse,
-        retries=0,  # Changed from 2 to 0 to fail fast in tests - prevents hanging
+        retries=2,  # Allow LLM to auto-correct JSON/formatting errors
         system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
 
 Your capabilities:
@@ -206,9 +206,12 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
 2. Use memory results when available. If search_memory() returns relevant past
    research, use that knowledge in your answer and cite the memory source in
    your reasoning (e.g., "Based on prior research stored on [date]...").
+   IMPORTANT: If search_memory() returns results, STOP searching and answer
+   immediately. Do NOT call search_memory() again with the same query.
 
 3. Research when needed. Only use web_search or other expensive tools when
-   memory does not have the answer.
+   memory does not have the answer (i.e., search_memory() returned empty results
+   or "NO RESULTS FOUND").
 
 4. Store new findings. After synthesizing new research findings from
    web_search or other sources, always call store_memory() to persist this
@@ -265,6 +268,10 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
                 query, settings.vector_dimension
             )
             documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
+
+        # Explicitly tell LLM to stop if no results found
+        if not documents:
+            return [{"content": "NO RESULTS FOUND. Please try web_search.", "metadata": {}}]
 
         # Convert Document objects to dict format
         return [{"content": doc.content, "metadata": doc.metadata_} for doc in documents]
@@ -484,9 +491,12 @@ async def _register_mcp_tools(
             logger.debug("⏭️  Skipping tool: %s", tool_name)
             continue
         
+        # Rename 'search' to 'web_search' for consistency with system prompt
+        final_name = "web_search" if tool_name == "search" else tool_name
+        
         agent.tool(  # type: ignore[call-overload]
             _make_mcp_tool(mcp_session, tool),
-            name=tool_name,
+            name=final_name,
             description=getattr(tool, "description", None),
         )
         registered_count += 1
