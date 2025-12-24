@@ -48,17 +48,17 @@ Non-negotiables to satisfy while implementing tasks below:
 
 **Purpose**: Shared types, config, and adapters that all user stories build on. **Blocks all user story work.**
 
-- [ ] T009 Extend settings for Windmill integration in `src/core/config.py` (add `windmill_base_url`, `windmill_workspace`, `windmill_token`, `approval_timeout_seconds`)
-- [ ] T010 [P] Define `SourceReference` Pydantic model in `src/models/source_reference.py` (validate `snippet<=1000`, URL format)
-- [ ] T011 [P] Define `PlannedAction` Pydantic model in `src/models/planned_action.py` (fields per `data-model.md`, includes `risk_level`)
-- [ ] T012 [P] Define `ResearchState` Pydantic model in `src/models/research_state.py` (topic/user_id validation, iteration/max_iterations cap at 5, planned_actions)
-- [ ] T013 [P] Define `ResearchReport` Pydantic model in `src/models/research_report.py` (markdown/report fields + metadata)
-- [ ] T014 [P] Define `ApprovalRequest` Pydantic model in `src/models/approval_request.py` (timeout_at rules, status enum)
-- [ ] T015 Create contract-aligned API schemas in `src/api/schemas/workflow_api.py` (CreateRunRequest/Response, RunStatusResponse, ReportResponse, ErrorResponse)
-- [ ] T016 Create Windmill API client adapter in `src/windmill/client.py` (trigger flow, fetch job status, fetch job result) using `httpx`
-- [ ] T017 Create workflow module skeleton in `src/workflows/research_graph.py` (build/compile graph functions; no node logic yet)
-- [ ] T018 Create report formatting module skeleton in `src/workflows/report_formatter.py` (Markdown layout per FR-008)
-- [ ] T019 Add foundational unit tests for new models in `tests/unit/test_daily_research_models.py` (validation rules from `data-model.md`)
+- [X] T009 Extend settings for Windmill integration in `src/core/config.py` (add `windmill_base_url`, `windmill_workspace`, `windmill_token`, `approval_timeout_seconds`)
+- [X] T010 [P] Define `SourceReference` Pydantic model in `src/models/source_reference.py` (validate `snippet<=1000`, URL format)
+- [X] T011 [P] Define `PlannedAction` Pydantic model in `src/models/planned_action.py` (fields per `data-model.md`, includes `risk_level`)
+- [X] T012 [P] Define `ResearchState` Pydantic model in `src/models/research_state.py` (topic/user_id validation, iteration/max_iterations cap at 5, planned_actions)
+- [X] T013 [P] Define `ResearchReport` Pydantic model in `src/models/research_report.py` (markdown/report fields + metadata)
+- [X] T014 [P] Define `ApprovalRequest` Pydantic model in `src/models/approval_request.py` (timeout_at rules, status enum)
+- [X] T015 Create contract-aligned API schemas in `src/api/schemas/workflow_api.py` (CreateRunRequest/Response, RunStatusResponse, ReportResponse, ErrorResponse)
+- [X] T016 Create Windmill API client adapter in `src/windmill/client.py` (trigger flow, fetch job status, fetch job result) using `httpx`
+- [X] T017 Create workflow module skeleton in `src/workflows/research_graph.py` (build/compile graph functions; no node logic yet)
+- [X] T018 Create report formatting module skeleton in `src/workflows/report_formatter.py` (Markdown layout per FR-008)
+- [X] T019 Add foundational unit tests for new models in `tests/unit/test_daily_research_models.py` (validation rules from `data-model.md`)
 
 **Checkpoint**: Foundation ready — user story implementation can begin.
 

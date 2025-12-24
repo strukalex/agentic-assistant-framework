@@ -134,6 +134,28 @@ class Settings(BaseSettings):
         description="Enable detailed agentic loop logging (shows LLM conversation messages and tool calls). Set ENABLE_AGENTIC_LOGGING=true to enable.",
     )
 
+    # ----------------------
+    # Windmill integration
+    # ----------------------
+    windmill_base_url: str = Field(
+        default="http://localhost:8000",
+        description="Base URL for the Windmill instance handling workflow runs",
+    )
+    windmill_workspace: str = Field(
+        default="default",
+        description="Windmill workspace name used for workflow invocations",
+    )
+    windmill_token: str | None = Field(
+        default=None,
+        description="Windmill API token for authenticated requests (if required)",
+    )
+    approval_timeout_seconds: int = Field(
+        default=300,
+        ge=1,
+        le=900,
+        description="Default approval timeout in seconds (target: 5 minutes ±10s)",
+    )
+
 
 # Instantiate a global settings object.
 # Import this in your app as `from config import settings` and use `settings.<field>`.
