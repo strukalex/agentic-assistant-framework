@@ -65,9 +65,22 @@ class ToolGapDetector:
         if not self.available_tools:
             tools_result = await self.mcp_session.list_tools()
             if hasattr(tools_result, "tools"):
-                self.available_tools = list(tools_result.tools)
+                raw_tools = list(tools_result.tools)
             else:
-                self.available_tools = list(tools_result)
+                raw_tools = list(tools_result)
+            
+            # Filter to only include the 'search' tool, exclude article fetchers
+            # This matches the filtering logic in _register_mcp_tools()
+            excluded_tools = {
+                "fetchLinuxDoArticle",
+                "fetchCsdnArticle",
+                "fetchGithubReadme",
+                "fetchJuejinArticle",
+            }
+            self.available_tools = [
+                tool for tool in raw_tools
+                if getattr(tool, "name", None) not in excluded_tools
+            ]
 
         # Phase 2: Extract required capabilities from task using LLM
         required_capabilities = await self._extract_capabilities(task_description)

@@ -310,14 +310,29 @@ async def _register_mcp_tools(
     tools_result = await mcp_session.list_tools()
     tools = getattr(tools_result, "tools", [])
 
+    # Filter to only register the 'search' tool, exclude article fetchers
+    excluded_tools = {
+        "fetchLinuxDoArticle",
+        "fetchCsdnArticle",
+        "fetchGithubReadme",
+        "fetchJuejinArticle",
+    }
+    
+    registered_count = 0
     for tool in tools:
+        tool_name = getattr(tool, "name", None)
+        if tool_name in excluded_tools:
+            logger.debug("⏭️  Skipping tool: %s", tool_name)
+            continue
+        
         agent.tool(  # type: ignore[call-overload]
             _make_mcp_tool(mcp_session, tool),
-            name=getattr(tool, "name", None),
+            name=tool_name,
             description=getattr(tool, "description", None),
         )
+        registered_count += 1
 
-    logger.info("✅ Registered %d MCP tools with agent", len(tools))
+    logger.info("✅ Registered %d MCP tools with agent", registered_count)
 
 
 # Wrapper function for instrumented agent.run() calls
