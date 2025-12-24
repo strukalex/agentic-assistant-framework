@@ -225,12 +225,18 @@ async def test_concurrent_sessions_do_not_deadlock(db_engine: AsyncEngine) -> No
     async def _write_session(session_id):
         messages = [f"{session_id}-m{i}" for i in range(3)]
         for index, content in enumerate(messages):
-            role = MessageRole.USER.value if index % 2 == 0 else MessageRole.ASSISTANT.value
+            role = (
+                MessageRole.USER.value
+                if index % 2 == 0
+                else MessageRole.ASSISTANT.value
+            )
             await manager.store_message(session_id, role, content)
         history = await manager.get_conversation_history(session_id, limit=5)
         return session_id, messages, history
 
-    results = await asyncio.gather(*(_write_session(session_id) for session_id in session_ids))
+    results = await asyncio.gather(
+        *(_write_session(session_id) for session_id in session_ids)
+    )
 
     for session_id, expected_messages, history in results:
         assert len(history) == len(expected_messages)

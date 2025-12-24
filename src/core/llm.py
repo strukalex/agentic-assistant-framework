@@ -5,7 +5,7 @@ between ResearcherAgent and ToolGapDetector.
 """
 
 import os
-from typing import Any, Optional, TypeVar
+from typing import Any, Optional, TypeVar, cast
 
 from dotenv import load_dotenv
 from pydantic_ai.models.openai import OpenAIModel
@@ -34,7 +34,8 @@ def get_azure_model() -> OpenAIModel:
         value = os.getenv(var_name)
         if not value:
             raise ValueError(
-                f"{var_name} environment variable is required for Azure AI Foundry configuration"
+                f"{var_name} environment variable is required for "
+                "Azure AI Foundry configuration"
             )
         return value
 
@@ -65,7 +66,8 @@ def get_azure_model() -> OpenAIModel:
 def parse_agent_result(result: Any) -> Optional[T]:
     """Extract data from a Pydantic AI RunResult, handling version differences.
 
-    Pydantic AI versions differ in their result structure (some use .data, others .output).
+    Pydantic AI versions differ in their result structure (some use .data,
+    others .output).
     This function normalizes access across versions.
 
     Args:
@@ -84,4 +86,4 @@ def parse_agent_result(result: Any) -> Optional[T]:
         raise AttributeError(
             f"agent.run result missing data/output. Available attrs: {dir(result)}"
         )
-    return data
+    return cast(Optional[T], data)

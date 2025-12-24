@@ -1,11 +1,20 @@
+"""Unit tests for telemetry utilities."""
+# ruff: noqa
+
 from __future__ import annotations
 
 import pytest
 from opentelemetry import trace
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 
 from src.core.config import settings
-from src.core.telemetry import set_span_exporter, trace_memory_operation, trace_tool_call
+from src.core.telemetry import (
+    set_span_exporter,
+    trace_memory_operation,
+    trace_tool_call,
+)
 
 
 @pytest.mark.asyncio

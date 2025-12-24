@@ -1,3 +1,4 @@
+# ruff: noqa
 """
 Integration tests for OpenTelemetry observability.
 
@@ -6,8 +7,6 @@ OpenTelemetry tracing, including MCP tool calls and agent.run() invocations.
 
 Per Spec 002 tasks.md Phase 7 (User Story 5): T500-T502
 """
-
-import os
 
 import pytest
 from opentelemetry import trace

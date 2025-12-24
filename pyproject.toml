@@ -50,6 +50,7 @@ skip-string-normalization = true
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+exclude = ["tests"]
 
 [tool.ruff.lint]
 select = [
@@ -72,7 +73,6 @@ no_implicit_optional = true
 strict_equality = true
 show_error_codes = true
 pretty = true
-mypy_path = "src"
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]

@@ -1,3 +1,4 @@
+# ruff: noqa
 """
 Unit tests for ToolGapDetector.
 
@@ -9,6 +10,7 @@ Validates tool gap detection logic including:
 
 Per Spec 002 tasks.md T201, T202 (FR-009 to FR-014, SC-003)
 """
+# ruff: noqa
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch

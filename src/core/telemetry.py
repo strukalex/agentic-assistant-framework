@@ -157,7 +157,8 @@ def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitabl
     Decorator to trace MCP tool invocations with OpenTelemetry.
 
     Creates span with name "mcp.tool_call.{func_name}"
-    Sets attributes: tool_name, parameters, result_count, execution_duration_ms, component
+    Sets attributes: tool_name, parameters, result_count, execution_duration_ms,
+    component
     Handles errors with span.record_exception()
 
     Per Spec 002 research.md RQ-004 (FR-030)
@@ -169,6 +170,7 @@ def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitabl
             ...
     """
     import time
+
     tracer = get_tracer("mcp")
 
     @wraps(func)

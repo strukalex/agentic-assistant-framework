@@ -1,4 +1,6 @@
+# ruff: noqa
 import asyncio
+
 import pytest
 
 from src.agents.researcher import _make_mcp_tool, run_agent_with_tracing

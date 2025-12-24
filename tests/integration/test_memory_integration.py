@@ -1,5 +1,5 @@
-"""
-Integration tests for ResearcherAgent memory integration.
+# ruff: noqa
+"""Integration tests for ResearcherAgent memory integration.
 
 Validates that search_memory and store_memory tools work with MemoryManager
 dependency injection via RunContext.

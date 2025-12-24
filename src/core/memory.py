@@ -287,14 +287,13 @@ class MemoryManager:
             end_date=end_date,
         )
 
-        created_at_column = cast(Any, Document.created_at)
         vector_column = cast(Any, Document.embedding)
         stmt = select(Document)
         if conditions:
             stmt = stmt.where(and_(*conditions))
-        stmt = stmt.order_by(
-            vector_column.cosine_distance(validated_embedding)
-        ).limit(top_k)
+        stmt = stmt.order_by(vector_column.cosine_distance(validated_embedding)).limit(
+            top_k
+        )
 
         start_time = perf_counter()
         async with self._session_factory() as db:
@@ -343,9 +342,7 @@ class MemoryManager:
         )
         created_at_column = cast(Any, Document.created_at)
         stmt = (
-            select(Document)
-            .where(and_(*conditions))
-            .order_by(created_at_column.desc())
+            select(Document).where(and_(*conditions)).order_by(created_at_column.desc())
         )
 
         async with self._session_factory() as db:

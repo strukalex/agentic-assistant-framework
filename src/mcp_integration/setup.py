@@ -1,10 +1,10 @@
 """MCP tools setup and initialization."""
 
 import os
-from pathlib import Path
-from contextlib import asynccontextmanager
-from typing import AsyncIterator
 import subprocess
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import AsyncIterator
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -41,6 +41,7 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
     Note: Requires 'npm install' to be run first to install open-websearch dependency.
     """
     import logging
+
     logger = logging.getLogger(__name__)
 
     logger.info("🔧 Validating Node.js version...")
@@ -56,29 +57,30 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
                 f"Error: {node_version_result.stderr}"
             )
         node_version = node_version_result.stdout.strip()
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         raise RuntimeError(
             "Node.js not found in PATH. "
             "Please install Node.js 24+ from https://nodejs.org/ "
             "or use nvm: 'nvm install 24 && nvm use 24'"
-        )
-    except subprocess.TimeoutExpired:
+        ) from e
+    except subprocess.TimeoutExpired as e:
         raise RuntimeError(
             "Timeout while checking Node.js version. "
             "Node.js installation may be corrupted."
-        )
+        ) from e
 
     try:
         node_major = int(node_version.lstrip("v").split(".")[0])
-    except (ValueError, IndexError):
+    except (ValueError, IndexError) as e:
         raise RuntimeError(
             f"Failed to parse Node.js version: {node_version}. "
             "Expected format: vX.Y.Z (e.g., v24.0.0)"
-        )
+        ) from e
 
     if node_major < 20:
         raise RuntimeError(
-            f"Node.js 20+ required for Open-WebSearch MCP server. Detected: {node_version}. "
+            "Node.js 20+ required for Open-WebSearch MCP server. "
+            f"Detected: {node_version}. "
             "Run `nvm use 24` (or upgrade Node) and reinstall npm deps."
         )
     logger.info(f"✅ Node.js version: {node_version}")
@@ -104,9 +106,7 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
     # Environment variables for web search configuration
     # Use environment variable names that open-websearch expects
     websearch_engine = os.getenv("WEBSEARCH_ENGINE", settings.websearch_engine)
-    allowed_engines = os.getenv(
-        "ALLOWED_SEARCH_ENGINES", "duckduckgo,bing,exa"
-    )
+    allowed_engines = os.getenv("ALLOWED_SEARCH_ENGINES", "duckduckgo,bing,exa")
     websearch_timeout = int(os.getenv("WEBSEARCH_TIMEOUT", settings.websearch_timeout))
     websearch_max_results = int(
         os.getenv("WEBSEARCH_MAX_RESULTS", settings.websearch_max_results)
@@ -159,9 +159,10 @@ async def setup_mcp_tools() -> AsyncIterator[ClientSession]:
                         logger.info("🧹 Cleaning up MCP session...")
                     except Exception as e:
                         raise RuntimeError(
-                            f"Failed to initialize Open-WebSearch MCP session: {e}. "
-                            "The MCP server may have crashed or failed to start properly. "
-                            "Check the wrapper script and environment variables."
+                            "Failed to initialize Open-WebSearch MCP session: "
+                            f"{e}. The MCP server may have crashed or failed to "
+                            "start properly. Check the wrapper script and "
+                            "environment variables."
                         ) from e
             except Exception as e:
                 if "Failed to initialize MCP session" in str(e):

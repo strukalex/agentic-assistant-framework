@@ -8,7 +8,7 @@ hallucinated execution.
 Per Spec 002 research.md RQ-005, tasks.md T204-T209 (FR-009 to FR-014, SC-003)
 """
 
-from typing import List, Optional
+from typing import Any, List, Optional, cast
 
 from mcp import ClientSession
 from pydantic_ai import Agent
@@ -39,7 +39,7 @@ class ToolGapDetector:
         Per tasks.md T204 (FR-009)
         """
         self.mcp_session = mcp_session
-        self.available_tools: Optional[List] = None
+        self.available_tools: Optional[List[Any]] = None
 
     async def detect_missing_tools(
         self, task_description: str
@@ -62,22 +62,24 @@ class ToolGapDetector:
         Per tasks.md T205-T209 (FR-010 to FR-014)
         """
         # Phase 1: Get available tools (with caching)
-        if self.available_tools is None:
+        if not self.available_tools:
             tools_result = await self.mcp_session.list_tools()
-            # Handle both direct list and object with .tools attribute
             if hasattr(tools_result, "tools"):
-                self.available_tools = tools_result.tools
+                self.available_tools = list(tools_result.tools)
             else:
-                # Direct list response (common in tests and some MCP implementations)
-                self.available_tools = tools_result
+                self.available_tools = list(tools_result)
 
         # Phase 2: Extract required capabilities from task using LLM
         required_capabilities = await self._extract_capabilities(task_description)
 
         # Phase 3: Match capabilities to tools
-        available_capability_names = [tool.name for tool in self.available_tools]
+        available_capability_names = [
+            tool.name for tool in cast(List[Any], self.available_tools)
+        ]
         missing = [
-            cap for cap in required_capabilities if cap not in available_capability_names
+            cap
+            for cap in required_capabilities
+            if cap not in available_capability_names
         ]
 
         # Phase 4: Return ToolGapReport if gaps found, None otherwise
@@ -146,4 +148,4 @@ Return ONLY the JSON array, no additional text.
             raise Exception(
                 f"Failed to extract capabilities from task: {str(e)}. "
                 "Cannot safely determine if tools are available."
-            )
+            ) from e

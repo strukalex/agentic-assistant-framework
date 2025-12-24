@@ -1,5 +1,5 @@
-"""
-Integration tests for end-to-end tool gap detection.
+# ruff: noqa
+"""Integration tests for end-to-end tool gap detection.
 
 Validates that:
 - Agent correctly calls ToolGapDetector when task requires missing tools

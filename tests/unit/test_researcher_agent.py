@@ -1,5 +1,5 @@
-"""
-Unit tests for ResearcherAgent initialization and configuration.
+# ruff: noqa
+"""Unit tests for ResearcherAgent initialization and configuration.
 
 Validates that ResearcherAgent is initialized with DeepSeek 3.2 via AzureModel,
 result_type=AgentResponse, retries=2.
@@ -7,10 +7,13 @@ result_type=AgentResponse, retries=2.
 Per Spec 002 tasks.md T103 (FR-001, FR-002, FR-003, FR-004, FR-034)
 """
 
-import os
+from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import ValidationError
+
+from src.agents.researcher import setup_researcher_agent
+from src.agents.researcher import researcher_agent
 
 # NOTE: These tests will fail initially because ResearcherAgent is not yet implemented.
 # This is written FIRST per TDD approach to define the expected behavior.
@@ -124,9 +127,6 @@ class TestSetupResearcherAgent:
 
         Verifies contracts/researcher-agent-api.yaml usage pattern
         """
-        from src.agents.researcher import setup_researcher_agent
-        from unittest.mock import AsyncMock
-
         mock_memory_manager = AsyncMock()
 
         # Function should return tuple of (agent, mcp_session)
@@ -147,9 +147,6 @@ class TestSetupResearcherAgent:
         Verifies FR-026: Agent is configured with MemoryManager dependency
         Verifies FR-034: Agent initialization includes MCP tool setup
         """
-        from src.agents.researcher import setup_researcher_agent
-        from unittest.mock import AsyncMock
-
         mock_memory_manager = AsyncMock()
 
         # Function should call setup_mcp_tools() internally
@@ -164,9 +161,6 @@ class TestSetupResearcherAgent:
 
         Verifies FR-026: MemoryManager dependency injection
         """
-        from src.agents.researcher import setup_researcher_agent
-        from unittest.mock import AsyncMock
-
         mock_memory_manager = AsyncMock()
         mock_memory_manager.semantic_search = AsyncMock(return_value=[])
         mock_memory_manager.store_document = AsyncMock(return_value="doc_id")
@@ -189,9 +183,6 @@ class TestMemoryManagerDependencyInjection:
 
         Verifies FR-026: MemoryManager dependency injection
         """
-        from src.agents.researcher import researcher_agent
-        from src.core.memory import MemoryManager
-
         # Verify agent exists and has correct type annotations
         assert researcher_agent is not None
 

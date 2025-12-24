@@ -7,8 +7,6 @@ Validates that setup_mcp_tools() successfully initializes all 3 MCP servers
 Per Spec 002 tasks.md T101 (FR-005, FR-006, FR-007, FR-008)
 """
 
-import os
-import re
 import subprocess
 
 import pytest

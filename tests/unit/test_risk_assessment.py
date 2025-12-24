@@ -1,11 +1,9 @@
-"""
-Unit tests for risk assessment functions.
+# ruff: noqa
+"""Unit tests for risk assessment functions.
 
 Tests categorize_action_risk() and requires_approval() functions
 per Spec 002 tasks.md T301-T307 (FR-015 to FR-023).
 """
-
-import pytest
 
 from src.core.risk_assessment import categorize_action_risk, requires_approval
 from src.models.risk_level import RiskLevel
@@ -57,7 +55,9 @@ class TestCategorizeActionRisk:
 
     def test_schedule_task_is_reversible_with_delay(self):
         """Test that schedule_task is classified as REVERSIBLE_WITH_DELAY."""
-        risk = categorize_action_risk("schedule_task", {"task": "backup", "cron": "0 0 * * *"})
+        risk = categorize_action_risk(
+            "schedule_task", {"task": "backup", "cron": "0 0 * * *"}
+        )
         assert risk == RiskLevel.REVERSIBLE_WITH_DELAY
 
     # T303: Test IRREVERSIBLE tools classification
@@ -88,7 +88,9 @@ class TestCategorizeActionRisk:
     # T304: Test unknown tools default to IRREVERSIBLE
     def test_unknown_tool_defaults_to_irreversible(self):
         """Test that unknown tools are classified as IRREVERSIBLE (conservative default)."""
-        risk = categorize_action_risk("unknown_custom_tool", {"param": "value"})
+        risk = categorize_action_risk(
+            "unknown_custom_tool", {"param": "value"}
+        )
         assert risk == RiskLevel.IRREVERSIBLE
 
     def test_unknown_financial_tool_defaults_to_irreversible(self):
@@ -114,7 +116,9 @@ class TestCategorizeActionRisk:
 
     def test_read_file_with_credentials_escalates_risk(self):
         """Test that reading files with 'credentials' in path escalates risk."""
-        risk = categorize_action_risk("read_file", {"path": "/home/user/credentials.json"})
+        risk = categorize_action_risk(
+            "read_file", {"path": "/home/user/credentials.json"}
+        )
         assert risk == RiskLevel.REVERSIBLE_WITH_DELAY
 
     def test_read_file_with_password_escalates_risk(self):
@@ -152,11 +156,17 @@ class TestRequiresApproval:
     # T306: Test REVERSIBLE_WITH_DELAY conditional approval
     def test_reversible_with_delay_requires_approval_when_confidence_low(self):
         """Test that REVERSIBLE_WITH_DELAY requires approval when confidence < 0.85."""
-        assert requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.80) is True
+        assert (
+            requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.80)
+            is True
+        )
 
     def test_reversible_with_delay_requires_approval_at_threshold(self):
         """Test that REVERSIBLE_WITH_DELAY requires approval at exactly 0.84."""
-        assert requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.84) is True
+        assert (
+            requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.84)
+            is True
+        )
 
     def test_reversible_with_delay_no_approval_when_confidence_high(self):
         """Test that REVERSIBLE_WITH_DELAY auto-executes when confidence >= 0.85."""

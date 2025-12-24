@@ -33,9 +33,7 @@ class ToolCallRecord(BaseModel):
     result: Optional[Any] = Field(
         None, description="Tool output; None if execution failed or timed out"
     )
-    duration_ms: int = Field(
-        ..., ge=0, description="Execution time in milliseconds"
-    )
+    duration_ms: int = Field(..., ge=0, description="Execution time in milliseconds")
     status: ToolCallStatus = Field(
         ..., description="Execution status: SUCCESS, FAILED, or TIMEOUT"
     )
@@ -98,7 +96,10 @@ class AgentResponse(BaseModel):
         json_schema_extra={
             "example": {
                 "answer": "Paris",
-                "reasoning": "Used web_search to find 'capital of France'. Top result from Wikipedia confirmed Paris.",
+                "reasoning": (
+                    "Used web_search to find 'capital of France'. "
+                    "Top result from Wikipedia confirmed Paris."
+                ),
                 "tool_calls": [
                     {
                         "tool_name": "web_search",

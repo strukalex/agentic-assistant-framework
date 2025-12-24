@@ -1,27 +1,28 @@
 """ResearcherAgent implementation using Pydantic AI with MCP tools.
 
-Provides a research agent that can answer questions using web search,
-time context, filesystem access, and memory integration.
+Provides a research agent that can answer questions using web search, time
+context, filesystem access, and memory integration.
 
-Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-031, FR-034)
+Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030,
+FR-031, FR-034)
 """
 
 import asyncio
 import json
 import logging
-from typing import Any, Callable, List, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 from uuid import UUID
 
 from mcp import ClientSession
-from pydantic_ai import Agent, RunContext
 from pydantic import ValidationError
+from pydantic_ai import Agent, RunContext
 
+from src.core.config import settings
 from src.core.llm import get_azure_model, parse_agent_result
 from src.core.memory import MemoryManager
 from src.core.risk_assessment import categorize_action_risk, requires_approval
 from src.core.telemetry import get_tracer, trace_tool_call
 from src.core.tool_gap_detector import ToolGapDetector
-from src.core.config import settings
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
 from src.models.tool_gap_report import ToolGapReport
@@ -78,23 +79,29 @@ Your capabilities:
 
 Your responsibilities and workflow (IMPORTANT - follow this order):
 
-1. **Always check memory FIRST**: Before using expensive tools like web_search, ALWAYS call search_memory()
-   to check if you already have knowledge about this topic from prior research. This avoids duplicate work.
+1. Always check memory FIRST. Before using expensive tools like web_search,
+   always call search_memory() to see if you already have knowledge about this
+   topic. This avoids duplicate work.
 
-2. **Use memory results when available**: If search_memory() returns relevant past research, use that knowledge
-   in your answer and cite the memory source in your reasoning (e.g., "Based on prior research stored on [date]...").
+2. Use memory results when available. If search_memory() returns relevant past
+   research, use that knowledge in your answer and cite the memory source in
+   your reasoning (e.g., "Based on prior research stored on [date]...").
 
-3. **Research when needed**: Only use web_search or other expensive tools when memory doesn't have the answer.
+3. Research when needed. Only use web_search or other expensive tools when
+   memory does not have the answer.
 
-4. **Store new findings**: After synthesizing new research findings from web_search or other sources,
-   ALWAYS call store_memory() to persist this knowledge for future queries. Include metadata with:
+4. Store new findings. After synthesizing new research findings from
+   web_search or other sources, always call store_memory() to persist this
+   knowledge for future queries. Include metadata with:
    - topic: Brief topic description
    - timestamp: Current date/time from get_current_time()
    - sources: List of tools used (e.g., ["web_search"])
 
-5. **Provide accurate answers**: Return structured responses with confidence scores based on source reliability.
+5. Provide accurate answers. Return structured responses with confidence scores
+   based on source reliability.
 
-6. **Be honest about gaps**: Never hallucinate capabilities—acknowledge gaps honestly.
+6. Be honest about gaps. Never hallucinate capabilities—acknowledge gaps
+   honestly.
 
 Output Format: Always return a structured AgentResponse with:
 - answer: The final answer to the user's query
@@ -105,15 +112,14 @@ Output Format: Always return a structured AgentResponse with:
 - tool_calls: List of all tool invocations made during execution
 - confidence: Your self-assessed confidence score (0.0-1.0)
 
-CRITICAL: Follow the workflow order above. Memory-first, then research, then store findings.
+CRITICAL: Follow the workflow order above. Memory-first, then research, then
+store findings.
 """,
     )
 
 
 @trace_tool_call
-async def search_memory(
-    ctx: RunContext[MemoryManager], query: str
-) -> List[dict]:
+async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict]:
     """Search semantic memory for relevant past knowledge.
 
     Args:
@@ -136,10 +142,7 @@ async def search_memory(
         documents = await ctx.deps.semantic_search(query_embedding, top_k=5)
 
     # Convert Document objects to dict format
-    return [
-        {"content": doc.content, "metadata": doc.metadata_}
-        for doc in documents
-    ]
+    return [{"content": doc.content, "metadata": doc.metadata_} for doc in documents]
 
 
 @trace_tool_call
@@ -202,13 +205,14 @@ async def setup_researcher_agent(
         logger.warning("⚠️ Failed to register MCP tools: %s", exc)
 
     # Attach context manager for optional cleanup by caller
-    setattr(mcp_session, "_close_cm", mcp_session_cm)
+    mcp_session._close_cm = mcp_session_cm  # type: ignore[attr-defined]
     logger.info("✅ ResearcherAgent setup complete")
     return agent, mcp_session
 
 
 def _format_mcp_result(result: Any) -> str:
     """Normalize MCP tool results into a displayable string."""
+
     def _sanitize(text: str, max_len: int = 4000) -> str:
         # Drop control characters that can break JSON encoding and cap length
         import re
@@ -230,9 +234,7 @@ def _format_mcp_result(result: Any) -> str:
     return _sanitize(str(content))
 
 
-def _make_mcp_tool(
-    mcp_session: ClientSession, tool: Any
-) -> Callable[..., Any]:
+def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
     """Create a tool wrapper that calls the given MCP tool via the session.
 
     Integrates risk assessment per tasks.md T308-T310 (FR-015 to FR-023).
@@ -247,9 +249,10 @@ def _make_mcp_tool(
         # T308: Integrate risk assessment before tool invocation
         risk_level = categorize_action_risk(tool_name, kwargs)
 
-        # Get confidence from context if available (fallback to 1.0 for high-confidence tools)
-        # Note: In a full implementation, confidence would come from the agent's inference
-        # For now, we use a conservative default that doesn't block REVERSIBLE actions
+        # Get confidence from context if available (fallback to 1.0 for
+        # high-confidence tools). In a full implementation, confidence would come
+        # from the agent's inference. For now, use a conservative default that
+        # doesn't block REVERSIBLE actions.
         confidence = 1.0  # Conservative: assume high confidence for auto-execution
 
         # T309: Implement approval check
@@ -258,18 +261,23 @@ def _make_mcp_tool(
             # In a full implementation, this would trigger an approval workflow
             logger.warning(
                 "⚠️ Action requires approval - tool: %s, risk: %s, confidence: %.2f",
-                tool_name, risk_level.value, confidence
+                tool_name,
+                risk_level.value,
+                confidence,
             )
             return (
-                f"APPROVAL REQUIRED: Tool '{tool_name}' with risk level '{risk_level.value}' "
-                f"requires human approval before execution. Parameters: {kwargs}"
+                "APPROVAL REQUIRED: Tool "
+                f"'{tool_name}' with risk level '{risk_level.value}' "
+                "requires human approval before execution. "
+                f"Parameters: {kwargs}"
             )
 
         # T310: Log auto-executed REVERSIBLE actions
         if risk_level.value == "reversible":
             logger.info(
                 "✅ Auto-executing REVERSIBLE action - tool: %s, parameters: %s",
-                tool_name, kwargs
+                tool_name,
+                kwargs,
             )
 
         # Execute the tool
@@ -303,7 +311,7 @@ async def _register_mcp_tools(
     tools = getattr(tools_result, "tools", [])
 
     for tool in tools:
-        agent.tool(
+        agent.tool(  # type: ignore[call-overload]
             _make_mcp_tool(mcp_session, tool),
             name=getattr(tool, "name", None),
             description=getattr(tool, "description", None),
@@ -318,7 +326,7 @@ async def run_agent_with_tracing(
     agent: Agent[MemoryManager, AgentResponse],
     task: str,
     deps: MemoryManager,
-    mcp_session: ClientSession = None,
+    mcp_session: Optional[ClientSession] = None,
 ) -> AgentResponse | ToolGapReport:
     """Execute agent.run() with OpenTelemetry tracing and tool gap detection.
 
@@ -365,12 +373,17 @@ async def run_agent_with_tracing(
                     # This prevents hallucinated responses when tools are missing
                     return gap_report
                 else:
-                    logger.info("✅ All required tools available, proceeding with execution")
+                    logger.info(
+                        "✅ All required tools available, proceeding with execution"
+                    )
                     span.set_attribute("gap_detected", False)
             except Exception as e:
                 # Log warning but proceed with execution
                 # (Tool gap detection failure shouldn't block legitimate queries)
-                logger.warning("⚠️ Tool gap detection failed: %s. Proceeding with execution.", str(e))
+                logger.warning(
+                    "⚠️ Tool gap detection failed: %s. Proceeding with execution.",
+                    str(e),
+                )
                 span.set_attribute("gap_detection_error", str(e))
 
         # Phase 2: Execute agent.run()
@@ -405,7 +418,13 @@ async def run_agent_with_tracing(
                 tool_calls=[],
                 confidence=0.0,
             )
-        except (json.JSONDecodeError, ValidationError, AttributeError, ValueError, TypeError) as exc:
+        except (
+            json.JSONDecodeError,
+            ValidationError,
+            AttributeError,
+            ValueError,
+            TypeError,
+        ) as exc:
             # T604: Malformed data handling for MCP tool responses
             message = (
                 "Received malformed data from an MCP tool. "
@@ -423,21 +442,24 @@ async def run_agent_with_tracing(
             )
 
         # Set result attributes
-        span.set_attribute(
-            "confidence_score", getattr(payload, "confidence", None)
-        )
+        confidence_val = getattr(payload, "confidence", None)
+        span.set_attribute("confidence_score", float(confidence_val) if confidence_val is not None else 0.0)
         span.set_attribute(
             "tool_calls_count", len(getattr(payload, "tool_calls", []))
         )
 
-        logger.info("✅ Agent execution complete - confidence: %.2f, tool_calls: %d",
-                   getattr(payload, "confidence", 0.0),
-                   len(getattr(payload, "tool_calls", [])))
+        logger.info(
+            "✅ Agent execution complete - confidence: %.2f, tool_calls: %d",
+            getattr(payload, "confidence", 0.0),
+            len(getattr(payload, "tool_calls", [])),
+        )
 
-        return payload
+        return payload  # type: ignore[return-value]
 
 
-async def run_researcher_agent(task: str, deps: MemoryManager) -> AgentResponse | ToolGapReport:
+async def run_researcher_agent(
+    task: str, deps: MemoryManager
+) -> AgentResponse | ToolGapReport:
     """Convenience entrypoint: create agent with MCP tools, run it, then clean up."""
     agent, mcp_session = await setup_researcher_agent(deps)
     try:
@@ -451,4 +473,3 @@ async def _shutdown_session(mcp_session: Any) -> None:
     close_cm = getattr(mcp_session, "_close_cm", None)
     if close_cm is not None:
         await close_cm.__aexit__(None, None, None)
-

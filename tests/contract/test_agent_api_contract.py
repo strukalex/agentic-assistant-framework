@@ -21,7 +21,10 @@ class TestAgentResponseContract:
         """Test that valid AgentResponse passes validation."""
         response = AgentResponse(
             answer="Paris",
-            reasoning="Used web_search to find 'capital of France'. Top result from Wikipedia confirmed Paris.",
+            reasoning=(
+                "Used web_search to find 'capital of France'. "
+                "Top result from Wikipedia confirmed Paris."
+            ),
             tool_calls=[
                 ToolCallRecord(
                     tool_name="web_search",
@@ -184,13 +187,21 @@ class TestToolGapReportContract:
         report = ToolGapReport(
             missing_tools=["financial_data_api", "account_access"],
             attempted_task="Retrieve my stock portfolio performance for Q3 2024",
-            existing_tools_checked=["web_search", "read_file", "get_current_time", "search_memory"],
+            existing_tools_checked=[
+                "web_search",
+                "read_file",
+                "get_current_time",
+                "search_memory",
+            ],
         )
 
         # Validate all required fields are present
         assert len(report.missing_tools) == 2
         assert "financial_data_api" in report.missing_tools
-        assert report.attempted_task == "Retrieve my stock portfolio performance for Q3 2024"
+        assert (
+            report.attempted_task
+            == "Retrieve my stock portfolio performance for Q3 2024"
+        )
         assert len(report.existing_tools_checked) == 4
 
     def test_tool_gap_report_empty_missing_tools_invalid(self):
@@ -216,7 +227,7 @@ class TestToolGapReportContract:
         assert "attempted_task" in str(exc_info.value)
 
     def test_tool_gap_report_empty_existing_tools_allowed(self):
-        """Test that empty existing_tools_checked is allowed (edge case: no tools available)."""
+        """Empty existing_tools_checked is allowed (edge case: no tools available)."""
         report = ToolGapReport(
             missing_tools=["some_tool"],
             attempted_task="Some task requiring tools",
@@ -250,7 +261,11 @@ class TestRiskAssessmentContract:
 
         result = categorize_action_risk("web_search", {"query": "test"})
         assert isinstance(result, RiskLevel)
-        assert result in [RiskLevel.REVERSIBLE, RiskLevel.REVERSIBLE_WITH_DELAY, RiskLevel.IRREVERSIBLE]
+        assert result in [
+            RiskLevel.REVERSIBLE,
+            RiskLevel.REVERSIBLE_WITH_DELAY,
+            RiskLevel.IRREVERSIBLE,
+        ]
 
     def test_requires_approval_returns_boolean(self):
         """Test that requires_approval() returns boolean."""
@@ -270,7 +285,9 @@ class TestRiskAssessmentContract:
         assert reversible == RiskLevel.REVERSIBLE
 
         # Test REVERSIBLE_WITH_DELAY tool
-        reversible_delay = categorize_action_risk("send_email", {"to": "test@example.com"})
+        reversible_delay = categorize_action_risk(
+            "send_email", {"to": "test@example.com"}
+        )
         assert reversible_delay == RiskLevel.REVERSIBLE_WITH_DELAY
 
         # Test IRREVERSIBLE tool
@@ -286,8 +303,14 @@ class TestRiskAssessmentContract:
         assert requires_approval(RiskLevel.REVERSIBLE, confidence=0.5) is False
 
         # REVERSIBLE_WITH_DELAY should require approval when confidence < 0.85
-        assert requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.80) is True
-        assert requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.90) is False
+        assert (
+            requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.80)
+            is True
+        )
+        assert (
+            requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.90)
+            is False
+        )
 
         # IRREVERSIBLE should always require approval
         assert requires_approval(RiskLevel.IRREVERSIBLE, confidence=1.0) is True

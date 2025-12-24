@@ -1,4 +1,5 @@
-"""Manual validation script for ResearcherAgent Q&A, tool gap detection, and risk assessment.
+"""Manual validation script for ResearcherAgent Q&A, tool gap detection, and
+risk assessment.
 
 Tests:
 - User Story 1: Basic research queries with MCP tools
@@ -11,7 +12,6 @@ import asyncio
 
 from src.agents.researcher import run_researcher_agent
 from src.core.memory import MemoryManager
-from src.models.agent_response import AgentResponse
 from src.models.tool_gap_report import ToolGapReport
 
 
@@ -24,26 +24,25 @@ async def main(question: str) -> None:
 
     Risk Assessment (User Story 3):
     All MCP tool invocations are automatically assessed for risk level.
-    Check logs for "Auto-executing REVERSIBLE action" or "Action requires approval" messages.
+    Check logs for "Auto-executing REVERSIBLE action" or
+    "Action requires approval" messages.
     """
     import logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format="[%(levelname)s] %(message)s"
-    )
+
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
     logger = logging.getLogger(__name__)
 
     # Print risk assessment guide for user reference
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("RISK ASSESSMENT ACTIVE (User Story 3)")
-    print("="*60)
+    print("=" * 60)
     print("All tool invocations are assessed for risk level:")
     print("  • REVERSIBLE → Auto-execute with logging")
     print("  • REVERSIBLE_WITH_DELAY → Require approval if confidence < 0.85")
     print("  • IRREVERSIBLE → Always require approval")
     print("  • Unknown tools → Default to IRREVERSIBLE (conservative)")
     print("\nWatch logs for risk assessment decisions...")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     logger.info("📝 Question: %s", question)
     logger.info("🔧 Initializing MemoryManager...")
@@ -58,18 +57,24 @@ async def main(question: str) -> None:
         # Handle both AgentResponse and ToolGapReport
         if isinstance(result, ToolGapReport):
             # Tool Gap Detected - show gap report
-            print(f"\n{'='*60}")
+            print("\n" + "=" * 60)
             print(f"Question:        {question}")
-            print(f"\n⚠️  TOOL GAP DETECTED!\n")
-            print(f"The agent cannot complete this task because required tools are missing.")
-            print(f"\nMissing tools:")
+            print("\n⚠️  TOOL GAP DETECTED!\n")
+            print(
+                "The agent cannot complete this task because required tools "
+                "are missing."
+            )
+            print("\nMissing tools:")
             for tool in result.missing_tools:
                 print(f"  • {tool}")
             print(f"\nAttempted task:  {result.attempted_task}")
             print(f"\nAvailable tools checked ({len(result.existing_tools_checked)}):")
             for tool in result.existing_tools_checked:
                 print(f"  ✓ {tool}")
-            print(f"\n💡 Recommendation: Install or configure the missing MCP tools to complete this task.")
+            print(
+                "\n💡 Recommendation: Install or configure the missing MCP tools "
+                "to complete this task."
+            )
             print(f"{'='*60}\n")
         else:
             # Normal AgentResponse - show answer and reasoning
@@ -81,7 +86,10 @@ async def main(question: str) -> None:
             if result.tool_calls:
                 print("\nTool calls:")
                 for call in result.tool_calls:
-                    print(f"  • {call.tool_name} ({call.status.value}) - {call.duration_ms}ms")
+                    print(
+                        f"  • {call.tool_name} ({call.status.value}) "
+                        f"- {call.duration_ms}ms"
+                    )
                     print(f"    Parameters: {call.parameters}")
                     # Show if approval was required in the result
                     if call.result and "APPROVAL REQUIRED" in str(call.result):
@@ -96,7 +104,10 @@ async def main(question: str) -> None:
                 for call in result.tool_calls
             )
             if approval_needed:
-                print("⚠️  NOTE: One or more actions required approval and were blocked.")
+                print(
+                    "⚠️  NOTE: One or more actions required approval and were "
+                    "blocked."
+                )
                 print("    Check the tool call results above for details.\n")
     finally:
         logger.info("🧹 Shutting down MCP session...")
@@ -118,4 +129,3 @@ if __name__ == "__main__":
         asyncio.run(main(args.question))
     except KeyboardInterrupt:
         print("\nInterrupted by user.")
-
