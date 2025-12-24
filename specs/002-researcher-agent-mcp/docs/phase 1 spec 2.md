@@ -377,7 +377,7 @@ def categorize_action_risk(tool_name: str, parameters: dict) -> RiskLevel:
 Categorize action based on reversibility (Constitution Article II.C)
 """
 \# Read-only operations
-if tool_name in ['web_search', 'read_file', 'get_current_time', 'memory_search']:
+if tool_name in ['web_search', 'read_file', 'get_current_time', 'search_memory']:
 return RiskLevel.REVERSIBLE
 
     # Operations with delay window

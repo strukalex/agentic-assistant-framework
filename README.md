@@ -22,6 +22,10 @@ This repository now includes the Phase 1 memory layer feature, built around Pyth
 
 ### Quickstart
 
+For the ResearcherAgent (Spec 002) quickstart, follow the detailed guide in
+`specs/002-researcher-agent-mcp/quickstart.md` and the CLI walkthrough in
+`src/cli/README.md`. The abbreviated setup is below.
+
 ```bash
 # Clone & enter repo
 git clone <repository-url>
@@ -35,6 +39,9 @@ source venv/bin/activate  # Windows: venv\\Scripts\\activate
 # Install the project in editable mode with all development dependencies
 pip install -e .[dev]
 
+# Install Node.js dependencies for MCP servers (requires Node.js 24+)
+npm install
+
 # Copy environment defaults
 cp .env.example .env
 
@@ -43,10 +50,46 @@ docker-compose up -d
 
 # TESTING
 
-# Add the project root to PYTHONPATH
-export PYTHONPATH="$PWD/src:$PYTHONPATH"
-
 # Run tests with coverage gate
+pytest
+```
+
+### Reset & DB re-init
+
+To fully reset local infra, re-create the DB schema, and set `PYTHONPATH` automatically:
+
+```bash
+npm run reset
+```
+
+What the script does:
+- Stops containers, removes volumes, restarts infra (`docker compose` fallback to `docker-compose`)
+- Waits for Postgres health
+- Runs `alembic upgrade head` to initialize the schema
+
+Manual re-init (if you prefer the long form):
+```bash
+docker compose down
+docker compose down -v
+docker compose up -d
+alembic upgrade head
+```
+
+### Running tests
+
+Use the npm wrappers to auto-activate `venv` when present:
+
+```bash
+# npm wrappers
+npm test              # alias to npm run test:py
+npm run test:py -q tests/integration
+
+# Test the ResearcherAgent with MCP tools
+npm run test:agent "What is the capital of France?"
+```
+
+Or run pytest directly:
+```bash
 pytest
 ```
 
@@ -55,7 +98,7 @@ pytest
 The Phase 1 agent spec assumes:
 
 - **Default LLM**: DeepSeek 3.2 via **Microsoft Azure AI Foundry** (see `AZURE_AI_FOUNDRY_*` in `env.example`)
-- **Web Search**: **Open-WebSearch MCP** (`npx -y @open-websearch/mcp-server`) (see `WEBSEARCH_*` in `env.example`)
+- **Web Search**: **Open-WebSearch MCP** (embedded via `npm install`, see `package.json`) (see `WEBSEARCH_*` in `env.example`)
 
 ### Updating packages
 

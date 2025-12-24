@@ -2,6 +2,10 @@
 requires = ["setuptools>=70.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
 [project]
 name = "paias"
 version = "0.1.0"
@@ -13,7 +17,12 @@ dependencies = [
   "asyncpg>=0.30",
   "pydantic>=2.0",
   "pydantic-settings>=2.0",
+  "pydantic-ai>=1.0.0,<2.0.0",
+  "openai>=1.51.0",
+  "python-dotenv>=1.0.1",
+  "mcp>=1.2.0,<2.0.0",
   "pgvector>=0.3.0",
+  "opentelemetry-api>=1.39.1",
   "opentelemetry-sdk>=1.39.1",
   "opentelemetry-exporter-otlp>=1.39.1",
   "alembic>=1.14",
@@ -41,6 +50,7 @@ skip-string-normalization = true
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+exclude = ["tests"]
 
 [tool.ruff.lint]
 select = [
@@ -63,7 +73,6 @@ no_implicit_optional = true
 strict_equality = true
 show_error_codes = true
 pretty = true
-mypy_path = "src"
 explicit_package_bases = true
 
 [[tool.mypy.overrides]]

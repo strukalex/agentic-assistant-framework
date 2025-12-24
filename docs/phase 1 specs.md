@@ -1109,7 +1109,7 @@ services:
     ports:
       - "8080:8080"
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/paias
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/paias
     depends_on:
       - postgres
   

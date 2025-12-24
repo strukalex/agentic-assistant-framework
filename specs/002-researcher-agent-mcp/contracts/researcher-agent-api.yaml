@@ -1,0 +1,381 @@
+openapi: 3.1.0
+info:
+  title: ResearcherAgent API
+  description: |
+    Python API contract for the ResearcherAgent with MCP tools and tool gap detection.
+
+    This is a **Python library API**, not a REST endpoint. The schema documents the
+    public Python methods that consumers can invoke directly via import.
+
+    Usage:
+    ```python
+    from src.agents.researcher import ResearcherAgent, setup_researcher_agent
+    from src.models.agent_response import AgentResponse
+
+    # Initialize agent with dependencies
+    agent, mcp_session = await setup_researcher_agent(memory_manager)
+
+    # Execute research query
+    result: AgentResponse = await agent.run("What is the capital of France?")
+    print(result.answer)  # "Paris"
+    print(result.confidence)  # 0.95
+    ```
+
+  version: 1.0.0
+  contact:
+    name: PAIAS Development Team
+    url: https://github.com/your-org/agentic-assistant-framework
+
+tags:
+  - name: agent-execution
+    description: Core agent execution methods
+  - name: tool-gap-detection
+    description: Tool capability gap detection
+  - name: risk-assessment
+    description: Risk-based action approval
+
+paths:
+  /agent/run:
+    post:
+      tags:
+        - agent-execution
+      summary: Execute research query
+      description: |
+        Run the ResearcherAgent with a user query.
+
+        Python API: `await agent.run(user_query, deps=memory_manager)`
+
+        Functional Requirements: FR-001 to FR-004, FR-024 to FR-026
+        Success Criteria: SC-001, SC-002, SC-010
+      operationId: runAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_query:
+                  type: string
+                  description: The research question or task to execute
+                  example: "What is the capital of France?"
+                deps:
+                  type: object
+                  description: MemoryManager instance for dependency injection
+                  properties:
+                    memory_manager:
+                      $ref: '#/components/schemas/MemoryManager'
+              required:
+                - user_query
+                - deps
+      responses:
+        '200':
+          description: Agent execution successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentResponse'
+        '400':
+          description: Invalid input (empty query, invalid deps)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Agent execution failed (MCP tool error, LLM API error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: MCP tools unavailable (initialization failed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /tool-gap-detector/detect:
+    post:
+      tags:
+        - tool-gap-detection
+      summary: Detect missing tool capabilities
+      description: |
+        Analyze a task description and detect if required capabilities are missing.
+
+        Python API: `await tool_gap_detector.detect_missing_tools(task_description)`
+
+        Functional Requirements: FR-009 to FR-014
+        Success Criteria: SC-003
+      operationId: detectToolGap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                task_description:
+                  type: string
+                  description: The task to analyze for capability gaps
+                  example: "Retrieve my stock portfolio performance for Q3 2024"
+              required:
+                - task_description
+      responses:
+        '200':
+          description: Gap detection completed successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ToolGapReport'
+                  - type: "null"
+                    description: No capability gaps detected (all required tools available)
+        '400':
+          description: Invalid input (empty task_description)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Gap detection failed (LLM API error, MCP session error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /risk-assessment/categorize:
+    post:
+      tags:
+        - risk-assessment
+      summary: Categorize action risk level
+      description: |
+        Determine the risk level of a tool action.
+
+        Python API: `categorize_action_risk(tool_name, parameters)`
+
+        Functional Requirements: FR-015 to FR-019
+        Success Criteria: SC-004
+      operationId: categorizeRisk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tool_name:
+                  type: string
+                  description: Name of the tool to categorize
+                  example: "delete_file"
+                parameters:
+                  type: object
+                  description: Tool invocation parameters
+                  example:
+                    path: "/data/important.txt"
+              required:
+                - tool_name
+                - parameters
+      responses:
+        '200':
+          description: Risk categorization successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RiskLevel'
+
+  /risk-assessment/requires-approval:
+    post:
+      tags:
+        - risk-assessment
+      summary: Check if action requires approval
+      description: |
+        Determine if a tool action requires human approval before execution.
+
+        Python API: `requires_approval(action, confidence)`
+
+        Functional Requirements: FR-020 to FR-023
+        Success Criteria: SC-005
+      operationId: requiresApproval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  $ref: '#/components/schemas/RiskLevel'
+                confidence:
+                  type: number
+                  format: float
+                  minimum: 0.0
+                  maximum: 1.0
+                  description: Model confidence score (0.0 to 1.0)
+                  example: 0.95
+              required:
+                - action
+                - confidence
+      responses:
+        '200':
+          description: Approval check successful
+          content:
+            application/json:
+              schema:
+                type: boolean
+                description: True if approval required, False otherwise
+
+components:
+  schemas:
+    AgentResponse:
+      type: object
+      description: Structured output from ResearcherAgent.run()
+      properties:
+        answer:
+          type: string
+          description: The final answer to the user's query
+          example: "Paris"
+        reasoning:
+          type: string
+          description: Explanation of tool choices and reasoning process
+          example: "Used web_search to find 'capital of France'. Top result from Wikipedia confirmed Paris."
+        tool_calls:
+          type: array
+          description: All tool invocations made during agent execution
+          items:
+            $ref: '#/components/schemas/ToolCallRecord'
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Model's self-assessed confidence (0.0-1.0)
+          example: 0.95
+      required:
+        - answer
+        - reasoning
+        - tool_calls
+        - confidence
+
+    ToolCallRecord:
+      type: object
+      description: Record of a single tool invocation
+      properties:
+        tool_name:
+          type: string
+          description: Name of the MCP tool that was invoked
+          example: "web_search"
+        parameters:
+          type: object
+          description: Input parameters passed to the tool
+          example:
+            query: "capital of France"
+            max_results: 5
+        result:
+          description: Tool output; null if execution failed or timed out
+          nullable: true
+          example:
+            - title: "Paris - Wikipedia"
+              url: "https://en.wikipedia.org/wiki/Paris"
+              snippet: "Paris is the capital and most populous city of France..."
+        duration_ms:
+          type: integer
+          minimum: 0
+          description: Execution time in milliseconds
+          example: 1234
+        status:
+          $ref: '#/components/schemas/ToolCallStatus'
+      required:
+        - tool_name
+        - parameters
+        - duration_ms
+        - status
+
+    ToolCallStatus:
+      type: string
+      description: Status of a tool call execution
+      enum:
+        - SUCCESS
+        - FAILED
+        - TIMEOUT
+      example: "SUCCESS"
+
+    ToolGapReport:
+      type: object
+      description: Report of missing tool capabilities
+      properties:
+        missing_tools:
+          type: array
+          description: List of required capabilities not available in MCP tool registry
+          items:
+            type: string
+          minItems: 1
+          example:
+            - "financial_data_api"
+            - "account_access"
+        attempted_task:
+          type: string
+          description: The task description that required the missing tools
+          example: "Retrieve my stock portfolio performance for Q3 2024"
+        existing_tools_checked:
+          type: array
+          description: List of available MCP tools that were evaluated
+          items:
+            type: string
+          example:
+            - "web_search"
+            - "read_file"
+            - "get_current_time"
+            - "search_memory"
+      required:
+        - missing_tools
+        - attempted_task
+        - existing_tools_checked
+
+    RiskLevel:
+      type: string
+      description: Risk categorization for tool actions
+      enum:
+        - reversible
+        - reversible_with_delay
+        - irreversible
+      example: "irreversible"
+
+    MemoryManager:
+      type: object
+      description: Memory manager dependency (from Spec 001)
+      properties:
+        semantic_search:
+          type: string
+          format: method
+          description: "async def semantic_search(query: str, top_k: int = 5) -> List[dict]"
+        store_document:
+          type: string
+          format: method
+          description: "async def store_document(content: str, metadata: dict) -> str"
+      note: |
+        This is a placeholder. Actual schema defined in Spec 001 (Core Memory Layer).
+        Reference: specs/001-core-memory-layer/contracts/memory-manager-api.yaml
+
+    Error:
+      type: object
+      description: Standard error response
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "MCP_TOOL_UNAVAILABLE"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Failed to connect to Open-WebSearch MCP server: npx command not found"
+        details:
+          type: object
+          description: Additional error context
+          nullable: true
+      required:
+        - error
+        - message
+
+externalDocs:
+  description: Full feature specification
+  url: ../spec.md

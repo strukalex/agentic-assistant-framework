@@ -24,8 +24,6 @@ from src.models.document import Document  # noqa: F401 - ensure model is registe
 from src.models.message import Message  # noqa: F401 - ensure model is registered
 from src.models.session import Session  # noqa: F401 - ensure model is registered
 
-pytest_plugins = ["tests.fixtures.conftest"]
-
 LOGGER = logging.getLogger("tests.db")
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"

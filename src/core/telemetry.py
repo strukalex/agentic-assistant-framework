@@ -51,9 +51,18 @@ def _init_tracer_provider(exporter: Optional[SpanExporter] = None) -> None:
     _provider_initialized = True
 
 
-def get_tracer() -> trace.Tracer:
+def get_tracer(component: str = "memory") -> trace.Tracer:
+    """
+    Get a tracer for the specified component.
+
+    Args:
+        component: Component name (e.g., "memory", "agent", "mcp")
+
+    Returns:
+        OpenTelemetry Tracer instance
+    """
     _init_tracer_provider()
-    return trace.get_tracer("paias.memory")
+    return trace.get_tracer(f"paias.{component}")
 
 
 def set_span_exporter(exporter: SpanExporter) -> SpanExporter:
@@ -85,13 +94,14 @@ def trace_memory_operation(
     """
 
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
-        tracer = get_tracer()
+        tracer = get_tracer("memory")
 
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
             with tracer.start_as_current_span(f"memory.{operation_name}") as span:
                 span.set_attribute("operation.type", operation_name)
                 span.set_attribute("db.system", "postgresql")
+                span.set_attribute("component", "memory")
                 try:
                     result = await func(*args, **kwargs)
                     span.set_attribute("operation.success", True)
@@ -106,3 +116,106 @@ def trace_memory_operation(
         return wrapper
 
     return decorator
+
+
+def trace_agent_operation(
+    operation_name: str,
+) -> Callable[[Callable[..., Awaitable[T]]], Callable[..., Awaitable[T]]]:
+    """
+    Decorator to create a span around async agent operations with standard attributes.
+
+    Usage:
+        @trace_agent_operation("run")
+        async def run_agent(...):
+            ...
+    """
+
+    def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+        tracer = get_tracer("agent")
+
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
+            with tracer.start_as_current_span(f"agent.{operation_name}") as span:
+                span.set_attribute("operation.type", operation_name)
+                span.set_attribute("component", "agent")
+                try:
+                    result = await func(*args, **kwargs)
+                    span.set_attribute("operation.success", True)
+                    return result
+                except Exception as exc:
+                    span.set_attribute("operation.success", False)
+                    span.record_exception(exc)
+                    raise
+
+        return wrapper
+
+    return decorator
+
+
+def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
+    """
+    Decorator to trace MCP tool invocations with OpenTelemetry.
+
+    Creates span with name "mcp.tool_call.{func_name}"
+    Sets attributes: tool_name, parameters, result_count, execution_duration_ms,
+    component
+    Handles errors with span.record_exception()
+
+    Per Spec 002 research.md RQ-004 (FR-030)
+    Per Spec 002 tasks.md T504: Captures execution_duration_ms
+
+    Usage:
+        @trace_tool_call
+        async def web_search(...):
+            ...
+    """
+    import time
+
+    tracer = get_tracer("mcp")
+
+    @wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> T:
+        span_name = f"mcp.tool_call.{func.__name__}"
+
+        with tracer.start_as_current_span(span_name) as span:
+            # Set standard attributes
+            span.set_attribute("tool_name", func.__name__)
+            span.set_attribute("component", "mcp")
+            span.set_attribute("operation.type", "tool_call")
+
+            # Set parameters attribute (stringify for safety)
+            span.set_attribute("parameters", str(kwargs))
+
+            # T504: Capture execution start time
+            start_time = time.perf_counter()
+
+            try:
+                # Execute the tool function
+                result = await func(*args, **kwargs)
+
+                # T504: Calculate and set execution duration in milliseconds
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                span.set_attribute("execution_duration_ms", duration_ms)
+
+                # Set result count if result is a list
+                if isinstance(result, list):
+                    span.set_attribute("result_count", len(result))
+                else:
+                    span.set_attribute("result_count", 1)
+
+                span.set_attribute("operation.success", True)
+                return result
+
+            except Exception as exc:
+                # T504: Calculate duration even on error
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                span.set_attribute("execution_duration_ms", duration_ms)
+
+                # Record exception and set error attributes
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error_type", type(exc).__name__)
+                span.set_attribute("error_message", str(exc))
+                span.record_exception(exc)
+                raise
+
+    return wrapper

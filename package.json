@@ -1,0 +1,19 @@
+{
+  "name": "paias",
+  "version": "0.1.0",
+  "description": "Personal AI Assistant System",
+  "private": true,
+  "scripts": {
+    "reset": "bash scripts/reset_dev_env.sh",
+    "test:py": "bash scripts/run_pytest.sh",
+    "test": "npm run test:py",
+    "test:agent": "python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py"
+  },
+  "dependencies": {
+    "open-websearch": "latest"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
+

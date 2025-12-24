@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # Logical service name that will appear in tracing backends (Jaeger, etc.).
     # Helps distinguish this component from others in a distributed system.
     otel_service_name: str = Field(
-        default="paias-memory-layer",
+        default="paias",  # Updated to match agent layer per Constitution Article II.H
         description="OpenTelemetry service.name resource attribute",
     )
 
@@ -78,6 +78,26 @@ class Settings(BaseSettings):
         ge=0.0,  # Pydantic validation: minimum 0.0
         le=1.0,  # Pydantic validation: maximum 1.0
         description="Trace sampling rate (0.0-1.0); 1.0 for always on",
+    )
+
+    # ----------------------
+    # MCP / web search configuration
+    # ----------------------
+    websearch_engine: str = Field(
+        default="google",
+        description="Search engine for Open-WebSearch MCP server",
+    )
+    websearch_max_results: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum results returned by web_search tool",
+    )
+    websearch_timeout: int = Field(
+        default=30,
+        ge=1,
+        le=120,
+        description="Timeout (seconds) for MCP tool calls (WEBSEARCH_TIMEOUT)",
     )
 
     # ------------------------------------------------
@@ -104,6 +124,14 @@ class Settings(BaseSettings):
     embedding_model_name: str = Field(
         default="text-embedding-ada-002",
         description="Embedding model identifier; dimension follows model defaults",
+    )
+
+    # ----------------------
+    # Logging configuration
+    # ----------------------
+    enable_agentic_logging: bool = Field(
+        default=False,
+        description="Enable detailed agentic loop logging (shows LLM conversation messages and tool calls). Set ENABLE_AGENTIC_LOGGING=true to enable.",
     )
 
 
