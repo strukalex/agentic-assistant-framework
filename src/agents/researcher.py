@@ -64,7 +64,7 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
     return Agent[MemoryManager, AgentResponse](
         model=model,
         output_type=AgentResponse,
-        retries=2,
+        retries=0,  # Changed from 2 to 0 to fail fast in tests - prevents hanging
         system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
 
 Your capabilities:

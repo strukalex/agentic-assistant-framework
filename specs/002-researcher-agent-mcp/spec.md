@@ -97,7 +97,7 @@ All ResearcherAgent operations, including MCP tool invocations and agent.run() c
 
 **Why this priority**: This implements Article II.D (Observable Everything) from the Constitution. Essential for debugging, performance monitoring, and understanding agent behavior in production.
 
-**Independent Test**: Can be tested independently by executing a research query, then accessing Jaeger UI (localhost:16686) and verifying trace spans appear with service name "paias-agent-layer", span names matching tool calls (e.g., "mcp_tool_call:web_search", "agent_run"), and attributes including tool_name, parameters, result_count, and confidence_score.
+**Independent Test**: Can be tested independently by executing a research query, then accessing Jaeger UI (localhost:16686) and verifying trace spans appear with service name "paias", span names matching tool calls (e.g., "mcp_tool_call:web_search", "agent_run"), and attributes including tool_name, parameters, result_count, and confidence_score.
 
 **Acceptance Scenarios**:
 
@@ -181,13 +181,13 @@ All ResearcherAgent operations, including MCP tool invocations and agent.run() c
 
 - **FR-028**: The system MUST provide environment variable configuration for MCP server settings: WEBSEARCH_ENGINE (options: google, duckduckgo, bing), WEBSEARCH_MAX_RESULTS (default: 10), WEBSEARCH_TIMEOUT (default: 30 seconds)
 
-- **FR-029**: The system MUST provide environment variable configuration for OpenTelemetry: OTEL_EXPORTER_OTLP_ENDPOINT (default: http://localhost:4317), OTEL_SERVICE_NAME (must be: paias-agent-layer)
+- **FR-029**: The system MUST provide environment variable configuration for OpenTelemetry: OTEL_EXPORTER_OTLP_ENDPOINT (default: http://localhost:4317), OTEL_SERVICE_NAME (must be: paias)
 
 - **FR-030**: The system MUST instrument all MCP tool invocations with OpenTelemetry tracing using a @trace_tool_call decorator that creates span with attributes: tool_name, parameters (serialized), result_count, execution_duration_ms
 
 - **FR-031**: The system MUST instrument all agent.run() calls with OpenTelemetry tracing, creating a span with attributes: confidence_score, tool_calls_count, task_description, result_type
 
-- **FR-032**: All OpenTelemetry trace spans MUST be exported to the OTLP endpoint and be visible in Jaeger UI at localhost:16686 with service name "paias-agent-layer"
+- **FR-032**: All OpenTelemetry trace spans MUST be exported to the OTLP endpoint and be visible in Jaeger UI at localhost:16686 with service name "paias"
 
 - **FR-033**: The system MUST ensure all tool inputs and outputs use Pydantic models for type safety (e.g., SearchWebParams, SearchWebResult, TimeContextResult)
 
@@ -223,7 +223,7 @@ All ResearcherAgent operations, including MCP tool invocations and agent.run() c
 
 - **SC-007**: All unit tests pass with at least 80% code coverage as measured by pytest --cov-fail-under=80
 
-- **SC-008**: When executing any research query, OpenTelemetry trace spans appear in Jaeger UI (localhost:16686) within 2 seconds, showing service name "paias-agent-layer" and all expected attributes (tool_name, parameters, confidence_score)
+- **SC-008**: When executing any research query, OpenTelemetry trace spans appear in Jaeger UI (localhost:16686) within 2 seconds, showing service name "paias" and all expected attributes (tool_name, parameters, confidence_score)
 
 - **SC-009**: The system handles MCP tool failures gracefully: if web_search times out after 30 seconds, the agent returns an AgentResponse with confidence=0.0 and reasoning explaining the failure, without crashing
 

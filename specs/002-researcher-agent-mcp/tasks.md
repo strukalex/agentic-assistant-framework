@@ -189,7 +189,7 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 **Goal**: Ensure all ResearcherAgent operations are fully instrumented with OpenTelemetry tracing, visible in Jaeger UI with detailed span attributes
 
-**Independent Test**: Execute research query, access Jaeger UI (localhost:16686), verify trace spans appear with service name "paias-agent-layer", span names matching tool calls, attributes including tool_name, parameters, result_count, confidence_score
+**Independent Test**: Execute research query, access Jaeger UI (localhost:16686), verify trace spans appear with service name "paias", span names matching tool calls, attributes including tool_name, parameters, result_count, confidence_score
 
 ### Tests for User Story 5 (REQUIRED) ⚠️
 

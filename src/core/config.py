@@ -67,7 +67,7 @@ class Settings(BaseSettings):
     # Logical service name that will appear in tracing backends (Jaeger, etc.).
     # Helps distinguish this component from others in a distributed system.
     otel_service_name: str = Field(
-        default="paias-memory-layer",
+        default="paias",  # Updated to match agent layer per Constitution Article II.H
         description="OpenTelemetry service.name resource attribute",
     )
 

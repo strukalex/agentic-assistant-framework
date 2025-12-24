@@ -37,7 +37,7 @@ WEBSEARCH_TIMEOUT=30
 
 # OpenTelemetry (for observability)
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-OTEL_SERVICE_NAME=paias-agent-layer
+OTEL_SERVICE_NAME=paias
 
 # Database (inherited from Spec 001)
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/paias
@@ -205,7 +205,7 @@ OpenTelemetry traces exported to Jaeger (http://localhost:16686)
 ### 8. View Traces in Jaeger UI
 
 1. Open http://localhost:16686 in your browser
-2. Select service: `paias-agent-layer`
+2. Select service: `paias`
 3. Click "Find Traces"
 4. You should see trace spans for:
    - `agent_run` (top-level span)

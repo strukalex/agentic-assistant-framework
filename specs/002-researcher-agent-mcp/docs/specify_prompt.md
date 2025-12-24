@@ -102,7 +102,7 @@ This layer includes:
    
    - OpenTelemetry settings (from Spec 1):
      - OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-     - OTEL_SERVICE_NAME=paias-agent-layer
+     - OTEL_SERVICE_NAME=paias
 
 8. OpenTelemetry Instrumentation
    - Add @trace_tool_call decorator for all MCP tool invocations
