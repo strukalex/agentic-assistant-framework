@@ -20,7 +20,7 @@ def get_azure_model() -> OpenAIModel:
     Reads configuration from environment variables:
     - AZURE_AI_FOUNDRY_ENDPOINT: The base URL for the model
     - AZURE_AI_FOUNDRY_API_KEY: The API key for authentication
-    - AZURE_DEPLOYMENT_NAME: The model name (default: "DeepSeek-V3.2")
+    - AZURE_DEPLOYMENT_NAME: The model name (deployment ID)
 
     Returns:
         OpenAIModel configured for Azure AI Foundry
@@ -30,9 +30,17 @@ def get_azure_model() -> OpenAIModel:
     """
     load_dotenv()
 
-    endpoint = os.getenv("AZURE_AI_FOUNDRY_ENDPOINT")
-    api_key = os.getenv("AZURE_AI_FOUNDRY_API_KEY")
-    model_name = os.getenv("AZURE_DEPLOYMENT_NAME", "DeepSeek-V3.2")
+    def _require_env(var_name: str) -> str:
+        value = os.getenv(var_name)
+        if not value:
+            raise ValueError(
+                f"{var_name} environment variable is required for Azure AI Foundry configuration"
+            )
+        return value
+
+    endpoint = _require_env("AZURE_AI_FOUNDRY_ENDPOINT")
+    api_key = _require_env("AZURE_AI_FOUNDRY_API_KEY")
+    model_name = _require_env("AZURE_DEPLOYMENT_NAME")
 
     if not endpoint:
         raise ValueError("AZURE_AI_FOUNDRY_ENDPOINT environment variable is required")

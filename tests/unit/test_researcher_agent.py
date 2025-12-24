@@ -216,3 +216,31 @@ class TestMemoryManagerDependencyInjection:
         assert researcher_agent is not None
         # The tool registration is validated through integration tests
         # where we verify the agent can actually call these tools
+
+
+@pytest.mark.parametrize(
+    "missing_var",
+    [
+        "AZURE_AI_FOUNDRY_ENDPOINT",
+        "AZURE_AI_FOUNDRY_API_KEY",
+        "AZURE_DEPLOYMENT_NAME",
+    ],
+)
+def test_researcher_agent_env_var_validation(monkeypatch, missing_var):
+    """T605a: Ensure agent init fails clearly when required Azure env vars missing."""
+    for var in [
+        "AZURE_AI_FOUNDRY_ENDPOINT",
+        "AZURE_AI_FOUNDRY_API_KEY",
+        "AZURE_DEPLOYMENT_NAME",
+    ]:
+        if var == missing_var:
+            monkeypatch.setenv(var, "")
+        else:
+            monkeypatch.setenv(var, "placeholder")
+
+    from src.core.llm import get_azure_model
+
+    with pytest.raises(ValueError) as exc:
+        get_azure_model()
+
+    assert missing_var in str(exc.value)

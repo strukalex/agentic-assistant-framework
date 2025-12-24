@@ -80,6 +80,26 @@ class Settings(BaseSettings):
         description="Trace sampling rate (0.0-1.0); 1.0 for always on",
     )
 
+    # ----------------------
+    # MCP / web search configuration
+    # ----------------------
+    websearch_engine: str = Field(
+        default="google",
+        description="Search engine for Open-WebSearch MCP server",
+    )
+    websearch_max_results: int = Field(
+        default=10,
+        ge=1,
+        le=50,
+        description="Maximum results returned by web_search tool",
+    )
+    websearch_timeout: int = Field(
+        default=30,
+        ge=1,
+        le=120,
+        description="Timeout (seconds) for MCP tool calls (WEBSEARCH_TIMEOUT)",
+    )
+
     # ------------------------------------------------
     # Vector / pgvector configuration for embeddings
     # ------------------------------------------------

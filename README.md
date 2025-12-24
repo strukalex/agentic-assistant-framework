@@ -22,6 +22,10 @@ This repository now includes the Phase 1 memory layer feature, built around Pyth
 
 ### Quickstart
 
+For the ResearcherAgent (Spec 002) quickstart, follow the detailed guide in
+`specs/002-researcher-agent-mcp/quickstart.md` and the CLI walkthrough in
+`src/cli/README.md`. The abbreviated setup is below.
+
 ```bash
 # Clone & enter repo
 git clone <repository-url>

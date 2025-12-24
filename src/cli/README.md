@@ -11,15 +11,15 @@ Tests **User Story 1** (basic research queries), **User Story 2** (tool gap dete
 cd /home/lex/GitHub/agentic-assistant-framework
 
 # Test basic Q&A (should succeed with AgentResponse)
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "What is the capital of France?"
+python -m src.cli.test_agent "What is the capital of France?"
 
 # Test tool gap detection (should return ToolGapReport)
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Retrieve my stock portfolio performance for Q3 2024"
+python -m src.cli.test_agent "Retrieve my stock portfolio performance for Q3 2024"
 
 # More examples that should trigger gap detection
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Send an email to john@example.com"
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Query the database for all admin users"
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Make a purchase of 100 shares of AAPL"
+python -m src.cli.test_agent "Send an email to john@example.com"
+python -m src.cli.test_agent "Query the database for all admin users"
+python -m src.cli.test_agent "Make a purchase of 100 shares of AAPL"
 ```
 
 ### Example Output: AgentResponse (Normal Query)
@@ -151,21 +151,21 @@ Answer: APPROVAL REQUIRED: Tool 'delete_file' with risk level 'irreversible'
 
 ```bash
 # 1. REVERSIBLE: Should auto-execute (check logs for "Auto-executing REVERSIBLE action")
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "What is the capital of France?"
+python -m src.cli.test_agent "What is the capital of France?"
 
 # 2. Sensitive file read: Currently treats as REVERSIBLE in this MVP
 #    (file reading via MCP uses read_file tool from mcp-server-filesystem)
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Read the file at /etc/shadow"
+python -m src.cli.test_agent "Read the file at /etc/shadow"
 
 # 3. Tool gap for IRREVERSIBLE actions: Should detect missing tool
 #    (These tools don't exist, so gap detection triggers first)
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Delete the file /data/important.txt"
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Send an email to john@example.com saying hello"
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Make a purchase of 100 shares of AAPL"
+python -m src.cli.test_agent "Delete the file /data/important.txt"
+python -m src.cli.test_agent "Send an email to john@example.com saying hello"
+python -m src.cli.test_agent "Make a purchase of 100 shares of AAPL"
 
 # 4. REVERSIBLE_WITH_DELAY: Currently would require approval if tool existed
 #    (These will trigger tool gap detection since send_email isn't in MCP tools)
-python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py "Schedule a meeting for tomorrow at 2pm"
+python -m src.cli.test_agent "Schedule a meeting for tomorrow at 2pm"
 ```
 
 ### Expected Behavior

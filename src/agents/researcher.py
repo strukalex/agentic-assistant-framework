@@ -7,18 +7,21 @@ Per Spec 002 tasks.md Phase 3 (FR-001 to FR-004, FR-024 to FR-026, FR-030, FR-03
 """
 
 import asyncio
+import json
 import logging
 from typing import Any, Callable, List, Tuple
 from uuid import UUID
 
 from mcp import ClientSession
 from pydantic_ai import Agent, RunContext
+from pydantic import ValidationError
 
 from src.core.llm import get_azure_model, parse_agent_result
 from src.core.memory import MemoryManager
 from src.core.risk_assessment import categorize_action_risk, requires_approval
 from src.core.telemetry import get_tracer, trace_tool_call
 from src.core.tool_gap_detector import ToolGapDetector
+from src.core.config import settings
 from src.mcp_integration.setup import setup_mcp_tools
 from src.models.agent_response import AgentResponse
 from src.models.tool_gap_report import ToolGapReport
@@ -236,7 +239,7 @@ def _make_mcp_tool(
     """
     tool_name = getattr(tool, "name", "mcp_tool")
     description = getattr(tool, "description", "") or f"MCP tool {tool_name}"
-    timeout_seconds = 10
+    timeout_seconds = settings.websearch_timeout
     logger = logging.getLogger(__name__)
 
     @trace_tool_call
@@ -276,11 +279,14 @@ def _make_mcp_tool(
                 timeout=timeout_seconds,
             )
             return _format_mcp_result(result)
-        except asyncio.TimeoutError:
-            return (
-                f"Tool '{tool_name}' timed out after {timeout_seconds}s. "
-                "Failing fast per configuration."
-            )
+        except asyncio.TimeoutError as exc:
+            raise TimeoutError(
+                f"Tool '{tool_name}' timed out after {timeout_seconds}s"
+            ) from exc
+        except Exception as exc:
+            raise RuntimeError(
+                f"Tool '{tool_name}' failed during execution: {exc}"
+            ) from exc
 
     mcp_tool_wrapper.__name__ = tool_name
     mcp_tool_wrapper.__doc__ = description
@@ -369,19 +375,52 @@ async def run_agent_with_tracing(
 
         # Phase 2: Execute agent.run()
         logger.info("🔄 Calling agent.run()...")
-        result = await agent.run(task, deps=deps)
-        logger.info("✅ agent.run() completed")
-        logger.info(
-            "agent.run result type=%s dict=%s repr=%r",
-            type(result),
-            getattr(result, "__dict__", {}),
-            result,
-        )
+        try:
+            result = await agent.run(task, deps=deps)
+            logger.info("✅ agent.run() completed")
+            logger.info(
+                "agent.run result type=%s dict=%s repr=%r",
+                type(result),
+                getattr(result, "__dict__", {}),
+                result,
+            )
 
-        # Normalize payload shape across pydantic-ai versions
-        logger.info("🔍 Extracting payload from result...")
-        payload = parse_agent_result(result)
-        logger.info("✅ Payload extracted successfully")
+            # Normalize payload shape across pydantic-ai versions
+            logger.info("🔍 Extracting payload from result...")
+            payload = parse_agent_result(result)
+            logger.info("✅ Payload extracted successfully")
+        except asyncio.TimeoutError as exc:
+            # T603: Timeout handling for MCP tool calls
+            message = (
+                f"Tool execution timed out after {settings.websearch_timeout}s "
+                "while processing the task."
+            )
+            logger.error("⏱️ %s", message)
+            span.set_attribute("error_type", type(exc).__name__)
+            span.set_attribute("error_message", message)
+            span.record_exception(exc)
+            return AgentResponse(
+                answer="Tool execution timed out.",
+                reasoning=message,
+                tool_calls=[],
+                confidence=0.0,
+            )
+        except (json.JSONDecodeError, ValidationError, AttributeError, ValueError, TypeError) as exc:
+            # T604: Malformed data handling for MCP tool responses
+            message = (
+                "Received malformed data from an MCP tool. "
+                "Failed to parse or validate tool response."
+            )
+            logger.error("📄 %s Error: %s", message, exc)
+            span.set_attribute("error_type", type(exc).__name__)
+            span.set_attribute("error_message", str(exc))
+            span.record_exception(exc)
+            return AgentResponse(
+                answer="Tool response could not be parsed.",
+                reasoning=message,
+                tool_calls=[],
+                confidence=0.0,
+            )
 
         # Set result attributes
         span.set_attribute(
