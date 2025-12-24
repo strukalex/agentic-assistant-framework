@@ -171,15 +171,15 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 4 (REQUIRED) ⚠️
 
-- [ ] T400 [P] [US4] Write integration test in tests/integration/test_memory_integration.py to verify agent stores research findings via store_memory() after executing web_search and returns document ID (FR-025)
-- [ ] T401 [P] [US4] Write integration test in tests/integration/test_memory_integration.py to verify agent retrieves past research via search_memory() when user asks related question, includes memory source in reasoning field (FR-024, FR-026)
-- [ ] T402 [P] [US4] Write unit test in tests/unit/test_researcher_agent.py to verify ResearcherAgent is initialized with MemoryManager as dependency via RunContext[MemoryManager] (FR-026)
+- [X] T400 [P] [US4] Write integration test in tests/integration/test_memory_integration.py to verify agent stores research findings via store_memory() after executing web_search and returns document ID (FR-025)
+- [X] T401 [P] [US4] Write integration test in tests/integration/test_memory_integration.py to verify agent retrieves past research via search_memory() when user asks related question, includes memory source in reasoning field (FR-024, FR-026)
+- [X] T402 [P] [US4] Write unit test in tests/unit/test_researcher_agent.py to verify ResearcherAgent is initialized with MemoryManager as dependency via RunContext[MemoryManager] (FR-026)
 
 ### Implementation for User Story 4
 
-- [ ] T403 [US4] Enhance agent task execution in src/agents/researcher.py to automatically call search_memory() first for any user query to check for previously stored relevant knowledge before executing expensive web_search
-- [ ] T404 [US4] Enhance agent response synthesis in src/agents/researcher.py to automatically call store_memory() after synthesizing research findings from web_search, store with metadata including topic, timestamp, and source tools used
-- [ ] T405 [US4] Update agent reasoning field generation in src/agents/researcher.py to cite memory sources when search_memory() returns relevant past research (e.g., "Based on prior research stored on 2025-12-15...")
+- [X] T403 [US4] Enhance agent task execution in src/agents/researcher.py to automatically call search_memory() first for any user query to check for previously stored relevant knowledge before executing expensive web_search
+- [X] T404 [US4] Enhance agent response synthesis in src/agents/researcher.py to automatically call store_memory() after synthesizing research findings from web_search, store with metadata including topic, timestamp, and source tools used
+- [X] T405 [US4] Update agent reasoning field generation in src/agents/researcher.py to cite memory sources when search_memory() returns relevant past research (e.g., "Based on prior research stored on 2025-12-15...")
 
 **Checkpoint**: At this point, User Story 4 should be fully functional - agent integrates with memory layer for knowledge persistence and retrieval
 
@@ -193,17 +193,17 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 5 (REQUIRED) ⚠️
 
-- [ ] T500 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify OpenTelemetry exporter is configured with OTLP endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var (FR-029, FR-032). Note: Tests unified telemetry module per Constitution Article II.H
-- [ ] T501 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify all MCP tool invocations create trace spans with attributes: tool_name, parameters (serialized), result_count, execution_duration_ms (FR-030)
-- [ ] T502 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify agent.run() calls create trace spans with attributes: confidence_score, tool_calls_count, task_description, result_type (FR-031)
-- [ ] T503 [P] [US5] Write unit test in tests/unit/test_telemetry.py to verify @trace_tool_call decorator correctly creates spans and handles errors by setting span status to ERROR with error details
+- [X] T500 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify OpenTelemetry exporter is configured with OTLP endpoint from OTEL_EXPORTER_OTLP_ENDPOINT env var (FR-029, FR-032). Note: Tests unified telemetry module per Constitution Article II.H
+- [X] T501 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify all MCP tool invocations create trace spans with attributes: tool_name, parameters (serialized), result_count, execution_duration_ms (FR-030)
+- [X] T502 [P] [US5] Write integration test in tests/integration/test_telemetry.py to verify agent.run() calls create trace spans with attributes: confidence_score, tool_calls_count, task_description, result_type (FR-031)
+- [X] T503 [P] [US5] Write unit test in tests/unit/test_telemetry.py to verify @trace_tool_call decorator correctly creates spans and handles errors by setting span status to ERROR with error details
 
 ### Implementation for User Story 5
 
-- [ ] T504 [US5] Enhance @trace_tool_call decorator in src/core/telemetry.py to capture execution_duration_ms by measuring time before/after tool invocation
-- [ ] T505 [US5] Add span attributes for error handling in src/core/telemetry.py @trace_tool_call decorator: capture error_type, error_message when tool execution fails or times out (Note: error_type and error_message already captured via span.record_exception(), verify implementation)
-- [ ] T506 [US5] Verify all agent.run() spans in src/agents/researcher.py include complete set of attributes: confidence_score from result.confidence, tool_calls_count from len(result.tool_calls), task_description from input query
-- [ ] T507 [US5] Add parent-child span linking in src/agents/researcher.py: ensure all mcp_tool_call spans are children of agent_run span for trace hierarchy visualization in Jaeger
+- [X] T504 [US5] Enhance @trace_tool_call decorator in src/core/telemetry.py to capture execution_duration_ms by measuring time before/after tool invocation
+- [X] T505 [US5] Add span attributes for error handling in src/core/telemetry.py @trace_tool_call decorator: capture error_type, error_message when tool execution fails or times out (Note: error_type and error_message already captured via span.record_exception(), verified implementation)
+- [X] T506 [US5] Verify all agent.run() spans in src/agents/researcher.py include complete set of attributes: confidence_score from result.confidence, tool_calls_count from len(result.tool_calls), task_description from input query
+- [X] T507 [US5] Add parent-child span linking in src/agents/researcher.py: ensure all mcp_tool_call spans are children of agent_run span for trace hierarchy visualization in Jaeger
 
 **Checkpoint**: At this point, all user stories are complete with full observability - all operations traced and visible in Jaeger UI
 

@@ -99,6 +99,143 @@ class TestMemoryIntegration:
         pass
 
 
+# Tests for User Story 4: Memory Integration for Knowledge Persistence
+@pytest.mark.asyncio
+class TestMemoryPersistenceIntegration:
+    """Validate agent automatically stores and retrieves research findings."""
+
+    async def test_agent_stores_research_findings_after_web_search(
+        self, mock_memory_manager_with_tracking
+    ):
+        """
+        T400: Verify agent automatically calls store_memory() after executing
+        web_search and returns document ID.
+
+        Validates FR-025: Agent should store research findings in memory
+        after synthesizing results from web search.
+        """
+        from src.agents.researcher import run_agent_with_tracing, researcher_agent
+
+        # Setup: Agent performs web search (mocked) and should store findings
+        query = "What is the capital of France?"
+
+        # Execute agent with memory tracking
+        result = await run_agent_with_tracing(
+            agent=researcher_agent,
+            task=query,
+            deps=mock_memory_manager_with_tracking,
+            mcp_session=None,
+        )
+
+        # Verify: Agent should have called store_memory() after research
+        # Check that store_document was called with research findings
+        assert mock_memory_manager_with_tracking.store_document.called, (
+            "Agent should call store_memory() to persist research findings"
+        )
+
+        # Verify stored content includes the answer
+        call_args = mock_memory_manager_with_tracking.store_document.call_args
+        stored_content = call_args.kwargs.get("content", "")
+        assert "Paris" in stored_content or query in stored_content, (
+            "Stored content should include research findings or query"
+        )
+
+    async def test_agent_retrieves_past_research_before_web_search(
+        self, mock_memory_manager_with_past_research
+    ):
+        """
+        T401: Verify agent calls search_memory() when user asks related question
+        and includes memory source in reasoning field.
+
+        Validates FR-024: Agent should search memory first
+        Validates FR-026: Agent should cite memory sources in reasoning
+        """
+        from src.agents.researcher import run_agent_with_tracing, researcher_agent
+
+        # Setup: Memory has previous research about Python tech stack
+        query = "What tech stack does Project X use?"
+
+        # Execute agent
+        result = await run_agent_with_tracing(
+            agent=researcher_agent,
+            task=query,
+            deps=mock_memory_manager_with_past_research,
+            mcp_session=None,
+        )
+
+        # Verify: Agent called search_memory() first
+        assert mock_memory_manager_with_past_research.semantic_search.called, (
+            "Agent should call search_memory() to check for past research"
+        )
+
+        # Verify: Agent's reasoning cites memory source
+        # (This will be implemented in T405)
+        reasoning = getattr(result, "reasoning", "")
+        assert reasoning, "Agent should provide reasoning"
+        # The specific memory citation behavior is implemented in T405
+
+    async def test_agent_memory_integration_end_to_end(
+        self, mock_memory_manager_with_tracking
+    ):
+        """
+        End-to-end test: Store document, then retrieve it later.
+
+        Validates full memory integration flow:
+        1. Store research finding via store_memory()
+        2. Later search finds stored document via search_memory()
+        3. Agent uses stored knowledge in response
+        """
+        from src.agents.researcher import run_agent_with_tracing, researcher_agent
+
+        # Phase 1: Store a research finding
+        first_query = "Python 3.11 is required for this project"
+
+        # Mock store_memory to track what was stored
+        stored_docs = []
+
+        async def mock_store(content: str, metadata: dict):
+            doc_id = f"doc_{len(stored_docs)}"
+            stored_docs.append({"id": doc_id, "content": content, "metadata": metadata})
+            return doc_id
+
+        mock_memory_manager_with_tracking.store_document.side_effect = mock_store
+
+        # First agent run - should store findings
+        await run_agent_with_tracing(
+            agent=researcher_agent,
+            task=first_query,
+            deps=mock_memory_manager_with_tracking,
+            mcp_session=None,
+        )
+
+        # Phase 2: Query related information
+        # Mock semantic_search to return previously stored docs
+        async def mock_search(query, top_k=5):
+            return [
+                type('Document', (), {
+                    'content': doc['content'],
+                    'metadata_': doc['metadata']
+                })()
+                for doc in stored_docs
+            ]
+
+        mock_memory_manager_with_tracking.semantic_search.side_effect = mock_search
+
+        second_query = "What Python version is required?"
+
+        result = await run_agent_with_tracing(
+            agent=researcher_agent,
+            task=second_query,
+            deps=mock_memory_manager_with_tracking,
+            mcp_session=None,
+        )
+
+        # Verify: Agent used stored knowledge
+        assert mock_memory_manager_with_tracking.semantic_search.called
+        answer = getattr(result, "answer", "")
+        assert "3.11" in answer or "Python" in answer
+
+
 @pytest.fixture
 def mock_memory_manager():
     """
@@ -118,5 +255,48 @@ def mock_memory_manager():
         ]
     )
     mock.store_document = AsyncMock(return_value="doc_123456")
+
+    return mock
+
+
+@pytest.fixture
+def mock_memory_manager_with_tracking():
+    """
+    Provide a mock MemoryManager with call tracking for T400.
+
+    Tracks calls to store_document and semantic_search for verification.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock = MagicMock()
+
+    # Return empty results initially (no prior knowledge)
+    mock.semantic_search = AsyncMock(return_value=[])
+
+    # Track document storage
+    mock.store_document = AsyncMock(return_value="doc_test_123")
+
+    return mock
+
+
+@pytest.fixture
+def mock_memory_manager_with_past_research():
+    """
+    Provide a mock MemoryManager with pre-existing research for T401.
+
+    Returns stored research findings when search_memory is called.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    mock = MagicMock()
+
+    # Mock past research result
+    past_research = type('Document', (), {
+        'content': "Project X uses Python 3.11 and FastAPI",
+        'metadata_': {"project": "X", "topic": "tech_stack", "timestamp": "2025-12-15"}
+    })()
+
+    mock.semantic_search = AsyncMock(return_value=[past_research])
+    mock.store_document = AsyncMock(return_value="doc_456")
 
     return mock

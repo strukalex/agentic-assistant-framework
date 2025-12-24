@@ -157,16 +157,18 @@ def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitabl
     Decorator to trace MCP tool invocations with OpenTelemetry.
 
     Creates span with name "mcp.tool_call.{func_name}"
-    Sets attributes: tool_name, parameters, result_count, component
+    Sets attributes: tool_name, parameters, result_count, execution_duration_ms, component
     Handles errors with span.record_exception()
 
     Per Spec 002 research.md RQ-004 (FR-030)
+    Per Spec 002 tasks.md T504: Captures execution_duration_ms
 
     Usage:
         @trace_tool_call
         async def web_search(...):
             ...
     """
+    import time
     tracer = get_tracer("mcp")
 
     @wraps(func)
@@ -182,9 +184,16 @@ def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitabl
             # Set parameters attribute (stringify for safety)
             span.set_attribute("parameters", str(kwargs))
 
+            # T504: Capture execution start time
+            start_time = time.perf_counter()
+
             try:
                 # Execute the tool function
                 result = await func(*args, **kwargs)
+
+                # T504: Calculate and set execution duration in milliseconds
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                span.set_attribute("execution_duration_ms", duration_ms)
 
                 # Set result count if result is a list
                 if isinstance(result, list):
@@ -196,6 +205,10 @@ def trace_tool_call(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitabl
                 return result
 
             except Exception as exc:
+                # T504: Calculate duration even on error
+                duration_ms = int((time.perf_counter() - start_time) * 1000)
+                span.set_attribute("execution_duration_ms", duration_ms)
+
                 # Record exception and set error attributes
                 span.set_attribute("operation.success", False)
                 span.set_attribute("error_type", type(exc).__name__)
