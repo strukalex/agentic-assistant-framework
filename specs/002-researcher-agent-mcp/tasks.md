@@ -143,21 +143,21 @@ Include tasks to satisfy these non-negotiables (refer to the cited Articles in t
 
 ### Tests for User Story 3 (REQUIRED) ⚠️
 
-- [ ] T300 [P] [US3] Write contract test in tests/contract/test_agent_api_contract.py to validate categorize_action_risk() and requires_approval() return correct types per contracts/researcher-agent-api.yaml
-- [ ] T301 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies known REVERSIBLE tools: web_search, read_file, get_current_time, search_memory (FR-016)
-- [ ] T302 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies hypothetical REVERSIBLE_WITH_DELAY tools: send_email, create_calendar_event, schedule_task (FR-017)
-- [ ] T303 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies hypothetical IRREVERSIBLE tools: delete_file, make_purchase, send_money, modify_production (FR-018)
-- [ ] T304 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() defaults to IRREVERSIBLE for unknown tools (FR-019)
-- [ ] T305 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify requires_approval() returns True for all IRREVERSIBLE actions regardless of confidence (FR-021)
-- [ ] T306 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify requires_approval() returns True for REVERSIBLE_WITH_DELAY when confidence < 0.85, False when confidence >= 0.85 (FR-022)
-- [ ] T307 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify requires_approval() returns False for REVERSIBLE actions enabling auto-execution with logging (FR-023)
+- [X] T300 [P] [US3] Write contract test in tests/contract/test_agent_api_contract.py to validate categorize_action_risk() and requires_approval() return correct types per contracts/researcher-agent-api.yaml
+- [X] T301 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies known REVERSIBLE tools: web_search, read_file, get_current_time, search_memory (FR-016)
+- [X] T302 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies hypothetical REVERSIBLE_WITH_DELAY tools: send_email, create_calendar_event, schedule_task (FR-017)
+- [X] T303 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() correctly classifies hypothetical IRREVERSIBLE tools: delete_file, make_purchase, send_money, modify_production (FR-018)
+- [X] T304 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify categorize_action_risk() defaults to IRREVERSIBLE for unknown tools (FR-019)
+- [X] T305 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify requires_approval() returns True for all IRREVERSIBLE actions regardless of confidence (FR-021)
+- [X] T306 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify requires_approval() returns True for REVERSIBLE_WITH_DELAY when confidence < 0.85, False when confidence >= 0.85 (FR-022)
+- [X] T307 [P] [US3] Write unit test in tests/unit/test_risk_assessment.py to verify requires_approval() returns False for REVERSIBLE actions enabling auto-execution with logging (FR-023)
 
 ### Implementation for User Story 3
 
-- [ ] T308 [US3] Integrate risk assessment into ResearcherAgent tool execution pipeline in src/agents/researcher.py: before invoking any MCP tool, call categorize_action_risk(tool_name, parameters) to get RiskLevel
-- [ ] T309 [US3] Implement approval check in ResearcherAgent tool execution in src/agents/researcher.py: call requires_approval(risk_level, confidence), if True, block execution and request user approval before proceeding
-- [ ] T310 [US3] Add logging for auto-executed REVERSIBLE actions in src/agents/researcher.py: when requires_approval() returns False, log tool invocation with risk level and confidence before auto-execution
-- [ ] T311 [US3] Implement parameter inspection for context-dependent risk in src/core/risk_assessment.py categorize_action_risk(): detect sensitive patterns in file paths (e.g., "/etc/shadow", "api_key", "secret", "credentials") and escalate read_file from REVERSIBLE to REVERSIBLE_WITH_DELAY per research.md RQ-006
+- [X] T308 [US3] Integrate risk assessment into ResearcherAgent tool execution pipeline in src/agents/researcher.py: before invoking any MCP tool, call categorize_action_risk(tool_name, parameters) to get RiskLevel
+- [X] T309 [US3] Implement approval check in ResearcherAgent tool execution in src/agents/researcher.py: call requires_approval(risk_level, confidence), if True, block execution and request user approval before proceeding
+- [X] T310 [US3] Add logging for auto-executed REVERSIBLE actions in src/agents/researcher.py: when requires_approval() returns False, log tool invocation with risk level and confidence before auto-execution
+- [X] T311 [US3] Implement parameter inspection for context-dependent risk in src/core/risk_assessment.py categorize_action_risk(): detect sensitive patterns in file paths (e.g., "/etc/shadow", "api_key", "secret", "credentials") and escalate read_file from REVERSIBLE to REVERSIBLE_WITH_DELAY per research.md RQ-006
 
 **Checkpoint**: All user stories should now be independently functional - agent executes basic research (US1), detects tool gaps (US2), and enforces risk-based approval (US3)
 

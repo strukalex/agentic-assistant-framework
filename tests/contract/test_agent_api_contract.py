@@ -235,3 +235,59 @@ class TestToolGapReportContract:
 
         assert len(report.missing_tools) == 1
         assert report.missing_tools[0] == "database_query"
+
+
+class TestRiskAssessmentContract:
+    """Validate risk assessment functions return correct types per OpenAPI contract.
+
+    Per Spec 002 tasks.md T300 (FR-015 to FR-023)
+    """
+
+    def test_categorize_action_risk_returns_risk_level(self):
+        """Test that categorize_action_risk() returns RiskLevel enum."""
+        from src.core.risk_assessment import categorize_action_risk
+        from src.models.risk_level import RiskLevel
+
+        result = categorize_action_risk("web_search", {"query": "test"})
+        assert isinstance(result, RiskLevel)
+        assert result in [RiskLevel.REVERSIBLE, RiskLevel.REVERSIBLE_WITH_DELAY, RiskLevel.IRREVERSIBLE]
+
+    def test_requires_approval_returns_boolean(self):
+        """Test that requires_approval() returns boolean."""
+        from src.core.risk_assessment import requires_approval
+        from src.models.risk_level import RiskLevel
+
+        result = requires_approval(RiskLevel.REVERSIBLE, confidence=0.95)
+        assert isinstance(result, bool)
+
+    def test_categorize_action_risk_with_various_tools(self):
+        """Test categorize_action_risk with different tool types."""
+        from src.core.risk_assessment import categorize_action_risk
+        from src.models.risk_level import RiskLevel
+
+        # Test REVERSIBLE tool
+        reversible = categorize_action_risk("web_search", {})
+        assert reversible == RiskLevel.REVERSIBLE
+
+        # Test REVERSIBLE_WITH_DELAY tool
+        reversible_delay = categorize_action_risk("send_email", {"to": "test@example.com"})
+        assert reversible_delay == RiskLevel.REVERSIBLE_WITH_DELAY
+
+        # Test IRREVERSIBLE tool
+        irreversible = categorize_action_risk("delete_file", {"path": "/data/file.txt"})
+        assert irreversible == RiskLevel.IRREVERSIBLE
+
+    def test_requires_approval_with_all_risk_levels(self):
+        """Test requires_approval with all risk levels."""
+        from src.core.risk_assessment import requires_approval
+        from src.models.risk_level import RiskLevel
+
+        # REVERSIBLE should not require approval
+        assert requires_approval(RiskLevel.REVERSIBLE, confidence=0.5) is False
+
+        # REVERSIBLE_WITH_DELAY should require approval when confidence < 0.85
+        assert requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.80) is True
+        assert requires_approval(RiskLevel.REVERSIBLE_WITH_DELAY, confidence=0.90) is False
+
+        # IRREVERSIBLE should always require approval
+        assert requires_approval(RiskLevel.IRREVERSIBLE, confidence=1.0) is True

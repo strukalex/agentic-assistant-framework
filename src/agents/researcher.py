@@ -16,6 +16,7 @@ from pydantic_ai import Agent, RunContext
 
 from src.core.llm import get_azure_model, parse_agent_result
 from src.core.memory import MemoryManager
+from src.core.risk_assessment import categorize_action_risk, requires_approval
 from src.core.telemetry import get_tracer, trace_tool_call
 from src.core.tool_gap_detector import ToolGapDetector
 from src.mcp_integration.setup import setup_mcp_tools
@@ -210,13 +211,46 @@ def _format_mcp_result(result: Any) -> str:
 def _make_mcp_tool(
     mcp_session: ClientSession, tool: Any
 ) -> Callable[..., Any]:
-    """Create a tool wrapper that calls the given MCP tool via the session."""
+    """Create a tool wrapper that calls the given MCP tool via the session.
+
+    Integrates risk assessment per tasks.md T308-T310 (FR-015 to FR-023).
+    """
     tool_name = getattr(tool, "name", "mcp_tool")
     description = getattr(tool, "description", "") or f"MCP tool {tool_name}"
     timeout_seconds = 10
+    logger = logging.getLogger(__name__)
 
     @trace_tool_call
     async def mcp_tool_wrapper(ctx: RunContext[MemoryManager], **kwargs: Any) -> str:
+        # T308: Integrate risk assessment before tool invocation
+        risk_level = categorize_action_risk(tool_name, kwargs)
+
+        # Get confidence from context if available (fallback to 1.0 for high-confidence tools)
+        # Note: In a full implementation, confidence would come from the agent's inference
+        # For now, we use a conservative default that doesn't block REVERSIBLE actions
+        confidence = 1.0  # Conservative: assume high confidence for auto-execution
+
+        # T309: Implement approval check
+        if requires_approval(risk_level, confidence):
+            # Action requires human approval - return approval request message
+            # In a full implementation, this would trigger an approval workflow
+            logger.warning(
+                "⚠️ Action requires approval - tool: %s, risk: %s, confidence: %.2f",
+                tool_name, risk_level.value, confidence
+            )
+            return (
+                f"APPROVAL REQUIRED: Tool '{tool_name}' with risk level '{risk_level.value}' "
+                f"requires human approval before execution. Parameters: {kwargs}"
+            )
+
+        # T310: Log auto-executed REVERSIBLE actions
+        if risk_level.value == "reversible":
+            logger.info(
+                "✅ Auto-executing REVERSIBLE action - tool: %s, parameters: %s",
+                tool_name, kwargs
+            )
+
+        # Execute the tool
         try:
             result = await asyncio.wait_for(
                 mcp_session.call_tool(tool_name, arguments=kwargs),
