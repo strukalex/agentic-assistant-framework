@@ -1,8 +1,33 @@
+"""Windmill workflow script for DailyTrendingResearch.
+
+This is the main Windmill entrypoint for the research workflow. When deployed
+to Windmill, this script is executed as a flow step.
+
+Constitution compliance:
+- Article I.B: Windmill for DAG orchestration, LangGraph for cyclical reasoning
+- Article II.C: Human-in-the-loop via wmill.suspend() for approval gates
+- Article II.H: Unified telemetry via src/core/telemetry.py
+
+Deployment:
+1. Register this script in Windmill under a path like 'f/research/daily_research'
+2. Configure environment variables: AZURE_*, DATABASE_URL, etc.
+3. Set resource limits: 1 CPU, 2GB memory per FR-010
+
+Usage from Windmill UI or API:
+    wmill.run_script_by_path("f/research/daily_research", {
+        "topic": "Latest developments in AI agents",
+        "user_id": "550e8400-e29b-41d4-a716-446655440000",
+        "client_traceparent": "00-xxx-yyy-01"  # Optional
+    })
+"""
+
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any, Callable, Awaitable
 
+from src.core.config import settings
 from src.models.planned_action import PlannedAction
 from src.models.research_state import ResearchState
 from src.windmill.approval_handler import (
@@ -14,6 +39,15 @@ from src.workflows.report_formatter import format_research_report, render_markdo
 from src.workflows.research_graph import InMemoryMemoryManager, compile_research_graph
 
 logger = logging.getLogger(__name__)
+
+
+def _get_wmill():
+    """Lazy import of wmill to avoid import errors in non-Windmill environments."""
+    try:
+        import wmill
+        return wmill
+    except ImportError:
+        return None
 
 
 async def _default_action_executor(action: PlannedAction) -> dict[str, Any]:
@@ -34,37 +68,29 @@ async def _default_action_executor(action: PlannedAction) -> dict[str, Any]:
     }
 
 
-async def _windmill_suspend_for_approval(
+def _windmill_suspend_for_approval(
     approval_request: ApprovalRequest,
 ) -> dict[str, Any]:
     """Suspend workflow and wait for Windmill approval.
 
-    In actual Windmill execution, this uses wmill.suspend().
-    For testing/local development, this auto-approves.
+    Uses Windmill's native suspend mechanism which:
+    1. Pauses the current job execution
+    2. Generates approval URLs (resume/cancel)
+    3. Waits for user interaction or timeout
+    4. Returns the resume payload with decision
+
+    Note: This is synchronous because Windmill's suspend() is synchronous -
+    it blocks the script until resumed.
+
+    Args:
+        approval_request: Details about the action requiring approval.
+
+    Returns:
+        Resume payload with 'decision' field ('approve' or 'reject').
     """
-    try:
-        import wmill
+    wmill = _get_wmill()
 
-        # Suspend the workflow and wait for resume
-        logger.info(
-            "Suspending for approval: %s (%s)",
-            approval_request.action_type,
-            approval_request.action_description,
-        )
-
-        # Get resume URLs for the UI
-        urls = wmill.get_resume_urls()
-
-        # Suspend the flow - this blocks until resumed or timeout
-        resume_payload = await wmill.suspend(
-            timeout=approval_request.timeout_at,
-            default_args={"decision": "pending"},
-            enums={"decision": ["approve", "reject"]},
-        )
-
-        return resume_payload
-
-    except ImportError:
+    if wmill is None:
         # Fallback for testing without wmill installed - auto-approve
         logger.warning(
             "wmill not available; auto-approving action '%s' for testing",
@@ -74,6 +100,78 @@ async def _windmill_suspend_for_approval(
             "decision": "approve",
             "approver": "test-auto-approval",
         }
+
+    # Suspend the workflow and wait for resume
+    logger.info(
+        "Suspending for approval: %s (%s)",
+        approval_request.action_type,
+        approval_request.action_description,
+    )
+
+    # Calculate timeout in seconds from the timeout_at datetime
+    timeout_seconds = settings.approval_timeout_seconds
+
+    try:
+        # wmill.suspend() is SYNCHRONOUS - it blocks until resumed or timeout
+        # The function returns the resume payload directly
+        #
+        # Parameters:
+        # - timeout: number of seconds or timedelta before auto-cancel
+        # - default_args: pre-populated form values
+        # - enums: dropdown options for approval form
+        # - description: markdown text shown on approval page
+        resume_payload = wmill.suspend(
+            timeout=timedelta(seconds=timeout_seconds),
+            default_args={"decision": "pending"},
+            enums={"decision": ["approve", "reject"]},
+            description=f"""
+## Action Approval Required
+
+**Action Type:** {approval_request.action_type}
+
+**Description:** {approval_request.action_description}
+
+**Risk Level:** Requires human approval before execution.
+
+Please review and select 'approve' to proceed or 'reject' to skip this action.
+
+_Timeout: {timeout_seconds} seconds_
+""",
+        )
+
+        logger.info(
+            "Approval response received for action '%s': %s",
+            approval_request.action_type,
+            resume_payload.get("decision", "unknown"),
+        )
+
+        return resume_payload
+
+    except Exception as e:
+        # Handle timeout or other errors
+        logger.warning(
+            "Approval request failed for action '%s': %s",
+            approval_request.action_type,
+            str(e),
+        )
+        return {
+            "decision": "reject",
+            "error": str(e),
+            "reason": "timeout_or_error",
+        }
+
+
+async def _async_suspend_wrapper(
+    approval_request: ApprovalRequest,
+) -> dict[str, Any]:
+    """Async wrapper for the synchronous Windmill suspend.
+
+    Windmill's suspend() is synchronous but our approval handler expects async.
+    This wrapper allows integration with our async processing pipeline.
+    """
+    # Note: In real Windmill execution, this runs in a worker that can block.
+    # The synchronous call is acceptable because Windmill manages the suspension.
+    return _windmill_suspend_for_approval(approval_request)
 
 
 async def main(
@@ -86,10 +184,11 @@ async def main(
     """
     Windmill entrypoint: execute the research graph with approval gating.
 
-    This function:
+    This function is the main entry point when this script is executed by Windmill.
+    It:
     1. Runs the LangGraph research loop (Plan → Research → Critique → Refine → Finish)
     2. Processes any planned actions with approval gating for risky operations
-    3. Returns the final report payload
+    3. Returns the final report payload for the API
 
     Args:
         topic: Research topic (1-500 chars).
@@ -99,20 +198,55 @@ async def main(
         suspend_for_approval: Optional custom approval handler (for testing).
 
     Returns:
-        Dict with status, iterations, report, sources, memory_document_id, and action_results.
+        Dict with:
+        - status: ResearchStatus value (e.g., "completed", "failed")
+        - iterations: Number of research iterations performed
+        - report: Markdown-formatted research report
+        - sources: List of source references with URLs and snippets
+        - memory_document_id: UUID of stored document in MemoryManager
+        - action_results: List of action execution results
+        - approval_status: Overall approval status if actions were processed
     """
+    # Log start for observability
+    wmill = _get_wmill()
+    if wmill:
+        # Set progress for Windmill UI (optional but nice for visibility)
+        try:
+            wmill.set_progress(0, "Starting research workflow")
+        except Exception:
+            pass  # Progress tracking is optional
+
+    logger.info(
+        "Starting DailyTrendingResearch workflow for topic: %s (user: %s)",
+        topic[:50] + "..." if len(topic) > 50 else topic,
+        user_id,
+    )
+
     # Use defaults if not provided
     if action_executor is None:
         action_executor = _default_action_executor
     if suspend_for_approval is None:
-        suspend_for_approval = _windmill_suspend_for_approval
+        suspend_for_approval = _async_suspend_wrapper
 
     # Execute the research graph with distributed tracing support (T047a)
     app = compile_research_graph(memory_manager=InMemoryMemoryManager())
     initial_state = ResearchState(topic=topic, user_id=user_id)
+
+    if wmill:
+        try:
+            wmill.set_progress(10, "Running research graph")
+        except Exception:
+            pass
+
     final_state: ResearchState = await app.ainvoke(
         initial_state, traceparent=client_traceparent
     )
+
+    if wmill:
+        try:
+            wmill.set_progress(70, "Formatting report")
+        except Exception:
+            pass
 
     # Format the report
     report = format_research_report(final_state)
@@ -123,6 +257,12 @@ async def main(
     approval_status: str | None = None
 
     if final_state.planned_actions:
+        if wmill:
+            try:
+                wmill.set_progress(80, "Processing planned actions")
+            except Exception:
+                pass
+
         logger.info(
             "Processing %d planned actions from research",
             len(final_state.planned_actions),
@@ -145,6 +285,18 @@ async def main(
         else:
             approval_status = "partial"
 
+    if wmill:
+        try:
+            wmill.set_progress(100, "Workflow completed")
+        except Exception:
+            pass
+
+    logger.info(
+        "DailyTrendingResearch workflow completed: %d iterations, %d sources",
+        final_state.iteration_count,
+        len(report.sources),
+    )
+
     return {
         "status": final_state.status.value,
         "iterations": final_state.iteration_count,
@@ -154,4 +306,32 @@ async def main(
         "action_results": action_results,
         "approval_status": approval_status,
     }
+
+
+# Windmill script metadata for registration
+# This helps Windmill understand the script's interface
+__windmill__ = {
+    "description": "Execute deep research on a topic with approval gating",
+    "summary": "DailyTrendingResearch Workflow",
+    "schema": {
+        "properties": {
+            "topic": {
+                "type": "string",
+                "description": "Research topic (1-500 characters)",
+                "minLength": 1,
+                "maxLength": 500,
+            },
+            "user_id": {
+                "type": "string",
+                "description": "User identifier (UUID format)",
+                "format": "uuid",
+            },
+            "client_traceparent": {
+                "type": "string",
+                "description": "Optional W3C traceparent for distributed tracing",
+            },
+        },
+        "required": ["topic", "user_id"],
+    },
+}
 

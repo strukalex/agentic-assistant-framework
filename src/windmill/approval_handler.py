@@ -8,6 +8,11 @@ Constitution compliance:
 - Uses shared config from src/core/config.py per Article II.I
 
 Timeout: 5 minutes ± 10 seconds (300s default per FR-007, SC-005)
+
+Windmill Suspend/Resume API:
+- https://www.windmill.dev/docs/flows/flow_approval
+- wmill.suspend() blocks until resumed or timeout
+- wmill.get_resume_urls() returns approval page URLs
 """
 
 from __future__ import annotations
@@ -24,6 +29,15 @@ from src.models.risk_level import RiskLevel
 logger = logging.getLogger(__name__)
 
 
+def _get_wmill():
+    """Lazy import of wmill to avoid import errors in non-Windmill environments."""
+    try:
+        import wmill
+        return wmill
+    except ImportError:
+        return None
+
+
 def get_resume_urls() -> dict[str, str]:
     """Get Windmill resume/cancel URLs for the current job.
 
@@ -31,18 +45,25 @@ def get_resume_urls() -> dict[str, str]:
     For testing, this is mocked to return test URLs.
 
     Returns:
-        Dict with 'resume', 'cancel', and optionally 'approval_page' URLs.
+        Dict with 'resume', 'cancel', and optionally 'approvalPage' URLs.
+        Note: Windmill uses 'approvalPage' (camelCase) not 'approval_page'.
     """
-    try:
-        import wmill
-        return wmill.get_resume_urls()
-    except ImportError:
-        # Fallback for testing without wmill installed
-        logger.warning("wmill not available; returning placeholder URLs")
-        return {
-            "resume": "http://localhost:8000/resume/placeholder",
-            "cancel": "http://localhost:8000/cancel/placeholder",
-        }
+    wmill = _get_wmill()
+    if wmill is not None:
+        try:
+            urls = wmill.get_resume_urls()
+            logger.debug("Got resume URLs from Windmill: %s", list(urls.keys()))
+            return urls
+        except Exception as e:
+            logger.warning("Failed to get resume URLs: %s", e)
+
+    # Fallback for testing without wmill installed
+    logger.warning("wmill not available; returning placeholder URLs")
+    return {
+        "resume": "http://localhost:8000/resume/placeholder",
+        "cancel": "http://localhost:8000/cancel/placeholder",
+        "approvalPage": "http://localhost:8000/approval/placeholder",
+    }
 
 
 def requires_approval(action: PlannedAction) -> bool:
@@ -297,28 +318,88 @@ async def process_planned_actions(
     return results
 
 
+def suspend_for_approval(
+    action_type: str,
+    action_description: str,
+    timeout_seconds: int | None = None,
+) -> dict[str, Any]:
+    """Suspend the current Windmill job for approval.
+
+    This is the actual suspension mechanism using wmill.suspend().
+    It blocks the script execution until the job is resumed or times out.
+
+    Args:
+        action_type: Type of action requiring approval.
+        action_description: Human-readable description of the action.
+        timeout_seconds: Timeout in seconds (default from settings).
+
+    Returns:
+        Resume payload with 'decision' field and optional metadata.
+    """
+    wmill = _get_wmill()
+    if wmill is None:
+        logger.warning("wmill not available; auto-approving for testing")
+        return {
+            "decision": "approve",
+            "approver": "test-auto-approval",
+        }
+
+    if timeout_seconds is None:
+        timeout_seconds = settings.approval_timeout_seconds
+
+    try:
+        # wmill.suspend() is SYNCHRONOUS - it blocks until resumed or timeout
+        # See: https://www.windmill.dev/docs/flows/flow_approval
+        resume_payload = wmill.suspend(
+            timeout=timedelta(seconds=timeout_seconds),
+            default_args={"decision": "pending"},
+            enums={"decision": ["approve", "reject"]},
+            description=f"""
+## Approval Required
+
+**Action:** {action_type}
+
+**Description:** {action_description}
+
+Please select **approve** to execute this action or **reject** to skip it.
+
+_This request will timeout in {timeout_seconds} seconds._
+""",
+        )
+
+        logger.info(
+            "Approval received for '%s': %s",
+            action_type,
+            resume_payload.get("decision", "unknown"),
+        )
+
+        return resume_payload
+
+    except Exception as e:
+        logger.warning("Approval request failed for '%s': %s", action_type, e)
+        return {
+            "decision": "reject",
+            "error": str(e),
+            "reason": "timeout_or_error",
+        }
+
+
 async def create_windmill_suspend_handler(
     approval_request: ApprovalRequest,
 ) -> dict[str, Any]:
     """Create a Windmill-compatible suspend handler for approval.
 
-    This function is called by Windmill to suspend the workflow and
-    return the approval URLs and configuration.
+    This is an async wrapper around the synchronous suspend_for_approval.
+    Used when integrating with our async approval processing pipeline.
 
     Args:
         approval_request: The approval request with action details.
 
     Returns:
-        Dict with Windmill suspend configuration.
+        Resume payload with decision and metadata.
     """
-    urls = get_resume_urls()
-
-    return {
-        "resume": urls.get("resume"),
-        "cancel": urls.get("cancel"),
-        "action_type": approval_request.action_type,
-        "description": approval_request.action_description,
-        "default_args": {"decision": "pending"},
-        "enums": {"decision": ["approve", "reject"]},
-        "timeout_seconds": settings.approval_timeout_seconds,
-    }
+    return suspend_for_approval(
+        action_type=approval_request.action_type,
+        action_description=approval_request.action_description,
+        timeout_seconds=settings.approval_timeout_seconds,
+    )

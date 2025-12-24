@@ -149,11 +149,19 @@ class Settings(BaseSettings):
         default=None,
         description="Windmill API token for authenticated requests (if required)",
     )
+    windmill_flow_path: str = Field(
+        default="research/daily_research",
+        description="Path to the DailyTrendingResearch flow in Windmill (without f/ prefix)",
+    )
     approval_timeout_seconds: int = Field(
         default=300,
         ge=1,
         le=900,
         description="Default approval timeout in seconds (target: 5 minutes ±10s)",
+    )
+    windmill_enabled: bool = Field(
+        default=False,
+        description="Enable Windmill orchestration (False = in-process execution for testing)",
     )
 
 
