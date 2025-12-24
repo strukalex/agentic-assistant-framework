@@ -108,7 +108,6 @@ src/
 ├── workflows/              # NEW - Spec 003
 │   ├── __init__.py
 │   ├── research_graph.py   # LangGraph state machine (Plan→Research→Critique→Refine→Finish)
-│   ├── research_state.py   # ResearchState Pydantic model
 │   ├── nodes/              # LangGraph node implementations
 │   │   ├── __init__.py
 │   │   ├── plan.py
@@ -118,7 +117,7 @@ src/
 │   │   └── finish.py
 │   └── report_formatter.py # Markdown report generation
 ├── models/
-│   ├── research_state.py   # ResearchState model (NEW)
+│   ├── research_state.py   # ResearchState Pydantic model (NEW) - single source of truth
 │   ├── research_report.py  # ResearchReport model (NEW)
 │   ├── approval_request.py # ApprovalRequest model (NEW)
 │   └── ... (EXISTING models)
