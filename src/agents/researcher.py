@@ -121,6 +121,12 @@ def _record_tool_call(
     )
 
 
+def _reset_run_context() -> None:
+    """Reset the per-run tool call log and cache. Used for testing and run initialization."""
+    _tool_call_log.set([])
+    _tool_result_cache.set({})
+
+
 async def _with_tool_logging_and_cache(
     tool_name: str, parameters: dict, func: Callable[[], Awaitable[Any]]
 ) -> Any:
