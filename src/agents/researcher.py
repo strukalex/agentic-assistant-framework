@@ -156,9 +156,27 @@ def _reset_run_context() -> None:
 
 
 async def _with_tool_logging_and_cache(
-    tool_name: str, parameters: dict, func: Callable[[], Awaitable[Any]]
+    tool_name: str,
+    parameters: dict,
+    func: Callable[[], Awaitable[Any]],
+    *,
+    enable_cache: bool = True,
+    loop_guard: bool = True,
+    max_repeats: int = 3,
 ) -> Any:
-    """Execute a tool with deduplication and logging to AgentResponse."""
+    """Execute a tool with deduplication, loop-guarding, and logging.
+
+    Args:
+        tool_name: Name of the tool being invoked.
+        parameters: Dict of parameters for the tool call.
+        func: Async callable that performs the actual tool work.
+        enable_cache: When False, skip read/write of the per-run cache. Use for
+            dynamic tools (e.g., web_search) or side-effecting tools
+            (e.g., store_memory).
+        loop_guard: When True, detect repeated identical tool invocations within
+            a run and halt after `max_repeats` to prevent thrashing.
+        max_repeats: Maximum consecutive identical invocations allowed.
+    """
     cache = _get_tool_cache()
     key = _make_cache_key(tool_name, parameters)
     start = time.perf_counter()
@@ -175,7 +193,32 @@ async def _with_tool_logging_and_cache(
         )
         raise RuntimeError(message)
 
-    if key in cache:
+    if loop_guard:
+        # Detect consecutive identical tool calls (ignoring cached flag).
+        normalized_params = _make_cache_key(tool_name, parameters)
+        repeats = 0
+        for call in reversed(_get_tool_log()):
+            call_params = dict(call.parameters)
+            call_params.pop("_cached", None)
+            if _make_cache_key(tool_name, call_params) != normalized_params:
+                break
+            repeats += 1
+            if repeats >= max_repeats - 1:
+                duration_ms = int((time.perf_counter() - start) * 1000)
+                message = (
+                    "Loop detected: identical tool call repeated "
+                    f"{max_repeats} times. Halting to avoid thrashing."
+                )
+                _record_tool_call(
+                    tool_name=tool_name,
+                    parameters={**parameters, "_cached": False},
+                    result=message,
+                    duration_ms=duration_ms,
+                    status=ToolCallStatus.FAILED,
+                )
+                raise RuntimeError(message)
+
+    if enable_cache and key in cache:
         cached_result = cache[key]
         duration_ms = int((time.perf_counter() - start) * 1000)
         _record_tool_call(
@@ -190,7 +233,8 @@ async def _with_tool_logging_and_cache(
     try:
         result = await func()
         duration_ms = int((time.perf_counter() - start) * 1000)
-        cache[key] = result
+        if enable_cache:
+            cache[key] = result
         _record_tool_call(
             tool_name=tool_name,
             parameters=parameters,
@@ -217,7 +261,9 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
         model=model,
         output_type=AgentResponse,
         retries=2,  # Allow LLM to auto-correct JSON/formatting errors
-        system_prompt="""You are the ResearcherAgent for a Personal AI Assistant System.
+        system_prompt=f"""You are the ResearcherAgent for a Personal AI Assistant System.
+
+Current date: {time.strftime("%Y-%m-%d")}. Treat earlier sources as valid historical facts.
 
 Your capabilities:
 - Search external information sources via web search
@@ -259,6 +305,9 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
 
 6. Be honest about gaps. Never hallucinate capabilities—acknowledge gaps
    honestly.
+
+7. Avoid tool thrashing. Do not repeat the exact same tool call with identical
+   parameters more than twice. If a tool yields relevant evidence, use it.
 
 Output Format: Always return a structured AgentResponse with:
 - answer: The final answer to the user's query
@@ -363,7 +412,12 @@ async def store_memory(
         _answer_committed.set(True)
         return str(doc_id)
 
-    return await _with_tool_logging_and_cache("store_memory", params, _execute)
+    return await _with_tool_logging_and_cache(
+        "store_memory",
+        params,
+        _execute,
+        enable_cache=False,  # Side-effecting; never replay a cached store
+    )
 
 
 def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
@@ -531,7 +585,13 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
                     f"Tool '{tool_name}' failed during execution: {exc}"
                 ) from exc
 
-        return await _with_tool_logging_and_cache(tool_name, params, _execute)
+        return await _with_tool_logging_and_cache(
+            tool_name,
+            params,
+            _execute,
+            # Dynamic external tools should not be cached; others can opt in
+            enable_cache=tool_name not in {"web_search", "search"},
+        )
 
     mcp_tool_wrapper.__name__ = tool_name
     mcp_tool_wrapper.__doc__ = description
@@ -649,6 +709,9 @@ async def run_agent_with_tracing(
         # Initialize per-run tool tracking
         tool_log_token = _tool_call_log.set([])
         tool_cache_token = _tool_result_cache.set({})
+        web_search_token = _web_search_seen.set(set())
+        stored_hashes_token = _stored_hashes.set(set())
+        answer_committed_token = _answer_committed.set(False)
         try:
             result = await agent.run(task, deps=deps)
             logger.info("✅ [AGENTIC LOOP] agent.run() completed")
@@ -717,6 +780,9 @@ async def run_agent_with_tracing(
             # Reset contextvars to avoid cross-run leakage
             _tool_call_log.reset(tool_log_token)
             _tool_result_cache.reset(tool_cache_token)
+            _web_search_seen.reset(web_search_token)
+            _stored_hashes.reset(stored_hashes_token)
+            _answer_committed.reset(answer_committed_token)
 
         # Set result attributes
         confidence_val = getattr(payload, "confidence", None)
