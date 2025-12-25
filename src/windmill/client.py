@@ -19,7 +19,7 @@ from typing import Any, Optional
 
 import httpx
 
-from src.core.config import settings
+from ..core.config import settings
 
 logger = logging.getLogger(__name__)
 

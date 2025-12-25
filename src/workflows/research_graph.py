@@ -14,13 +14,13 @@ except ImportError:  # pragma: no cover - optional dependency fallback
     StateGraph = None  # type: ignore[assignment]
     LANGGRAPH_AVAILABLE = False
 
-from src.core.telemetry import trace_langgraph_execution_context
-from src.models.research_state import ResearchState, ResearchStatus
-from src.workflows.nodes.critique import critique_node
-from src.workflows.nodes.finish import finish_node
-from src.workflows.nodes.plan import plan_node
-from src.workflows.nodes.refine import refine_node
-from src.workflows.nodes.research import research_node
+from ..core.telemetry import trace_langgraph_execution_context
+from ..models.research_state import ResearchState, ResearchStatus
+from .nodes.critique import critique_node
+from .nodes.finish import finish_node
+from .nodes.plan import plan_node
+from .nodes.refine import refine_node
+from .nodes.research import research_node
 
 NodeCallable = Callable[[ResearchState], Awaitable[ResearchState]]
 

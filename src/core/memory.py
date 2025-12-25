@@ -15,11 +15,11 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from src.core.config import settings
-from src.core.telemetry import trace_memory_operation
-from src.models.document import Document
-from src.models.message import Message, MessageRole
-from src.models.session import Session
+from .config import settings
+from .telemetry import trace_memory_operation
+from ..models.document import Document
+from ..models.message import Message, MessageRole
+from ..models.session import Session
 
 DEFAULT_USER_ID = "auto-created"
 

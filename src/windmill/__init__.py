@@ -10,7 +10,7 @@ Components:
 
 Usage:
     # Trigger workflow via API
-    from src.windmill.client import WindmillClient
+    from .client import WindmillClient
 
     async with WindmillClient() as client:
         job_id = await client.trigger_flow("research/daily_research", {
@@ -25,8 +25,8 @@ Usage:
     result = await client.get_job_result(job_id)
 """
 
-from src.windmill.client import WindmillClient, WindmillJobStatus
-from src.windmill.approval_handler import (
+from .client import WindmillClient, WindmillJobStatus
+from .approval_handler import (
     requires_approval,
     classify_actions,
     request_approval,

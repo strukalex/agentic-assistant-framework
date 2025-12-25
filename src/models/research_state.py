@@ -6,8 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from src.models.planned_action import PlannedAction
-from src.models.source_reference import SourceReference
+from .planned_action import PlannedAction
+from .source_reference import SourceReference
 
 
 class ResearchStatus(str, Enum):

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.models.research_report import QualityIndicators, ResearchReport
-from src.models.research_state import ResearchState
+from ..models.research_report import QualityIndicators, ResearchReport
+from ..models.research_state import ResearchState
 
 
 def format_research_report(state: ResearchState) -> ResearchReport:

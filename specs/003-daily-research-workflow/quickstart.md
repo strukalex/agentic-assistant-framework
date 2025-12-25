@@ -263,10 +263,70 @@ To view traces:
 3. Open Jaeger UI at http://localhost:16686
 4. Search for service `paias`
 
+## Streamlit Dashboard (Local UI)
+
+A Streamlit-based dashboard is available for local development and testing. It provides a simple web interface to trigger research workflows and view results.
+
+### Installation
+
+Streamlit is included in the project dependencies:
+
+```bash
+pip install -e .
+# or
+pip install streamlit>=1.40.0
+```
+
+### Running the Dashboard
+
+```bash
+# Run in local mode (uses LangGraph directly)
+streamlit run streamlit_app.py
+
+# Run with Windmill orchestration
+WINDMILL_BASE_URL=http://localhost:8100 \
+WINDMILL_TOKEN=your-token \
+streamlit run streamlit_app.py
+```
+
+The dashboard will be available at: http://localhost:8501
+
+### Features
+
+- **Topic Input**: Enter research topics (1-500 characters)
+- **Real-time Progress**: Visual feedback during research execution
+- **Report Display**: Rendered Markdown reports with source citations
+- **Quality Metrics**: View iterations, quality scores, and source counts
+- **Download**: Export reports as Markdown files
+- **History**: Browse previous research sessions
+
+### Execution Modes
+
+The dashboard automatically detects available execution modes:
+
+1. **Local Mode** (default): Runs the LangGraph research graph directly in the Streamlit process
+   - No Windmill required
+   - Good for development and testing
+   - Faster for single queries
+
+2. **Windmill Mode**: Triggers workflows via Windmill API
+   - Requires `WINDMILL_BASE_URL` and `WINDMILL_TOKEN` environment variables
+   - Provides orchestration benefits (scheduling, retries, monitoring)
+   - Supports approval gates for risky actions
+
+### Dashboard Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `WINDMILL_BASE_URL` | For Windmill mode | Windmill server URL |
+| `WINDMILL_TOKEN` | For Windmill mode | API token from Windmill UI |
+| `WINDMILL_FLOW_PATH` | No | Default: `f/research/run_research` |
+
 ## Next steps
 
 - Use `data-model.md` for the entity definitions and validation rules.
 - Review `src/windmill/daily_research.py` for the workflow script implementation.
 - See `src/windmill/approval_handler.py` for approval gate logic.
+- Try the Streamlit dashboard with `streamlit run streamlit_app.py`
 
 

@@ -2,7 +2,7 @@
 
 import logging
 
-from src.models.risk_level import RiskLevel
+from ..models.risk_level import RiskLevel
 
 logger = logging.getLogger(__name__)
 

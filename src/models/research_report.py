@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.models.source_reference import SourceReference
+from .source_reference import SourceReference
 
 
 class QualityIndicators(BaseModel):

@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlmodel import Field, SQLModel
 
-from src.core.config import settings
+from ..core.config import settings
 
 
 class Document(SQLModel, table=True):

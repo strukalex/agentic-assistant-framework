@@ -10,9 +10,9 @@ Tests:
 import argparse
 import asyncio
 
-from src.agents.researcher import run_researcher_agent
-from src.core.memory import MemoryManager
-from src.models.tool_gap_report import ToolGapReport
+from ..agents.researcher import run_researcher_agent
+from ..core.memory import MemoryManager
+from ..models.tool_gap_report import ToolGapReport
 
 
 async def main(question: str) -> None:

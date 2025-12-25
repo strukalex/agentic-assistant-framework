@@ -4,12 +4,12 @@ from typing import Awaitable, Callable, Iterable
 
 from uuid import uuid4
 
-from src.agents.researcher import run_researcher_agent
-from src.core.memory import MemoryManager
-from src.core.telemetry import trace_langgraph_node
-from src.models.agent_response import AgentResponse, ToolCallRecord
-from src.models.research_state import ResearchState, ResearchStatus
-from src.models.source_reference import SourceReference
+from ...agents.researcher import run_researcher_agent
+from ...core.memory import MemoryManager
+from ...core.telemetry import trace_langgraph_node
+from ...models.agent_response import AgentResponse, ToolCallRecord
+from ...models.research_state import ResearchState, ResearchStatus
+from ...models.source_reference import SourceReference
 
 
 async def _default_agent_runner(task: str, deps: MemoryManager) -> AgentResponse:

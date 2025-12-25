@@ -19,19 +19,19 @@ from mcp import ClientSession
 from pydantic import ValidationError
 from pydantic_ai import Agent, RunContext
 
-from src.core.config import settings
-from src.core.llm import get_azure_model, parse_agent_result
-from src.core.memory import MemoryManager
-from src.core.risk_assessment import categorize_action_risk, requires_approval
-from src.core.telemetry import get_tracer, trace_tool_call
-from src.core.tool_gap_detector import ToolGapDetector
-from src.mcp_integration.setup import setup_mcp_tools
-from src.models.agent_response import (
+from ..core.config import settings
+from ..core.llm import get_azure_model, parse_agent_result
+from ..core.memory import MemoryManager
+from ..core.risk_assessment import categorize_action_risk, requires_approval
+from ..core.telemetry import get_tracer, trace_tool_call
+from ..core.tool_gap_detector import ToolGapDetector
+from ..mcp_integration.setup import setup_mcp_tools
+from ..models.agent_response import (
     AgentResponse,
     ToolCallRecord,
     ToolCallStatus,
 )
-from src.models.tool_gap_report import ToolGapReport
+from ..models.tool_gap_report import ToolGapReport
 
 
 def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]:
@@ -337,7 +337,7 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
 
     Per tasks.md T105 (FR-024)
     """
-    from src.core.config import settings
+    from ..core.config import settings
 
     params = {"query": query}
 

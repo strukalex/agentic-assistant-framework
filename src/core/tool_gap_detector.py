@@ -14,8 +14,8 @@ from mcp import ClientSession
 from pydantic import BaseModel
 from pydantic_ai import Agent
 
-from src.core.llm import get_azure_model, parse_agent_result
-from src.models.tool_gap_report import ToolGapReport
+from .llm import get_azure_model, parse_agent_result
+from ..models.tool_gap_report import ToolGapReport
 
 
 class CapabilityAnalysisResult(BaseModel):

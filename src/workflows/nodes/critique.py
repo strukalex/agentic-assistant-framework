@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.core.telemetry import trace_langgraph_node
-from src.models.research_state import ResearchState, ResearchStatus
+from ...core.telemetry import trace_langgraph_node
+from ...models.research_state import ResearchState, ResearchStatus
 
 
 @trace_langgraph_node("critique")

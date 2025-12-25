@@ -9,7 +9,7 @@ from typing import AsyncIterator
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
-from src.core.config import settings
+from ..core.config import settings
 
 # Project root directory (3 levels up from this file: src/mcp_integration/setup.py)
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

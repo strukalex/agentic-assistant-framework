@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.models.risk_level import RiskLevel
+from .risk_level import RiskLevel
 
 
 class PlannedAction(BaseModel):

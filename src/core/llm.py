@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-from src.core.config import settings
+from .config import settings
 
 T = TypeVar("T")
 

@@ -27,16 +27,16 @@ import logging
 from datetime import timedelta
 from typing import Any, Callable, Awaitable
 
-from src.core.config import settings
-from src.models.planned_action import PlannedAction
-from src.models.research_state import ResearchState
-from src.windmill.approval_handler import (
+from ..core.config import settings
+from ..models.planned_action import PlannedAction
+from ..models.research_state import ResearchState
+from .approval_handler import (
     ApprovalRequest,
     process_planned_actions,
     requires_approval,
 )
-from src.workflows.report_formatter import format_research_report, render_markdown
-from src.workflows.research_graph import InMemoryMemoryManager, compile_research_graph
+from ..workflows.report_formatter import format_research_report, render_markdown
+from ..workflows.research_graph import InMemoryMemoryManager, compile_research_graph
 
 logger = logging.getLogger(__name__)
 

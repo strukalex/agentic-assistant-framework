@@ -47,10 +47,10 @@ Non-negotiables to satisfy while implementing tasks below:
 **Note**: Phase 1 has been extended with additional Windmill workspace tasks to support the deployment strategy documented in `plan.md`.
 
 - [X] T008a [Setup] Initialize Windmill workspace locally: Run `wmill workspace add local http://localhost:8000` and authenticate (default: admin@windmill.dev / changeme), then `wmill sync pull` to pull default workspace structure
-- [ ] T008b [Setup] Create Shared Code Structure: Create `u/admin/` directory and symlink `src/` to `u/admin/research_lib/` via `ln -s $(pwd)/src u/admin/research_lib` (Linux/macOS) or `New-Item -ItemType SymbolicLink -Path "u\admin\research_lib" -Target "..\..\src"` (Windows PowerShell as Admin). This makes `src/` code accessible as `u.admin.research_lib.*` in Windmill.
-- [ ] T008c [Refactor] Convert absolute `src.*` imports to relative imports in `src/` modules: Change `from src.core.config import settings` to `from ..core.config import settings` (and similar) across `src/agents/`, `src/workflows/`, `src/models/`, `src/windmill/`, and `src/api/` to make code environment-agnostic (works in both local `src/` and deployed `u/admin/research_lib/`)
-- [ ] T008d [Setup] Create Windmill flow entry point in `f/research/run_research.py`: Script that imports from `u.admin.research_lib` (e.g., `from u.admin.research_lib.workflows.research_graph import compile_research_graph`) and serves as the Windmill-executable entry point, accepting `topic` and `user_id` arguments
-- [ ] T008e [Setup] Add `streamlit` to runtime dependencies in `pyproject.toml` for Phase 7 UI tasks
+- [X] T008b [Setup] Create Shared Code Structure: Create `u/admin/` directory and symlink `src/` to `u/admin/research_lib/` via `ln -s $(pwd)/src u/admin/research_lib` (Linux/macOS) or `New-Item -ItemType SymbolicLink -Path "u\admin\research_lib" -Target "..\..\src"` (Windows PowerShell as Admin). This makes `src/` code accessible as `u.admin.research_lib.*` in Windmill.
+- [X] T008c [Refactor] Convert absolute `src.*` imports to relative imports in `src/` modules: Change `from src.core.config import settings` to `from ..core.config import settings` (and similar) across `src/agents/`, `src/workflows/`, `src/models/`, `src/windmill/`, and `src/api/` to make code environment-agnostic (works in both local `src/` and deployed `u/admin/research_lib/`)
+- [X] T008d [Setup] Create Windmill flow entry point in `f/research/run_research.py`: Script that imports from `u.admin.research_lib` (e.g., `from u.admin.research_lib.workflows.research_graph import compile_research_graph`) and serves as the Windmill-executable entry point, accepting `topic` and `user_id` arguments
+- [X] T008e [Setup] Add `streamlit` to runtime dependencies in `pyproject.toml` for Phase 7 UI tasks
 
 ---
 
@@ -97,8 +97,8 @@ Non-negotiables to satisfy while implementing tasks below:
 - [X] T029 [US1] Implement LangGraph assembly in `src/workflows/research_graph.py` (StateGraph wiring + conditional edge + max-5 enforcement)
 - [X] T030 [US1] Implement Markdown report generation in `src/workflows/report_formatter.py` (FR-008: executive summary, detailed findings, citations, metadata)
 - [X] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API) — uses local imports for testing
-- [ ] T031a [US1] Configure Windmill job settings to enforce subprocess isolation with 1 CPU / 2GB memory limits per FR-010 (prevent resource exhaustion)
-- [ ] T031b [US1] Verify/update Windmill entry point in `f/research/run_research.py`: Ensure imports use `from u.admin.research_lib.workflows.research_graph import compile_research_graph` pattern (depends on T008a-T008d workspace setup + T008c relative import refactor)
+- [X] T031a [US1] Configure Windmill job settings to enforce subprocess isolation with 1 CPU / 2GB memory limits per FR-010 (prevent resource exhaustion)
+- [X] T031b [US1] Verify/update Windmill entry point in `f/research/run_research.py`: Ensure imports use `from u.admin.research_lib.workflows.research_graph import compile_research_graph` pattern (depends on T008a-T008d workspace setup + T008c relative import refactor)
 - [ ] T031c [US1] Deploy to Windmill: Run `wmill sync push` and verify the "Run" form appears in the Windmill UI at `http://localhost:8000` under `f/research/run_research`
 - [X] T032 [US1] Implement API routes in `src/api/routes/daily_trending_research.py` to match contract (create run, get status, get report)
 - [X] T033 [US1] Wire API router into app in `src/api/app.py` and ensure FastAPI OpenAPI includes `/v1/research/workflows/daily-trending-research/*`
@@ -163,7 +163,7 @@ Non-negotiables to satisfy while implementing tasks below:
 - [X] T054 Wire API routes in `src/api/routes/daily_trending_research.py` to trigger Windmill via `WindmillClient` (create job, poll status/result); remove in-process run registry, remove any demo code
 - [X] T055 Register/export the Windmill flow from `src/windmill/daily_research.py` so Windmill can execute it (entrypoint compatibility, traceparent handling, memory output shape)
 - [X] T056 Add Windmill usage docs to `README.md` and `specs/003-daily-research-workflow/quickstart.md` (prereqs, env vars, how to start Windmill, how to deploy flow, how to trigger runs)
-- [ ] T057 Add integration test (skipped unless WINDMILL_* are set) in `tests/integration/test_windmill_e2e.py` that triggers a real Windmill job via the API and asserts status/report mapping
+- [X] T057 Add integration test (skipped unless WINDMILL_* are set) in `tests/integration/test_windmill_e2e.py` that triggers a real Windmill job via the API and asserts status/report mapping
 
 ---
 
@@ -173,8 +173,8 @@ Non-negotiables to satisfy while implementing tasks below:
 
 - [X] T049 [P] Add Spec 003 developer notes for required env vars in `specs/003-daily-research-workflow/quickstart.md` (WINDMILL_*, OTEL, Azure AI Foundry)
 - [X] T051 [P] Add API smoke test instructions in `README.md` (how to run `python -m src.cli.run_api` + curl examples from `quickstart.md`)
-- [ ] T058 [UI] Create Streamlit app in `streamlit_app.py`: Initialize `WindmillClient`, create form for topic/user_id input, trigger `f/research/run_research` flow, display job status and final report
-- [ ] T059 [UI] Add Streamlit usage documentation to `specs/003-daily-research-workflow/quickstart.md` (how to run `streamlit run streamlit_app.py`, UI walkthrough)
+- [X] T058 [UI] Create Streamlit app in `streamlit_app.py`: Initialize `WindmillClient`, create form for topic/user_id input, trigger `f/research/run_research` flow, display job status and final report
+- [X] T059 [UI] Add Streamlit usage documentation to `specs/003-daily-research-workflow/quickstart.md` (how to run `streamlit run streamlit_app.py`, UI walkthrough)
 
 ---
 
