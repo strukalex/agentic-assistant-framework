@@ -36,11 +36,8 @@ docker-compose ps
 **Service URLs:**
 - **Windmill UI**: http://localhost:8100
 - **Jaeger UI**: http://localhost:16686
-- **API Server**: http://localhost:8000 (after starting with `python -m src.cli.run_api`)
 
 ## Environment configuration
-
-### Minimum (in-process mode, no Windmill)
 
 ```bash
 # Database / Memory
@@ -54,15 +51,6 @@ AZURE_DEPLOYMENT_NAME=your-deployment
 # OpenTelemetry
 OTEL_SERVICE_NAME=paias
 OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
-```
-
-### Full Windmill mode
-
-```bash
-# All of the above, plus:
-
-# Enable Windmill orchestration
-WINDMILL_ENABLED=true
 
 # Windmill connection
 WINDMILL_BASE_URL=http://localhost:8100
@@ -118,74 +106,36 @@ langgraph>=0.0.1
 
 Or configure the worker to use your project's virtual environment.
 
-## Running the API server
+## Triggering Workflows
 
-For local development, use the provided CLI helper:
+### Via Windmill UI
 
-```bash
-# From project root
-python -m src.cli.run_api
-```
+1. Navigate to the flow in Windmill UI (http://localhost:8100)
+2. Click "Run" and provide `topic` and `user_id` parameters
 
-This will:
-- Load environment variables from `.env` file (if present)
-- Start the FastAPI server on `http://127.0.0.1:8000` by default
-- Enable auto-reload on code changes (development mode)
-- Provide interactive API docs at `http://127.0.0.1:8000/docs`
-
-**Configuration via environment variables:**
-- `API_HOST`: Server host (default: `127.0.0.1`)
-- `API_PORT`: Server port (default: `8000`)
-- `API_RELOAD`: Enable auto-reload (default: `true`)
-
-**Alternative (production):**
-```bash
-uvicorn src.api.app:app --host 0.0.0.0 --port 8000
-```
-
-## Trigger the workflow (API contract)
-
-The Phase 1 contract lives at:
-
-- `specs/003-daily-research-workflow/contracts/workflow-api.yaml`
-
-### Start a run
-
-Example request:
+### Via Windmill API
 
 ```bash
-curl -sS -X POST \
-  -H 'Content-Type: application/json' \
-  http://localhost:8000/v1/research/workflows/daily-trending-research/runs \
-  -d '{
-    "topic": "AI governance trends 2025",
-    "user_id": "8b6a4c64-3e0b-4a65-b0df-4e7e1e95d1e3"
-  }'
+# Using Windmill's native API
+curl -X POST "http://localhost:8100/api/w/default/jobs/run_script_by_path" \
+  -H "Authorization: Bearer $WINDMILL_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "f/research/daily_research", "args": {"topic": "AI governance trends 2025", "user_id": "8b6a4c64-3e0b-4a65-b0df-4e7e1e95d1e3"}}'
 ```
 
-Expected response: `202 Accepted` with a `run_id`.
+### Checking Run Status
 
-### Poll run status
+Use the Windmill UI or API to poll job status:
 
 ```bash
-curl -sS \
-  http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}
+# Get job status
+curl -H "Authorization: Bearer $WINDMILL_TOKEN" \
+  "http://localhost:8100/api/w/default/jobs/get/{job_id}"
 ```
 
-Key fields:
-
-- `status`: `queued|running|suspended_approval|completed|failed|escalated`
-- `iterations_used`: must be ≤ 5
-- `approval`: when `status=suspended_approval`, contains Windmill approval URLs and timeout info
-
-### Retrieve the final report
-
-```bash
-curl -sS \
-  http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/report
-```
-
-Returns Markdown in `markdown` plus normalized `sources`.
+Key fields in the response:
+- `status`: `queued|running|suspended|completed|failed`
+- When `status=suspended`, the workflow is waiting for approval
 
 ## Human approval behavior
 
@@ -196,38 +146,25 @@ If the workflow determines it should execute an action categorized as `REVERSIBL
 
 ### Approval flow
 
-1. **Workflow suspends**: When a risky action is detected, the workflow pauses
+1. **Workflow suspends**: When a risky action is detected, the workflow pauses and appears in Windmill UI
 
-2. **Check status**: Poll the run endpoint to see suspension
+2. **Check status**: View the job in Windmill UI or poll via API:
    ```bash
-   curl http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}
-   ```
-   Response includes:
-   ```json
-   {
-     "status": "suspended_approval",
-     "approval": {
-       "status": "pending",
-       "action_type": "external_api_call",
-       "action_description": "Call external service",
-       "approval_page_url": "http://localhost:8100/runs/..."
-     }
-   }
+   curl -H "Authorization: Bearer $WINDMILL_TOKEN" \
+     "http://localhost:8100/api/w/default/jobs/get/{job_id}"
    ```
 
-3. **Approve via API** (programmatic):
+3. **Approve via Windmill UI**:
+   - Open the job in Windmill UI
+   - Click "Resume" to approve the suspended action
+
+4. **Or approve via Windmill API**:
    ```bash
-   curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/approve
+   curl -X POST "http://localhost:8100/api/w/default/jobs/resume/{job_id}" \
+     -H "Authorization: Bearer $WINDMILL_TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"resume_id": "approval_id", "approver": "user@example.com"}'
    ```
-
-4. **Or reject**:
-   ```bash
-   curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/reject \
-     -H 'Content-Type: application/json' \
-     -d '{"reason": "Not authorized"}'
-   ```
-
-5. **Or approve via Windmill UI**: Open `approval.approval_page_url` in browser
 
 ### Timeout behavior
 
@@ -235,21 +172,6 @@ If the workflow determines it should execute an action categorized as `REVERSIBL
 - The action is **skipped** and marked as `escalated`
 - The workflow continues with remaining actions
 - Escalation is logged for audit
-
-## In-Process Mode (Testing)
-
-For development without Windmill, set `WINDMILL_ENABLED=false` (default):
-
-```bash
-# .env
-WINDMILL_ENABLED=false
-```
-
-In this mode:
-- Workflows run directly in the API process
-- Approval gates use in-memory tracking
-- No Windmill infrastructure required
-- Useful for unit tests and local debugging
 
 ## Observability
 
@@ -304,34 +226,14 @@ The following environment variables are required or optional for Spec 003 functi
 | `AZURE_AI_FOUNDRY_API_KEY` | Yes | - | Azure OpenAI API key |
 | `AZURE_DEPLOYMENT_NAME` | Yes | - | Model deployment name (e.g., `deepseek-3.2`) |
 | **Windmill Orchestration** ||||
-| `WINDMILL_ENABLED` | No | `false` | Enable Windmill orchestration (vs in-process) |
-| `WINDMILL_BASE_URL` | When enabled | - | Windmill server URL (e.g., `http://localhost:8100`) |
-| `WINDMILL_WORKSPACE` | When enabled | `default` | Windmill workspace name |
-| `WINDMILL_TOKEN` | When enabled | - | API token from Windmill UI |
+| `WINDMILL_BASE_URL` | Yes | - | Windmill server URL (e.g., `http://localhost:8100`) |
+| `WINDMILL_WORKSPACE` | No | `default` | Windmill workspace name |
+| `WINDMILL_TOKEN` | Yes | - | API token from Windmill UI |
 | `WINDMILL_FLOW_PATH` | No | `research/daily_research` | Script path in Windmill |
 | `APPROVAL_TIMEOUT_SECONDS` | No | `300` | Approval gate timeout (5 minutes) |
 | **OpenTelemetry** ||||
 | `OTEL_SERVICE_NAME` | No | `paias` | Service name for traces |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | - | OTLP collector endpoint (e.g., `http://localhost:4317`) |
-| **API Server** ||||
-| `API_HOST` | No | `127.0.0.1` | Server bind host |
-| `API_PORT` | No | `8000` | Server bind port |
-| `API_RELOAD` | No | `true` | Enable hot-reload (dev mode) |
-
-### Development vs Production Mode
-
-**Development (in-process mode)**:
-- Set `WINDMILL_ENABLED=false` (default)
-- Workflows execute directly in the API process
-- Approval gates use in-memory tracking
-- Faster iteration, no external dependencies beyond Postgres
-
-**Production (Windmill mode)**:
-- Set `WINDMILL_ENABLED=true`
-- Workflows are durable (survive API restarts)
-- Approval gates use Windmill's native suspend/resume
-- Resource isolation per worker (1 CPU, 2GB memory)
-- Full observability via Windmill UI
 
 ### Configuring Windmill Workers
 
@@ -353,7 +255,7 @@ docker-compose --profile scale up -d
 
 ### Trace Context Propagation
 
-The API propagates trace context to Windmill via the `traceparent` argument. This enables end-to-end distributed tracing from API request → Windmill job → LangGraph nodes → agent tool calls.
+Trace context is propagated to Windmill via the `traceparent` argument. This enables end-to-end distributed tracing from Windmill job → LangGraph nodes → agent tool calls.
 
 To view traces:
 1. Ensure `OTEL_EXPORTER_OTLP_ENDPOINT` is set
@@ -364,8 +266,7 @@ To view traces:
 ## Next steps
 
 - Use `data-model.md` for the entity definitions and validation rules.
-- Use `contracts/` as the contract-of-record while implementing the actual API + Windmill workflow scripts.
-- Review `src/windmill/client.py` for the Windmill API client implementation.
+- Review `src/windmill/daily_research.py` for the workflow script implementation.
 - See `src/windmill/approval_handler.py` for approval gate logic.
 
 

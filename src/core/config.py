@@ -159,10 +159,6 @@ class Settings(BaseSettings):
         le=900,
         description="Default approval timeout in seconds (target: 5 minutes ±10s)",
     )
-    windmill_enabled: bool = Field(
-        default=False,
-        description="Enable Windmill orchestration (False = in-process execution for testing)",
-    )
 
 
 # Instantiate a global settings object.

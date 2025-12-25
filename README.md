@@ -75,12 +75,9 @@ docker-compose --profile scale up -d
 
 ### Windmill Configuration
 
-Add these to your `.env` file to enable Windmill orchestration:
+Add these to your `.env` file:
 
 ```bash
-# Enable Windmill (default: false for in-process testing)
-WINDMILL_ENABLED=true
-
 # Windmill connection (matches docker-compose settings)
 WINDMILL_BASE_URL=http://localhost:8100
 WINDMILL_WORKSPACE=default
@@ -103,79 +100,27 @@ WINDMILL_FLOW_PATH=research/daily_research
 
 ### Triggering Workflows
 
-**Via API (recommended):**
-```bash
-curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs \
-  -H 'Content-Type: application/json' \
-  -d '{"topic": "AI trends 2025", "user_id": "550e8400-e29b-41d4-a716-446655440000"}'
-```
-
 **Via Windmill UI:**
 1. Navigate to the flow in Windmill UI
 2. Click "Run" and provide `topic` and `user_id` parameters
 
+**Via Windmill API:**
+```bash
+# Using Windmill's native API
+curl -X POST "http://localhost:8100/api/w/default/jobs/run_script_by_path" \
+  -H "Authorization: Bearer <your-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"path": "f/research/daily_research", "args": {"topic": "AI trends 2025", "user_id": "550e8400-e29b-41d4-a716-446655440000"}}'
+```
+
 ### Approval Gates
 
 When a workflow requires human approval (for `REVERSIBLE_WITH_DELAY` actions):
-1. The workflow suspends and status becomes `suspended_approval`
-2. Poll the run status to get `approval.approval_page_url`
-3. Open the URL in Windmill UI to approve/reject
-4. Workflow resumes after approval or times out after 5 minutes
+1. The workflow suspends and appears in the Windmill UI pending approval
+2. Open the Windmill UI to approve/reject
+3. Workflow resumes after approval or times out after 5 minutes
 
-See `specs/003-daily-research-workflow/quickstart.md` for detailed API usage.
-
-## Running the API server
-
-For local development, use the provided CLI helper:
-
-```bash
-# From project root
-python -m src.cli.run_api
-```
-
-This starts the FastAPI server at http://localhost:8000 with auto-reload enabled.
-
-### API Smoke Test
-
-After starting the server, verify the API is working with these curl commands:
-
-```bash
-# 1. Health check
-curl http://localhost:8000/healthz
-# Expected: {"status":"ok"}
-
-# 2. Start a research workflow
-curl -X POST http://localhost:8000/v1/research/workflows/daily-trending-research/runs \
-  -H 'Content-Type: application/json' \
-  -d '{"topic": "AI trends 2025", "user_id": "550e8400-e29b-41d4-a716-446655440000"}'
-# Expected: {"run_id":"...","status":"queued",...}
-
-# 3. Check run status (replace {run_id} with actual ID from step 2)
-curl http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}
-# Expected: {"run_id":"...","status":"running|completed",...}
-
-# 4. Get report when completed
-curl http://localhost:8000/v1/research/workflows/daily-trending-research/runs/{run_id}/report
-# Expected: {"markdown":"# Research Report\n...","sources":[...]}
-```
-
-For interactive API documentation, visit http://localhost:8000/docs (Swagger UI).
-
-See `specs/003-daily-research-workflow/quickstart.md` for complete API usage including approval flows.
-
-## US1 demo (no server required)
-
-Quickly exercise the DailyTrendingResearch workflow end-to-end without running a server:
-
-```bash
-pip install .[dev]  # if not already installed
-python scripts/demo_us1_workflow.py "your topic here"
-```
-
-What it does:
-- Spins up the FastAPI app in-process via ASGI transport
-- Creates a workflow run, polls until completion, and prints the Markdown report + metadata
-- Uses a demo-friendly agent fallback (no external calls, no Windmill required)
+See `specs/003-daily-research-workflow/quickstart.md` for detailed usage.
 
 ### Reset & DB re-init
 
