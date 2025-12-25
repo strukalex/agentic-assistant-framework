@@ -44,10 +44,13 @@ Non-negotiables to satisfy while implementing tasks below:
 
 ### Windmill Workspace Setup (Approach 2 — Workspace Module)
 
-- [ ] T003a [Setup] Initialize Windmill workspace locally: Run `wmill workspace add local http://localhost:8000` and authenticate (default: admin@windmill.dev / changeme), then `wmill sync pull` to pull default workspace structure
-- [ ] T003b [Setup] Create Shared Code Structure (Approach 2): Create `u/admin/` directory structure to host shared Python modules importable by Windmill scripts
-- [ ] T003c [Refactor] Create `u/admin/research_lib.py`: Move/export `ResearchState`, `compile_research_graph`, and other shared workflow logic so it is importable as `from u.admin.research_lib import ...` in Windmill scripts
-- [ ] T003d [Setup] Create Windmill flow entry point in `f/research/run_research.py`: Script that imports from `u.admin.research_lib` and serves as the Windmill-executable entry point
+**Note**: Phase 1 has been extended with additional Windmill workspace tasks to support the deployment strategy documented in `plan.md`.
+
+- [X] T008a [Setup] Initialize Windmill workspace locally: Run `wmill workspace add local http://localhost:8000` and authenticate (default: admin@windmill.dev / changeme), then `wmill sync pull` to pull default workspace structure
+- [ ] T008b [Setup] Create Shared Code Structure: Create `u/admin/` directory and symlink `src/` to `u/admin/research_lib/` via `ln -s $(pwd)/src u/admin/research_lib` (Linux/macOS) or `New-Item -ItemType SymbolicLink -Path "u\admin\research_lib" -Target "..\..\src"` (Windows PowerShell as Admin). This makes `src/` code accessible as `u.admin.research_lib.*` in Windmill.
+- [ ] T008c [Refactor] Convert absolute `src.*` imports to relative imports in `src/` modules: Change `from src.core.config import settings` to `from ..core.config import settings` (and similar) across `src/agents/`, `src/workflows/`, `src/models/`, `src/windmill/`, and `src/api/` to make code environment-agnostic (works in both local `src/` and deployed `u/admin/research_lib/`)
+- [ ] T008d [Setup] Create Windmill flow entry point in `f/research/run_research.py`: Script that imports from `u.admin.research_lib` (e.g., `from u.admin.research_lib.workflows.research_graph import compile_research_graph`) and serves as the Windmill-executable entry point, accepting `topic` and `user_id` arguments
+- [ ] T008e [Setup] Add `streamlit` to runtime dependencies in `pyproject.toml` for Phase 7 UI tasks
 
 ---
 
@@ -93,9 +96,9 @@ Non-negotiables to satisfy while implementing tasks below:
 - [X] T028 [P] [US1] Implement Finish node in `src/workflows/nodes/finish.py` (build `ResearchReport`, store via `src/core/memory.py:MemoryManager`, return memory doc id)
 - [X] T029 [US1] Implement LangGraph assembly in `src/workflows/research_graph.py` (StateGraph wiring + conditional edge + max-5 enforcement)
 - [X] T030 [US1] Implement Markdown report generation in `src/workflows/report_formatter.py` (FR-008: executive summary, detailed findings, citations, metadata)
-- [X] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API)
+- [X] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API) — uses local imports for testing
 - [ ] T031a [US1] Configure Windmill job settings to enforce subprocess isolation with 1 CPU / 2GB memory limits per FR-010 (prevent resource exhaustion)
-- [ ] T031b [US1] Implement Windmill entry point in `f/research/run_research.py`: Import shared logic using `from u.admin.research_lib import ...`, accept `topic` and `user_id` arguments, initialize and invoke `compile_research_graph`
+- [ ] T031b [US1] Verify/update Windmill entry point in `f/research/run_research.py`: Ensure imports use `from u.admin.research_lib.workflows.research_graph import compile_research_graph` pattern (depends on T008a-T008d workspace setup + T008c relative import refactor)
 - [ ] T031c [US1] Deploy to Windmill: Run `wmill sync push` and verify the "Run" form appears in the Windmill UI at `http://localhost:8000` under `f/research/run_research`
 - [X] T032 [US1] Implement API routes in `src/api/routes/daily_trending_research.py` to match contract (create run, get status, get report)
 - [X] T033 [US1] Wire API router into app in `src/api/app.py` and ensure FastAPI OpenAPI includes `/v1/research/workflows/daily-trending-research/*`
@@ -180,12 +183,16 @@ Non-negotiables to satisfy while implementing tasks below:
 ### Phase Dependencies
 
 - **Setup (Phase 1)**: No dependencies — can start immediately
-- **Foundational (Phase 2)**: Depends on Setup — **blocks all user stories**
-- **US1 (Phase 3)**: Depends on Foundational
+  - **Windmill Workspace Setup (T008a-T008e)**: Extended Phase 1 tasks that must complete before Windmill deployment tasks in Phase 3 and Phase 6
+- **Foundational (Phase 2)**: Depends on Setup (T001-T008) — **blocks all user stories**
+- **US1 (Phase 3)**: Depends on Foundational (Phase 2)
+  - **T031b, T031c**: Additionally depend on Windmill Workspace Setup (T008a-T008d) — workspace must be initialized and symlinked before deployment
 - **US2 (Phase 4)**: Depends on US1 (approval fields integrate into run lifecycle + status shape)
 - **US3 (Phase 5)**: Depends on US1 (needs real nodes/graph); can be developed in parallel with US2 once US1 exists
 - **Windmill Orchestration (Phase 6)**: Depends on US1+ (endpoints, flow, and config must exist before switching to external orchestration)
+  - Additionally depends on Windmill Workspace Setup (T008a-T008d) being complete
 - **Polish (Phase 7)**: Depends on whichever stories are in scope for the release
+  - **T058 (Streamlit)**: Depends on T008e (streamlit dependency added to pyproject.toml)
 
 ### User Story Dependencies (Graph)
 
@@ -197,6 +204,11 @@ Non-negotiables to satisfy while implementing tasks below:
 - Tests should be written first and fail before implementation
 - Models/config before services/clients
 - Graph/node logic before Windmill wrapper before API endpoints
+
+### Cross-Phase Dependencies
+
+- **T008c (Relative Import Refactor)**: Must complete before T031b (Windmill entry point verification) to ensure imports work in both `src/` (local) and `u/admin/research_lib/` (Windmill deployed) contexts
+- **T008a-T008d (Windmill Workspace)**: Must complete before any Windmill deployment tasks (T031b, T031c, T053-T056)
 
 ---
 
