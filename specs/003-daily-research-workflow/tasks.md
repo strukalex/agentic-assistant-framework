@@ -42,6 +42,13 @@ Non-negotiables to satisfy while implementing tasks below:
 - [X] T007 Add API run helper for local dev in `src/cli/run_api.py` (documented uvicorn command + env loading)
 - [X] T008 Update developer docs to mention API runner in `specs/003-daily-research-workflow/quickstart.md`
 
+### Windmill Workspace Setup (Approach 2 — Workspace Module)
+
+- [ ] T003a [Setup] Initialize Windmill workspace locally: Run `wmill workspace add local http://localhost:8000` and authenticate (default: admin@windmill.dev / changeme), then `wmill sync pull` to pull default workspace structure
+- [ ] T003b [Setup] Create Shared Code Structure (Approach 2): Create `u/admin/` directory structure to host shared Python modules importable by Windmill scripts
+- [ ] T003c [Refactor] Create `u/admin/research_lib.py`: Move/export `ResearchState`, `compile_research_graph`, and other shared workflow logic so it is importable as `from u.admin.research_lib import ...` in Windmill scripts
+- [ ] T003d [Setup] Create Windmill flow entry point in `f/research/run_research.py`: Script that imports from `u.admin.research_lib` and serves as the Windmill-executable entry point
+
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
@@ -88,6 +95,8 @@ Non-negotiables to satisfy while implementing tasks below:
 - [X] T030 [US1] Implement Markdown report generation in `src/workflows/report_formatter.py` (FR-008: executive summary, detailed findings, citations, metadata)
 - [X] T031 [US1] Implement Windmill workflow script in `src/windmill/daily_research.py` (validate input, run graph, return result fields needed by API)
 - [ ] T031a [US1] Configure Windmill job settings to enforce subprocess isolation with 1 CPU / 2GB memory limits per FR-010 (prevent resource exhaustion)
+- [ ] T031b [US1] Implement Windmill entry point in `f/research/run_research.py`: Import shared logic using `from u.admin.research_lib import ...`, accept `topic` and `user_id` arguments, initialize and invoke `compile_research_graph`
+- [ ] T031c [US1] Deploy to Windmill: Run `wmill sync push` and verify the "Run" form appears in the Windmill UI at `http://localhost:8000` under `f/research/run_research`
 - [X] T032 [US1] Implement API routes in `src/api/routes/daily_trending_research.py` to match contract (create run, get status, get report)
 - [X] T033 [US1] Wire API router into app in `src/api/app.py` and ensure FastAPI OpenAPI includes `/v1/research/workflows/daily-trending-research/*`
 - [X] T034 [US1] Ensure run result payload returned by Windmill script matches `ReportResponse` in `src/api/schemas/workflow_api.py`
@@ -161,6 +170,8 @@ Non-negotiables to satisfy while implementing tasks below:
 
 - [X] T049 [P] Add Spec 003 developer notes for required env vars in `specs/003-daily-research-workflow/quickstart.md` (WINDMILL_*, OTEL, Azure AI Foundry)
 - [X] T051 [P] Add API smoke test instructions in `README.md` (how to run `python -m src.cli.run_api` + curl examples from `quickstart.md`)
+- [ ] T058 [UI] Create Streamlit app in `streamlit_app.py`: Initialize `WindmillClient`, create form for topic/user_id input, trigger `f/research/run_research` flow, display job status and final report
+- [ ] T059 [UI] Add Streamlit usage documentation to `specs/003-daily-research-workflow/quickstart.md` (how to run `streamlit run streamlit_app.py`, UI walkthrough)
 
 ---
 

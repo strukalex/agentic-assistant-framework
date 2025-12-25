@@ -142,6 +142,94 @@ tests/
 
 **Structure Decision**: Extends existing single-project structure. New `src/workflows/` module for LangGraph orchestration logic, `src/windmill/` for Windmill-specific workflow scripts. Reuses all existing core modules (memory, telemetry, llm, agents).
 
+### Deployment Strategy: Windmill Workspace (Approach 2 — Workspace Module)
+
+We utilize the **Workspace Module** pattern for shared code to ensure clean separation between orchestration scripts and core logic.
+
+**Rationale**: The Workspace Module approach provides:
+- Clean namespace isolation between flows and shared utilities
+- Reusable shared logic accessible across multiple Windmill scripts
+- Consistent import paths that work both locally and in Windmill workers
+- Better maintainability as the project scales
+
+**Critical Requirement**: Windmill does **not** automatically sync `src/` to `u/admin/`. Since `wmill sync` strictly mirrors only the `f/` and `u/` folders, you must explicitly link `src/` into the Windmill user space using a symbolic link. Without this link, `wmill sync push` will ignore your `src/` folder, and imports in the cloud will fail.
+
+**Local Development**:
+- The `src/` directory containing `ResearchState`, `ResearcherAgent`, and workflow logic is symlinked into the Windmill `u/admin` namespace
+- The Windmill CLI (`wmill`) syncs the local project to the remote workspace
+- Development happens in `src/` (pure, testable, framework-agnostic code)
+- `u/admin/research_lib/` acts as the "deployment slot" where Windmill expects to find that logic
+
+**Import Style**: Scripts in `windmill/f/` (or project root `f/`) import shared logic via Windmill path imports:
+```python
+# From Windmill script in f/research/run_research.py
+from u.admin.research_lib.research_state import ResearchState
+from u.admin.research_lib.agent import ResearcherAgent
+
+def main(topic: str):
+    state = ResearchState(topic=topic)
+    # ...
+```
+
+### Implementation Steps
+
+**1. Initialize Structure**:
+```bash
+mkdir -p my_project/{src,windmill/f/daily_research,windmill/u/admin}
+cd my_project
+wmill workspace add local http://localhost:8000
+wmill sync pull  # Pulls default workspace structure
+```
+
+**2. Create the Symlink (The "Workspace Module" Trick)**:
+Instead of copying files back and forth, symlink your source code into the Windmill user space. This makes `src` accessible as `u.admin.research_lib` in Windmill.
+
+```bash
+# MacOS / Linux
+ln -s $(pwd)/src windmill/u/admin/research_lib
+
+# Windows (PowerShell as Admin)
+New-Item -ItemType SymbolicLink -Path "windmill\u\admin\research_lib" -Target "..\..\src"
+```
+
+**3. Develop in `src/`**:
+Write your `ResearchState` and `ResearcherAgent` inside `src/`:
+- `src/research_state.py`
+- `src/agent.py`
+
+**4. Deploy**:
+```bash
+wmill sync push  # Windmill will follow the symlink and upload the contents of src into u/admin/research_lib on the server
+```
+
+### Updated Directory Structure (Windmill Integration)
+
+```text
+my_project/
+├── f/                          # Windmill Flows (synced from wmill sync pull)
+│   └── research/
+│       ├── folder.meta.yaml    # Folder metadata
+│       └── run_research.py     # Windmill entry point script
+├── u/                          # Windmill User/Shared Modules
+│   └── admin/
+│       └── research_lib/       # SYMLINK pointing to src/ (This is what wmill uploads)
+├── src/                        # REAL SOURCE (Edit code here, run pytest here)
+│   ├── core/
+│   ├── agents/
+│   ├── models/
+│   ├── workflows/
+│   └── windmill/               # Local Windmill-specific code
+├── wmill.yaml                  # Workspace configuration (auto-generated)
+└── wmill-lock.yaml             # Lock file for sync state
+```
+
+**Key Points**:
+- `f/` directory: Contains Windmill flow scripts (entry points)
+- `u/admin/research_lib/`: **Symlink** to `src/` - this is what Windmill syncs to the cloud
+- `src/`: Real source code directory - edit code here, run tests here (framework-agnostic)
+- `src/windmill/`: Local development version of Windmill scripts (for testing without Windmill)
+- Sync via `wmill sync push` deploys `f/` and `u/` (following symlinks) to the Windmill workspace
+
 ## Complexity Tracking
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
