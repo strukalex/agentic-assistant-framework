@@ -20,6 +20,17 @@ The system implements a **Composite UI** and **Hybrid Orchestration** strategy, 
 
 This repository now includes the Phase 1 memory layer feature, built around Python 3.11, SQLModel, asyncpg, pgvector, and OpenTelemetry. The implementation is container-first and ships with Docker Compose for PostgreSQL + Jaeger.
 
+### Dev tools [todo: if you see this move this section as part of your tasks]
+Provides wmill command
+`npm install -g windmill-cli`
+
+#### Windmill setup
+`wmill workspace add default http://localhost:8100`
+
+Follow the prompts to log in (default user: admin@windmill.dev / changeme)
+
+`wmill sync pull`  # Pulls the default workspace structure to your local disk
+
 ### Quickstart
 
 For the ResearcherAgent (Spec 002) quickstart, follow the detailed guide in
