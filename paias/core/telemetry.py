@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from contextlib import contextmanager
 from functools import wraps
@@ -22,6 +23,7 @@ T = TypeVar("T")
 _provider_initialized = False
 _exporter_override: Optional[SpanExporter] = None
 _active_exporter: Optional[SpanExporter] = None
+_logging_initialized = False
 
 
 def _create_default_exporter() -> SpanExporter:
@@ -66,6 +68,72 @@ def _init_tracer_provider(exporter: Optional[SpanExporter] = None) -> None:
     _active_exporter = resolved_exporter
     _provider_initialized = True
 
+    # Also initialize OTLP logging if configured
+    _init_otlp_logging()
+
+
+def _init_otlp_logging() -> None:
+    """
+    Initialize OTLP log export to Loki if OTEL_EXPORTER_OTLP_LOGS_ENDPOINT is configured.
+
+    This sets up Python's logging to export logs via OTLP to Loki or another
+    OTLP-compatible log backend.
+    """
+    global _logging_initialized
+    if _logging_initialized:
+        return
+
+    import os
+
+    logger = logging.getLogger(__name__)
+
+    # Check environment variable directly (Windmill may set this)
+    logs_endpoint = os.environ.get(
+        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", settings.otel_exporter_otlp_logs_endpoint
+    )
+
+    if not logs_endpoint:
+        logger.debug("OTLP logging: No logs endpoint configured, skipping")
+        return
+
+    try:
+        from opentelemetry._logs import set_logger_provider
+        from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
+        from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+        from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+
+        resource = Resource(attributes={"service.name": settings.otel_service_name})
+
+        # Create logger provider with OTLP HTTP exporter (Loki uses HTTP)
+        logger_provider = LoggerProvider(resource=resource)
+
+        # Use HTTP exporter for Loki compatibility
+        log_exporter = OTLPLogExporter(endpoint=logs_endpoint)
+        logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+
+        set_logger_provider(logger_provider)
+
+        # Attach OTLP handler to root logger so all Python logs are exported
+        handler = LoggingHandler(
+            level=logging.DEBUG, logger_provider=logger_provider
+        )
+        logging.getLogger().addHandler(handler)
+
+        _logging_initialized = True
+        logger.info("OTLP logging: Initialized, exporting to %s", logs_endpoint)
+
+    except ImportError as e:
+        logger.warning(
+            "OTLP logging: Failed to import logging SDK components: %s. "
+            "Logs will not be exported to Loki.",
+            e,
+        )
+    except Exception as e:
+        logger.warning(
+            "OTLP logging: Failed to initialize: %s. Logs will not be exported to Loki.",
+            e,
+        )
+
 
 def get_tracer(component: str = "memory") -> trace.Tracer:
     """
@@ -100,6 +168,17 @@ def set_span_exporter(exporter: SpanExporter) -> SpanExporter:
 def get_active_span_exporter() -> Optional[SpanExporter]:
     """Return the exporter currently wired into the tracer provider."""
     return _active_exporter
+
+
+def init_telemetry() -> None:
+    """
+    Initialize all telemetry: tracing and OTLP logging.
+
+    Call this early in application startup to ensure logs are exported
+    to Loki from the very beginning.
+    """
+    _init_tracer_provider()
+    # _init_otlp_logging() is called by _init_tracer_provider
 
 
 def trace_memory_operation(

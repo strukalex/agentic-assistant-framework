@@ -68,6 +68,19 @@ class Settings(BaseSettings):
         description="OTLP endpoint for trace export (Jaeger collector)",
     )
 
+    # Separate endpoint for traces (optional, falls back to otel_exporter_otlp_endpoint)
+    otel_exporter_otlp_traces_endpoint: str | None = Field(
+        default=None,
+        description="OTLP endpoint for traces (defaults to otel_exporter_otlp_endpoint)",
+    )
+
+    # Endpoint where OTLP logs are sent, typically Loki.
+    # Example: http://localhost:3100/otlp/v1/logs for local Loki.
+    otel_exporter_otlp_logs_endpoint: str | None = Field(
+        default=None,
+        description="OTLP endpoint for log export (Loki). If set, logs are exported via OTLP.",
+    )
+
     # Logical service name that will appear in tracing backends (Jaeger, etc.).
     # Helps distinguish this component from others in a distributed system.
     otel_service_name: str = Field(

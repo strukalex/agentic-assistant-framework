@@ -32,6 +32,34 @@ services:
       retries: 5
 
   # ============================================================================
+  # Loki + Grafana (Centralized Logging via OTLP)
+  # ============================================================================
+  # Loki: Log aggregation system with native OTLP support
+  # Grafana: Visualization UI at http://localhost:3000
+  # Workers send logs directly to Loki via OTLP endpoint
+  # ============================================================================
+
+  loki:
+    image: grafana/loki:3.0.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - loki
+
+  # ============================================================================
   # Windmill Orchestration (Spec 003)
   # ============================================================================
   # Windmill provides workflow orchestration with:
@@ -80,14 +108,14 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
       BASE_URL: http://localhost:8100
-      RUST_LOG: info
+      RUST_LOG: warn
       MODE: worker
       WORKER_GROUP: default
       # Tell Windmill to use pre-installed paias package and system site-packages
       ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
-      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
       # Pass through Azure AI Foundry credentials (from .env)
       AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
       AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
@@ -96,21 +124,25 @@ services:
       # Database URL for paias application (use Docker service name, not localhost)
       # Separate from Windmill's DATABASE_URL to avoid conflicts
       PAIAS_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/paias
-      # Telemetry - use jaeger hostname (not localhost) for Docker networking
+      # Telemetry - traces go to Jaeger, logs go to Loki
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://loki:3100/otlp/v1/logs
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}
       OTEL_SAMPLING_RATE: ${OTEL_SAMPLING_RATE:-1.0}
       # Web search configuration
       WEBSEARCH_ENGINE: ${WEBSEARCH_ENGINE:-duckduckgo}
       WEBSEARCH_MAX_RESULTS: ${WEBSEARCH_MAX_RESULTS:-10}
       WEBSEARCH_TIMEOUT_SECONDS: ${WEBSEARCH_TIMEOUT_SECONDS:-30}
-      # Logging
-      ENABLE_AGENTIC_LOGGING: ${ENABLE_AGENTIC_LOGGING:-true}
+      # Logging - enabled to send logs to Loki via OTLP
+      ENABLE_AGENTIC_LOGGING: "true"
     depends_on:
       windmill_server:
         condition: service_healthy
       jaeger:
         condition: service_healthy
+      loki:
+        condition: service_started
     # Resource limits per FR-010 (Constitution Article II.F)
     deploy:
       resources:
@@ -136,13 +168,13 @@ services:
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
       BASE_URL: http://localhost:8100
-      RUST_LOG: info
+      RUST_LOG: warn
       MODE: worker
       WORKER_GROUP: default
       # Tell Windmill to use pre-installed paias package and system site-packages
       ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
-      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
       # Pass through Azure AI Foundry credentials (from .env)
       AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
       AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
@@ -151,21 +183,25 @@ services:
       # Database URL for paias application (use Docker service name, not localhost)
       # Separate from Windmill's DATABASE_URL to avoid conflicts
       PAIAS_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/paias
-      # Telemetry - use jaeger hostname (not localhost) for Docker networking
+      # Telemetry - traces go to Jaeger, logs go to Loki
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://loki:3100/otlp/v1/logs
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}
       OTEL_SAMPLING_RATE: ${OTEL_SAMPLING_RATE:-1.0}
       # Web search configuration
       WEBSEARCH_ENGINE: ${WEBSEARCH_ENGINE:-duckduckgo}
       WEBSEARCH_MAX_RESULTS: ${WEBSEARCH_MAX_RESULTS:-10}
       WEBSEARCH_TIMEOUT_SECONDS: ${WEBSEARCH_TIMEOUT_SECONDS:-30}
-      # Logging
-      ENABLE_AGENTIC_LOGGING: ${ENABLE_AGENTIC_LOGGING:-true}
+      # Logging - enabled to send logs to Loki via OTLP
+      ENABLE_AGENTIC_LOGGING: "true"
     depends_on:
       windmill_server:
         condition: service_healthy
       jaeger:
         condition: service_healthy
+      loki:
+        condition: service_started
     deploy:
       resources:
         limits:
@@ -181,4 +217,6 @@ volumes:
   postgres_data:
   windmill_worker_cache:
   windmill_worker_cache_2:
+  loki_data:
+  grafana_data:
 

@@ -28,6 +28,7 @@ from datetime import timedelta
 from typing import Any, Callable, Awaitable
 
 from ..core.config import settings
+from ..core.telemetry import init_telemetry
 from ..models.planned_action import PlannedAction
 from ..models.research_state import ResearchState
 from .approval_handler import (
@@ -38,6 +39,9 @@ from .approval_handler import (
 from ..workflows.report_formatter import format_research_report, render_markdown
 from ..workflows.research_graph import InMemoryMemoryManager, compile_research_graph
 from ..agents.researcher import run_researcher_agent
+
+# Initialize telemetry early to export logs to Loki via OTLP
+init_telemetry()
 
 logger = logging.getLogger(__name__)
 
