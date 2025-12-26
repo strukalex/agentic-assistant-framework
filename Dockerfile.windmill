@@ -10,6 +10,7 @@ WORKDIR /app
 COPY pyproject.toml /app/
 COPY paias/ /app/paias/
 COPY package.json /app/
+COPY mcp-servers/ /app/mcp-servers/
 
 # Install the paias package in editable mode
 # Windmill uses uv for Python package management
