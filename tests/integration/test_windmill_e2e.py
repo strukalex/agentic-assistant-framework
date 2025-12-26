@@ -60,6 +60,7 @@ class TestWindmillE2EFlow:
     """End-to-end tests for the Windmill-orchestrated research workflow."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Windmill E2E tests disabled - requires live Windmill instance")
     async def test_trigger_and_poll_workflow(
         self,
         windmill_client,
@@ -126,6 +127,7 @@ class TestWindmillE2EFlow:
                 pytest.fail(f"Job failed: {job.get('error', 'Unknown error')}")
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Windmill E2E tests disabled - requires live Windmill instance")
     async def test_report_response_schema(
         self,
         windmill_client,
@@ -184,6 +186,7 @@ class TestWindmillE2EFlow:
                 assert "url" in source
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Windmill E2E tests disabled - requires live Windmill instance")
     async def test_status_mapping(
         self,
         windmill_client,
@@ -231,6 +234,7 @@ class TestWindmillJobOperations:
     """Tests for individual Windmill job operations."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Windmill E2E tests disabled - requires live Windmill instance")
     async def test_get_nonexistent_job(self, windmill_client):
         """Test that getting a nonexistent job raises an appropriate error."""
         import httpx
@@ -242,6 +246,7 @@ class TestWindmillJobOperations:
                 await client.get_job(fake_job_id)
 
     @pytest.mark.asyncio
+    @pytest.mark.skip(reason="Windmill E2E tests disabled - requires live Windmill instance")
     async def test_trigger_with_invalid_flow_path(self, windmill_client, test_user_id: str):
         """Test that triggering a nonexistent flow raises an error."""
         import httpx

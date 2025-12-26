@@ -11,7 +11,7 @@ from typing import Any, Optional, TypeVar, cast
 
 import httpx
 from dotenv import load_dotenv
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 from .config import settings
@@ -21,7 +21,7 @@ T = TypeVar("T")
 logger = logging.getLogger(__name__)
 
 
-def get_azure_model() -> OpenAIModel:
+def get_azure_model() -> OpenAIChatModel:
     """Create a standardized Azure AI Foundry model instance.
 
     Reads configuration from environment variables:
@@ -30,7 +30,7 @@ def get_azure_model() -> OpenAIModel:
     - AZURE_DEPLOYMENT_NAME: The model name (deployment ID)
 
     Returns:
-        OpenAIModel configured for Azure AI Foundry
+        OpenAIChatModel configured for Azure AI Foundry
 
     Raises:
         ValueError: If required environment variables are missing
@@ -83,7 +83,7 @@ def get_azure_model() -> OpenAIModel:
     if settings.enable_agentic_logging:
         provider = _LoggingProviderWrapper(provider)
 
-    return OpenAIModel(model_name, provider=provider)
+    return OpenAIChatModel(model_name, provider=provider)
 
 
 class _LoggingProviderWrapper:
