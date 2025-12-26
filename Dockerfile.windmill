@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Copy only the files needed for package installation
 COPY pyproject.toml /app/
-COPY src/ /app/src/
+COPY paias/ /app/paias/
 
 # Install the paias package in editable mode
 # Windmill uses uv for Python package management

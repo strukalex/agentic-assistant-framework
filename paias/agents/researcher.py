@@ -66,8 +66,6 @@ def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]
     return embedding
 
 
-model = get_azure_model()
-
 # Limits and per-run state to prevent thrashing and to capture executed tools.
 MAX_TOOL_CALLS_PER_RUN = 50
 _tool_call_log: contextvars.ContextVar[
@@ -257,6 +255,9 @@ async def _with_tool_logging_and_cache(
 
 def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
     """Create a fresh ResearcherAgent instance with base configuration."""
+    # Lazy initialization: create model only when agent is needed
+    # This prevents import-time errors if environment variables aren't set yet
+    model = get_azure_model()
     return Agent[MemoryManager, AgentResponse](
         model=model,
         output_type=AgentResponse,
@@ -427,8 +428,27 @@ def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
 
 
 # Export a baseline agent for compatibility; MCP tools are added per session.
-researcher_agent = _create_researcher_agent()
-_register_core_tools(researcher_agent)
+# Lazy initialization: only create when accessed to avoid import-time errors
+_researcher_agent_instance: Optional[Agent[MemoryManager, AgentResponse]] = None
+
+
+def _get_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
+    """Get or create the baseline researcher agent instance."""
+    global _researcher_agent_instance
+    if _researcher_agent_instance is None:
+        _researcher_agent_instance = _create_researcher_agent()
+        _register_core_tools(_researcher_agent_instance)
+    return _researcher_agent_instance
+
+
+# Module-level __getattr__ for lazy initialization
+# This allows `from paias.agents.researcher import researcher_agent` to work
+# without triggering model creation at import time
+def __getattr__(name: str) -> Any:
+    """Module-level __getattr__ for lazy initialization of researcher_agent."""
+    if name == "researcher_agent":
+        return _get_researcher_agent()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 async def setup_researcher_agent(
