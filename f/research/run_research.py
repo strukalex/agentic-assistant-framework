@@ -89,10 +89,8 @@ from typing import Any
 from uuid import uuid4
 
 # Import from pre-installed paias package
-from paias.workflows.research_graph import (
-    InMemoryMemoryManager,
-    compile_research_graph,
-)
+from paias.workflows.research_graph import compile_research_graph
+from paias.core.memory import MemoryManager  # Use real MemoryManager with database
 from paias.models.research_state import ResearchState
 from paias.workflows.report_formatter import (
     format_research_report,
@@ -236,8 +234,13 @@ async def _async_main(
     try:
         # Execute the research graph
         logger.info("PHASE 1: Initializing research graph")
-        logger.info("- Creating in-memory memory manager")
-        memory_mgr = InMemoryMemoryManager()
+        logger.info("- Creating database-backed memory manager")
+        # Use real MemoryManager - connects to Postgres from PAIAS_DATABASE_URL env var
+        # Note: PAIAS_DATABASE_URL must be set in docker-compose.yml WHITELIST_ENVS
+        import os
+        db_url = os.environ.get("PAIAS_DATABASE_URL") or settings.database_url
+        logger.info(f"  Database URL: {db_url.split('@')[1] if '@' in db_url else 'default'}")  # Don't log credentials
+        memory_mgr = MemoryManager()  # Will use PAIAS_DATABASE_URL from settings
         logger.info("- Configuring ResearcherAgent with MCP tools")
         app = compile_research_graph(
             memory_manager=memory_mgr,

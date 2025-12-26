@@ -87,14 +87,15 @@ services:
       ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
-      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,DATABASE_URL_PAIAS,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
       # Pass through Azure AI Foundry credentials (from .env)
       AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
       AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
       AZURE_DEPLOYMENT_NAME: ${AZURE_DEPLOYMENT_NAME:-gpt-4o}
       AZURE_API_VERSION: ${OPENAI_API_VERSION:-2024-12-01-preview}
-      # Database URL for paias application
-      DATABASE_URL_PAIAS: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/paias}
+      # Database URL for paias application (use Docker service name, not localhost)
+      # Separate from Windmill's DATABASE_URL to avoid conflicts
+      PAIAS_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/paias
       # Telemetry - use jaeger hostname (not localhost) for Docker networking
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}
@@ -141,14 +142,15 @@ services:
       # Tell Windmill to use pre-installed paias package and system site-packages
       ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
-      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,DATABASE_URL_PAIAS,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
       # Pass through Azure AI Foundry credentials (from .env)
       AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
       AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
       AZURE_DEPLOYMENT_NAME: ${AZURE_DEPLOYMENT_NAME:-gpt-4o}
       AZURE_API_VERSION: ${OPENAI_API_VERSION:-2024-12-01-preview}
-      # Database URL for paias application
-      DATABASE_URL_PAIAS: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/paias}
+      # Database URL for paias application (use Docker service name, not localhost)
+      # Separate from Windmill's DATABASE_URL to avoid conflicts
+      PAIAS_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/paias
       # Telemetry - use jaeger hostname (not localhost) for Docker networking
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
       OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}

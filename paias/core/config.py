@@ -22,10 +22,12 @@ class Settings(BaseSettings):
     # - env_file: load variables from a local .env file for development
     # - env_file_encoding: read .env as UTF-8
     # - extra="ignore": ignore any env vars that don't correspond to defined fields
+    # - populate_by_name: allow using both field name and alias for env var population
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         extra="ignore",
+        populate_by_name=True,
     )
 
     # ----------------------
@@ -33,10 +35,12 @@ class Settings(BaseSettings):
     # ----------------------
 
     # Async PostgreSQL URL used by SQLAlchemy with asyncpg.
-    # Can be overridden by setting the env var DATABASE_URL.
+    # Can be overridden by setting the env var PAIAS_DATABASE_URL.
+    # Note: Separate from Windmill's DATABASE_URL to avoid conflicts in containerized environments.
     database_url: str = Field(
         default="postgresql+asyncpg://postgres:postgres@localhost:5432/paias",
         description="Async PostgreSQL connection string with asyncpg driver",
+        alias="PAIAS_DATABASE_URL",
     )
 
     # Base size of the async SQLAlchemy connection pool.
