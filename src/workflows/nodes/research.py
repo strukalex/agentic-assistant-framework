@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Awaitable, Callable, Iterable
 
 from uuid import uuid4
@@ -10,6 +11,8 @@ from ...core.telemetry import trace_langgraph_node
 from ...models.agent_response import AgentResponse, ToolCallRecord
 from ...models.research_state import ResearchState, ResearchStatus
 from ...models.source_reference import SourceReference
+
+logger = logging.getLogger(__name__)
 
 
 async def _default_agent_runner(task: str, deps: MemoryManager) -> AgentResponse:
@@ -69,6 +72,13 @@ async def research_node(
         agent_runner: Callable that executes research (defaults to run_researcher_agent).
         memory_manager: MemoryManager dependency passed to the agent runner.
     """
+    logger.info(
+        "  → [research_node] Starting research iteration %d/%d",
+        state.iteration_count + 1,
+        state.max_iterations,
+    )
+    logger.info("  → [research_node] Invoking Pydantic AI agent for topic: '%s'", state.topic)
+
     runner = agent_runner or _default_agent_runner
     deps = memory_manager if memory_manager is not None else _NoopMemoryManager()
 
@@ -102,6 +112,14 @@ async def research_node(
             quality_score = max(quality_score, float(getattr(result, "confidence", 0.0)))
         except Exception:
             pass
+
+    total_sources = len(state.sources) + len(sources)
+    logger.info(
+        "  → [research_node] Agent completed - found %d new sources (total: %d), confidence: %.2f",
+        len(sources),
+        total_sources,
+        quality_score,
+    )
 
     return state.model_copy(
         update={

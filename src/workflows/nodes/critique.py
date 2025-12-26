@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+import logging
+
 from ...core.telemetry import trace_langgraph_node
 from ...models.research_state import ResearchState, ResearchStatus
+
+logger = logging.getLogger(__name__)
 
 
 @trace_langgraph_node("critique")
@@ -33,6 +37,15 @@ async def critique_node(state: ResearchState) -> ResearchState:
         ResearchStatus.REFINING
         if (state.iteration_count < state.max_iterations) and (not has_enough_sources or not meets_quality)
         else ResearchStatus.FINISHED
+    )
+
+    decision = "REFINE" if next_status == ResearchStatus.REFINING else "FINISH"
+    logger.info(
+        "  → [critique_node] Sources: %d/3, Quality: %.2f/%.2f - Decision: %s",
+        source_count,
+        state.quality_score,
+        state.quality_threshold,
+        decision,
     )
 
     return state.model_copy(

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 from uuid import UUID
 
@@ -7,6 +8,8 @@ from ...core.memory import MemoryManager
 from ...core.telemetry import trace_langgraph_node
 from ...models.research_state import ResearchState, ResearchStatus
 from ..report_formatter import format_research_report, render_markdown
+
+logger = logging.getLogger(__name__)
 
 
 @trace_langgraph_node("finish")
@@ -16,6 +19,7 @@ async def finish_node(
     """
     Build the final report, store it in memory, and mark the workflow finished.
     """
+    logger.info("  → [finish_node] Building final report and storing to memory...")
     report = format_research_report(state)
     markdown = render_markdown(report)
 
@@ -32,8 +36,10 @@ async def finish_node(
                     "iteration_count": state.iteration_count,
                 },
             )
-        except Exception:
+            logger.info("  → [finish_node] Report stored to memory with ID: %s", document_id)
+        except Exception as e:
             # Storage failure should not block returning the report; propagate via metadata
+            logger.warning("  → [finish_node] Failed to store report to memory: %s", e)
             document_id = None
 
     return state.model_copy(

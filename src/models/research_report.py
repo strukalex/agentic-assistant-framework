@@ -55,3 +55,5 @@ class ResearchReport(BaseModel):
 
     model_config = {"extra": "forbid"}
 
+
+

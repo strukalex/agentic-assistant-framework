@@ -70,6 +70,7 @@ print("=== END DIAGNOSTICS ===")
 # === END DIAGNOSTIC LOGGING ===
 
 import asyncio
+import logging
 from typing import Any
 
 # Import from pre-installed paias package
@@ -89,6 +90,14 @@ from paias.windmill.approval_handler import (
 from paias.models.planned_action import PlannedAction
 from paias.core.config import settings
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
 
 # Try to import wmill for Windmill-specific functionality
 try:
@@ -102,6 +111,7 @@ except ImportError:
 
 async def _default_action_executor(action: PlannedAction) -> dict[str, Any]:
     """Default action executor that logs execution."""
+    logger.info(f"Executing action: {action.action_type} - {action.description}")
     return {
         "success": True,
         "action_type": action.action_type,
@@ -113,8 +123,11 @@ async def _windmill_suspend_for_approval(
     approval_request: ApprovalRequest,
 ) -> dict[str, Any]:
     """Suspend workflow and wait for Windmill approval."""
+    logger.info(f"Requesting approval for action: {approval_request.action_type}")
+
     if not WMILL_AVAILABLE or wmill is None:
         # Auto-approve for testing without wmill
+        logger.info("Auto-approving action (wmill not available)")
         return {
             "decision": "approve",
             "approver": "test-auto-approval",
@@ -123,6 +136,7 @@ async def _windmill_suspend_for_approval(
     from datetime import timedelta
 
     timeout_seconds = settings.approval_timeout_seconds
+    logger.info(f"Suspending workflow for approval (timeout: {timeout_seconds}s)")
 
     try:
         resume_payload = wmill.suspend(
@@ -141,9 +155,11 @@ Please review and select 'approve' to proceed or 'reject' to skip this action.
 _Timeout: {timeout_seconds} seconds_
 """,
         )
+        logger.info(f"Approval received: {resume_payload.get('decision', 'unknown')}")
         return resume_payload
 
     except Exception as e:
+        logger.error(f"Approval request failed: {e}")
         return {
             "decision": "reject",
             "error": str(e),
@@ -182,6 +198,13 @@ async def _async_main(
     client_traceparent: str | None = None,
 ) -> dict[str, Any]:
     """Async implementation of the Windmill workflow."""
+    logger.info("=" * 80)
+    logger.info("STARTING RESEARCH WORKFLOW")
+    logger.info(f"Topic: {topic}")
+    logger.info(f"User ID: {user_id}")
+    logger.info(f"Traceparent: {client_traceparent or 'None'}")
+    logger.info("=" * 80)
+
     # Set progress for Windmill UI
     if WMILL_AVAILABLE and wmill is not None:
         try:
@@ -189,19 +212,47 @@ async def _async_main(
         except Exception:
             pass
 
-    # Execute the research graph
-    app = compile_research_graph(memory_manager=InMemoryMemoryManager())
-    initial_state = ResearchState(topic=topic, user_id=user_id)
+    try:
+        # Execute the research graph
+        logger.info("PHASE 1: Initializing research graph")
+        logger.info("- Creating in-memory memory manager")
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
 
-    if WMILL_AVAILABLE and wmill is not None:
-        try:
-            wmill.set_progress(10, "Running research graph")
-        except Exception:
-            pass
+        logger.info("- Creating initial state")
+        initial_state = ResearchState(topic=topic, user_id=user_id)
+        logger.info(f"  Max iterations: {initial_state.max_iterations}")
+        logger.info(f"  Quality threshold: {initial_state.quality_threshold}")
 
-    final_state: ResearchState = await app.ainvoke(
-        initial_state, traceparent=client_traceparent
-    )
+        if WMILL_AVAILABLE and wmill is not None:
+            try:
+                wmill.set_progress(10, "Running research graph")
+            except Exception:
+                pass
+
+        logger.info("")
+        logger.info("PHASE 2: Executing research graph")
+        logger.info("- Starting LangGraph workflow (Plan → Research → Critique → Refine/Finish)")
+        logger.info("  This may take several minutes depending on topic complexity...")
+
+        final_state: ResearchState = await app.ainvoke(
+            initial_state, traceparent=client_traceparent
+        )
+    except Exception as e:
+        logger.error("")
+        logger.error("=" * 80)
+        logger.error("PHASE 2 FAILED: Error during research graph execution")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error message: {str(e)}")
+        logger.error("=" * 80)
+        raise
+
+    logger.info("")
+    logger.info("PHASE 2 COMPLETE: Research graph execution finished")
+    logger.info(f"- Status: {final_state.status.value}")
+    logger.info(f"- Total iterations: {final_state.iteration_count}")
+    logger.info(f"- Sources found: {len(final_state.sources)}")
+    logger.info(f"- Quality score: {final_state.quality_score}")
+    logger.info(f"- Planned actions: {len(final_state.planned_actions) if final_state.planned_actions else 0}")
 
     if WMILL_AVAILABLE and wmill is not None:
         try:
@@ -210,8 +261,11 @@ async def _async_main(
             pass
 
     # Format the report
+    logger.info("")
+    logger.info("PHASE 3: Formatting research report")
     report = format_research_report(final_state)
     markdown = render_markdown(report)
+    logger.info(f"- Report formatted (length: {len(markdown)} chars)")
 
     # Process planned actions with approval gating
     action_results: list[dict[str, Any]] = []
@@ -223,6 +277,10 @@ async def _async_main(
                 wmill.set_progress(80, "Processing planned actions")
             except Exception:
                 pass
+
+        logger.info("")
+        logger.info("PHASE 4: Processing planned actions")
+        logger.info(f"- Found {len(final_state.planned_actions)} planned actions")
 
         action_results = await process_planned_actions(
             final_state.planned_actions,
@@ -240,11 +298,22 @@ async def _async_main(
         else:
             approval_status = "partial"
 
+        logger.info(f"- Actions processed: {len(action_results)}")
+        logger.info(f"- Overall approval status: {approval_status}")
+    else:
+        logger.info("")
+        logger.info("PHASE 4: No planned actions to process")
+
     if WMILL_AVAILABLE and wmill is not None:
         try:
             wmill.set_progress(100, "Workflow completed")
         except Exception:
             pass
+
+    logger.info("")
+    logger.info("=" * 80)
+    logger.info("WORKFLOW COMPLETED SUCCESSFULLY")
+    logger.info("=" * 80)
 
     return {
         "status": final_state.status.value,

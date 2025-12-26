@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from functools import partial
 from typing import Any, Awaitable, Callable, Optional
 from uuid import UUID, uuid4
@@ -13,6 +14,8 @@ from .nodes.finish import finish_node
 from .nodes.plan import plan_node
 from .nodes.refine import refine_node
 from .nodes.research import research_node
+
+logger = logging.getLogger(__name__)
 
 NodeCallable = Callable[[ResearchState], Awaitable[ResearchState]]
 
@@ -104,6 +107,7 @@ class _LangGraphRunner:
     async def ainvoke(
         self, state: ResearchState, *, traceparent: Optional[str] = None
     ) -> ResearchState:
+        logger.info("→ [LangGraph] Starting workflow execution")
         with trace_langgraph_execution_context(
             "daily_research",
             topic=str(state.topic),
@@ -118,6 +122,7 @@ class _LangGraphRunner:
             if final_state.quality_score is not None:
                 span.set_attribute("quality_score", float(final_state.quality_score))
 
+            logger.info("→ [LangGraph] Workflow execution complete")
             return final_state
 
     def invoke(
