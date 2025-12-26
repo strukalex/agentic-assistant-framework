@@ -1,19 +1,73 @@
 """Windmill flow entry point for DailyTrendingResearch workflow.
 
 This script is the Windmill-executable entry point that imports from the
-pre-installed paias package (installed via custom Dockerfile.windmill).
+paias package (installed from local path in custom Dockerfile.windmill).
 
 Usage in Windmill:
     - Registered at path: f/research/run_research
     - Arguments: topic (str), user_id (str), client_traceparent (str, optional)
 
 Architecture:
-    - paias package is pre-installed in custom Windmill worker image
-    - No need to copy src/ to u/admin/research_lib/
+    - paias package is installed from file:///app in Windmill's venv
+    - Source code is copied to /app in the custom Docker image
     - Clean imports directly from the installed package
 """
+# requirements:
+# file:///app
 
 from __future__ import annotations
+
+# === DIAGNOSTIC LOGGING ===
+import sys
+import os
+import subprocess
+
+print("=== WINDMILL ENVIRONMENT DIAGNOSTICS ===")
+print(f"Python executable: {sys.executable}")
+print(f"sys.path: {sys.path}")
+
+# Check where paias is installed FIRST (most important)
+try:
+    result = subprocess.run([sys.executable, '-m', 'pip', 'show', 'paias'], capture_output=True, text=True)
+    print(f"paias package info:\n{result.stdout}")
+    if result.stderr:
+        print(f"paias show stderr: {result.stderr}")
+except Exception as e:
+    print(f"Failed to show paias: {e}")
+
+# Try importing step by step
+print("Attempting imports...")
+try:
+    import paias
+    print(f"SUCCESS: import paias -> {paias.__file__}")
+except ImportError as e:
+    print(f"FAILED: import paias -> {e}")
+    # Check what's at the expected location
+    for p in sys.path:
+        candidate = os.path.join(p, 'paias')
+        if os.path.exists(candidate):
+            print(f"  Found paias dir at {candidate}: {os.listdir(candidate)}")
+        candidate_init = os.path.join(p, 'paias', '__init__.py')
+        if os.path.exists(candidate_init):
+            print(f"  Found paias/__init__.py at {candidate_init}")
+
+# Check site-packages location
+import site
+print(f"Site packages: {site.getsitepackages()}")
+
+# Check site-packages contents for paias
+for sp in site.getsitepackages():
+    paias_in_sp = os.path.join(sp, 'paias')
+    egg_link = os.path.join(sp, 'paias.egg-link')
+    if os.path.exists(paias_in_sp):
+        print(f"Found paias in site-packages: {paias_in_sp}")
+    if os.path.exists(egg_link):
+        print(f"Found paias.egg-link: {egg_link}")
+        with open(egg_link) as f:
+            print(f"  Contents: {f.read()}")
+
+print("=== END DIAGNOSTICS ===")
+# === END DIAGNOSTIC LOGGING ===
 
 import asyncio
 from typing import Any

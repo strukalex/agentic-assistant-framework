@@ -2,9 +2,33 @@
 requires = ["setuptools>=70.0"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["src*"]
+[tool.setuptools.package-dir]
+paias = "src"
+"paias.agents" = "src/agents"
+"paias.api" = "src/api"
+"paias.api.schemas" = "src/api/schemas"
+"paias.cli" = "src/cli"
+"paias.core" = "src/core"
+"paias.mcp_integration" = "src/mcp_integration"
+"paias.models" = "src/models"
+"paias.windmill" = "src/windmill"
+"paias.workflows" = "src/workflows"
+"paias.workflows.nodes" = "src/workflows/nodes"
+
+[tool.setuptools]
+packages = [
+    "paias",
+    "paias.agents",
+    "paias.api",
+    "paias.api.schemas",
+    "paias.cli",
+    "paias.core",
+    "paias.mcp_integration",
+    "paias.models",
+    "paias.windmill",
+    "paias.workflows",
+    "paias.workflows.nodes",
+]
 
 [project]
 name = "paias"

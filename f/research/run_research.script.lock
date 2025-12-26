@@ -1,0 +1,2 @@
+# Empty lock file - all dependencies pre-installed in custom Windmill worker image
+# See Dockerfile.windmill for paias package installation

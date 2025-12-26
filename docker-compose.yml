@@ -83,6 +83,8 @@ services:
       RUST_LOG: info
       MODE: worker
       WORKER_GROUP: default
+      # Tell Windmill to use pre-installed paias package and system site-packages
+      ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
       # Pass through Azure AI Foundry credentials
       AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
       AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
@@ -122,6 +124,8 @@ services:
       RUST_LOG: info
       MODE: worker
       WORKER_GROUP: default
+      # Tell Windmill to use pre-installed paias package and system site-packages
+      ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
       # Pass through Azure AI Foundry credentials
       AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
       AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
