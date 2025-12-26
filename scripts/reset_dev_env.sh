@@ -45,5 +45,22 @@ done
 echo "Applying migrations (alembic upgrade head)..."
 alembic upgrade head
 
+echo "Waiting for Windmill to become healthy..."
+for i in {1..60}; do
+  if curl -sf http://localhost:8100/api/version >/dev/null 2>&1; then
+    echo "Windmill is ready."
+    break
+  fi
+  if [[ $i -eq 60 ]]; then
+    echo "Windmill did not become ready in time." >&2
+    exit 1
+  fi
+  sleep 2
+done
+
+echo "Configuring Windmill workspace..."
+wmill workspace add default http://localhost:8100 --create
+wmill sync push --yes
+
 echo "Reset complete. PYTHONPATH is set to: ${PYTHONPATH}"
 
