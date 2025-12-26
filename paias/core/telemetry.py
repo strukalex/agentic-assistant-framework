@@ -137,8 +137,13 @@ def _init_otlp_logging() -> None:
         handler = LoggingHandler(
             level=logging.DEBUG, logger_provider=logger_provider
         )
-        logging.getLogger().addHandler(handler)
-        print("Added LoggingHandler to root logger")
+
+        # Set root logger to DEBUG to ensure all logs are captured
+        root_logger = logging.getLogger()
+        root_logger.setLevel(logging.DEBUG)
+        root_logger.addHandler(handler)
+        print(f"Added LoggingHandler to root logger with level DEBUG")
+        print(f"Root logger level: {logging.getLevelName(root_logger.level)}")
 
         _logging_initialized = True
         print(f"OTLP logging: Initialized successfully, exporting to {logs_endpoint}")

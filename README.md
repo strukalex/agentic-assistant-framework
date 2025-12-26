@@ -65,6 +65,10 @@ docker-compose up -d
 pytest
 ```
 
+### Note
+
+Use `{service_name="paias"}` when setting up grafana loki view.
+
 ## Windmill Orchestration (Spec 003)
 
 The DailyTrendingResearch workflow uses **Windmill** for durable workflow orchestration with human-in-the-loop approval gates.
