@@ -195,17 +195,32 @@ async def _with_tool_logging_and_cache(
         # Detect consecutive identical tool calls (ignoring cached flag).
         normalized_params = _make_cache_key(tool_name, parameters)
         repeats = 0
+        recent_tools = []
         for call in reversed(_get_tool_log()):
             call_params = dict(call.parameters)
             call_params.pop("_cached", None)
-            if _make_cache_key(tool_name, call_params) != normalized_params:
+            recent_tools.append(f"{call.tool_name}({_make_cache_key(call.tool_name, call_params)})")
+            if _make_cache_key(call.tool_name, call_params) != normalized_params:
                 break
             repeats += 1
             if repeats >= max_repeats - 1:
                 duration_ms = int((time.perf_counter() - start) * 1000)
+
+                # Enhanced error message with call history
+                logger = logging.getLogger(__name__)
+                logger.error("🔄 [LOOP DETECTED] Tool '%s' called %d times consecutively", tool_name, max_repeats)
+                logger.error("   Recent tool call sequence: %s", " → ".join(reversed(recent_tools[:10])))
+                logger.error("   Parameters: %s", parameters)
+                logger.error("   DIAGNOSIS: Agent is stuck in a loop. This usually means:")
+                logger.error("     1. The agent isn't recognizing successful tool results")
+                logger.error("     2. The agent's prompt may need clearer success/failure criteria")
+                logger.error("     3. Results may be ambiguous (e.g., 'NO RESULTS FOUND' vs actual data)")
+
                 message = (
-                    "Loop detected: identical tool call repeated "
-                    f"{max_repeats} times. Halting to avoid thrashing."
+                    f"Loop detected: identical tool call '{tool_name}' repeated "
+                    f"{max_repeats} times consecutively. "
+                    f"Recent sequence: {' → '.join(reversed(recent_tools[:5]))}. "
+                    "Halting to avoid thrashing."
                 )
                 _record_tool_call(
                     tool_name=tool_name,
@@ -339,8 +354,12 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
     Per tasks.md T105 (FR-024)
     """
     from ..core.config import settings
+    logger = logging.getLogger(__name__)
 
     params = {"query": query}
+
+    # Enhanced logging for memory search
+    logger.info("🔍 [search_memory] Querying memory for: %s", query[:100])
 
     async def _execute() -> List[dict]:
         try:
@@ -355,9 +374,11 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
 
         # Explicitly tell LLM to stop if no results found
         if not documents:
+            logger.info("📭 [search_memory] No results found in memory")
             return [{"content": "NO RESULTS FOUND. Please try web_search.", "metadata": {}}]
 
         # Convert Document objects to dict format
+        logger.info("✅ [search_memory] Found %d documents in memory", len(documents))
         return [{"content": doc.content, "metadata": doc.metadata_} for doc in documents]
 
     return await _with_tool_logging_and_cache("search_memory", params, _execute)
@@ -508,21 +529,33 @@ def _format_mcp_result(result: Any) -> str:
     return _sanitize(str(content))
 
 
-def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
+def _make_mcp_tool(
+    mcp_session: ClientSession, tool: Any, registered_name: str | None = None
+) -> Callable[..., Any]:
     """Create a tool wrapper that calls the given MCP tool via the session.
 
     Integrates risk assessment per tasks.md T308-T310 (FR-015 to FR-023).
+
+    Args:
+        mcp_session: MCP client session for tool invocation
+        tool: MCP tool object from server
+        registered_name: Optional override name for the tool (used for renaming, e.g., 'search' -> 'web_search')
     """
-    tool_name = getattr(tool, "name", "mcp_tool")
+    # Original MCP tool name (used for actual MCP calls)
+    mcp_tool_name = getattr(tool, "name", "mcp_tool")
+    # Registered name (used for logging, caching, and loop detection)
+    tool_name = registered_name if registered_name is not None else mcp_tool_name
+
     description = getattr(tool, "description", "") or f"MCP tool {tool_name}"
     timeout_seconds = settings.websearch_timeout
     logger = logging.getLogger(__name__)
 
     @trace_tool_call
     async def mcp_tool_wrapper(ctx: RunContext[MemoryManager], **kwargs: Any) -> str:
-        # Log tool call initiation
+        # Log tool call initiation with full context
         logger.info("🔧 [AGENTIC STEP] Tool call initiated: %s", tool_name)
-        logger.debug("   Parameters: %s", kwargs)
+        logger.info("   Parameters: %s", kwargs)
+        logger.info("   Total tool calls so far: %d", len(_get_tool_log()))
 
         params = dict(kwargs)
 
@@ -575,21 +608,24 @@ def _make_mcp_tool(mcp_session: ClientSession, tool: Any) -> Callable[..., Any]:
 
             # Execute the tool
             try:
-                logger.debug("   [AGENTIC STEP] Executing MCP tool call...")
+                logger.info("   [AGENTIC STEP] Executing MCP tool call...")
+                # Use the original MCP tool name for the actual server call
                 result = await asyncio.wait_for(
-                    mcp_session.call_tool(tool_name, arguments=kwargs),
+                    mcp_session.call_tool(mcp_tool_name, arguments=kwargs),
                     timeout=timeout_seconds,
                 )
                 formatted_result = _format_mcp_result(result)
 
-                # Log tool result (truncate if too long)
+                # Log tool result with enhanced visibility
+                result_len = len(formatted_result)
                 result_preview = (
-                    formatted_result[:200] + "..."
-                    if len(formatted_result) > 200
+                    formatted_result[:300] + f"... [{result_len - 300} more chars]"
+                    if result_len > 300
                     else formatted_result
                 )
                 logger.info("✅ [AGENTIC STEP] Tool call completed: %s", tool_name)
-                logger.debug("   Result preview: %s", result_preview)
+                logger.info("   Result length: %d bytes", result_len)
+                logger.info("   Result preview: %s", result_preview)
 
                 return formatted_result
             except asyncio.TimeoutError as exc:
@@ -634,19 +670,21 @@ async def _register_mcp_tools(
         "fetchGithubReadme",
         "fetchJuejinArticle",
     }
-    
+
     registered_count = 0
     for tool in tools:
         tool_name = getattr(tool, "name", None)
         if tool_name in excluded_tools:
             logger.debug("⏭️  Skipping tool: %s", tool_name)
             continue
-        
+
         # Rename 'search' to 'web_search' for consistency with system prompt
         final_name = "web_search" if tool_name == "search" else tool_name
-        
+
+        # IMPORTANT: Pass final_name to the wrapper so it uses the renamed tool name
+        # This ensures loop detection and caching work correctly
         agent.tool(  # type: ignore[call-overload]
-            _make_mcp_tool(mcp_session, tool),
+            _make_mcp_tool(mcp_session, tool, registered_name=final_name),
             name=final_name,
             description=getattr(tool, "description", None),
         )
@@ -744,20 +782,50 @@ async def run_agent_with_tracing(
             logger.info("🔍 [AGENTIC LOOP] Extracting payload from result...")
             payload = parse_agent_result(result)
             logger.info("✅ [AGENTIC LOOP] Payload extracted successfully")
+
             # Override tool_calls with the authoritative log from wrappers
             wrapped_tool_calls = _get_tool_log()
             if hasattr(payload, "tool_calls"):
                 payload.tool_calls = wrapped_tool_calls  # type: ignore[attr-defined]
-            # Log agent's reasoning and tool calls
+
+            # Enhanced logging for agent's final output
+            logger.info("=" * 80)
+            logger.info("AGENT EXECUTION SUMMARY")
+            logger.info("=" * 80)
+            logger.info("📝 Task: %s", task[:100])
+
+            if hasattr(payload, "answer"):
+                answer_preview = (
+                    payload.answer[:200] + "..."
+                    if len(payload.answer) > 200
+                    else payload.answer
+                )
+                logger.info("💬 Answer: %s", answer_preview)
+
             if hasattr(payload, "reasoning"):
-                logger.info("🧠 [AGENTIC LOOP] Agent reasoning: %s", payload.reasoning[:500] + "..." if len(payload.reasoning) > 500 else payload.reasoning)
+                reasoning_preview = (
+                    payload.reasoning[:500] + "..."
+                    if len(payload.reasoning) > 500
+                    else payload.reasoning
+                )
+                logger.info("🧠 Reasoning: %s", reasoning_preview)
+
             if wrapped_tool_calls:
-                logger.info("🔧 [AGENTIC LOOP] Total tool calls made: %d", len(wrapped_tool_calls))
+                logger.info("🔧 Total tool calls: %d", len(wrapped_tool_calls))
                 for i, tool_call in enumerate(wrapped_tool_calls, 1):
-                    logger.info("   [AGENTIC LOOP] Tool call %d: %s (%s) - %dms", 
-                              i, tool_call.tool_name, tool_call.status.value, tool_call.duration_ms)
+                    status_emoji = "✅" if tool_call.status == ToolCallStatus.SUCCESS else "❌"
+                    logger.info(
+                        "   %s Call %d/%d: %s - %s (%dms)",
+                        status_emoji, i, len(wrapped_tool_calls),
+                        tool_call.tool_name, tool_call.status.value, tool_call.duration_ms
+                    )
+                    # Show tool parameters for debugging
+                    logger.info("      Params: %s", tool_call.parameters)
+
             if hasattr(payload, "confidence"):
-                logger.info("📊 [AGENTIC LOOP] Agent confidence: %.2f", payload.confidence)
+                logger.info("📊 Confidence: %.2f", payload.confidence)
+
+            logger.info("=" * 80)
         except asyncio.TimeoutError as exc:
             # T603: Timeout handling for MCP tool calls
             message = (
