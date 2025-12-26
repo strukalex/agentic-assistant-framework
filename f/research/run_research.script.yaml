@@ -1,9 +1,23 @@
-summary: ''
-description: ''
+summary: 'Execute deep research workflow with approval gating'
+description: 'DailyTrendingResearch workflow using LangGraph for iterative research with human-in-the-loop approval gates. Implements plan-research-critique-refine cycle with quality thresholds and telemetry.'
 lock: '!inline f/research/run_research.script.lock'
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
-  properties: {}
-  required: []
+  properties:
+    topic:
+      type: string
+      description: Research topic (1-500 characters)
+      minLength: 1
+      maxLength: 500
+    user_id:
+      type: string
+      description: User identifier (UUID format)
+      format: uuid
+    client_traceparent:
+      type: string
+      description: Optional W3C traceparent for distributed tracing
+  required:
+    - topic
+    - user_id

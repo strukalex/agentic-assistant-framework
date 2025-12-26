@@ -30,6 +30,11 @@ echo "Creating __init__.py files for package structure..."
 touch "u/__init__.py"
 touch "u/admin/__init__.py"
 
+# Remove any auto-generated script metadata for __init__ files
+# These are needed for Python imports but shouldn't be Windmill scripts
+rm -f "u/__init__.script.yaml" "u/__init__.script.lock"
+rm -f "u/admin/__init__.script.yaml" "u/admin/__init__.script.lock"
+
 echo "Pushing to Windmill..."
 wmill sync push --yes
 

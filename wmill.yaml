@@ -1,0 +1,46 @@
+version: v2
+
+# Windmill workspace configuration
+# This file configures how wmill sync push/pull behaves
+
+# Default TypeScript runtime
+defaultTs: bun
+
+# Skip syncing variables, resources, and secrets (managed separately)
+skipVariables: true
+skipResources: true
+skipSecrets: true
+
+# Excludes: patterns to ignore during sync
+excludes:
+  # Don't sync __init__.py files at u/ and u/admin/ levels as Windmill scripts
+  # They're needed for Python imports but shouldn't be executable scripts
+  - "u/__init__.py"
+  - "u/__init__.script.yaml"
+  - "u/__init__.script.lock"
+  - "u/admin/__init__.py"
+  - "u/admin/__init__.script.yaml"
+  - "u/admin/__init__.script.lock"
+
+  # Exclude Python cache and other build artifacts
+  - "**/__pycache__/"
+  - "**/*.pyc"
+  - "**/*.pyo"
+  - "**/*.pyd"
+  - ".pytest_cache/"
+  - ".mypy_cache/"
+  - ".ruff_cache/"
+
+  # Exclude local development files
+  - "src/"
+  - "tests/"
+  - "venv/"
+  - ".venv/"
+  - "build/"
+  - "dist/"
+  - "*.egg-info/"
+
+# Includes: what to sync (flows and user scripts)
+includes:
+  - "f/**"    # Flow scripts
+  - "u/**"    # User scripts (workspace modules)
