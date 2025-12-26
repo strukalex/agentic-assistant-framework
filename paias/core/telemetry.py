@@ -85,50 +85,84 @@ def _init_otlp_logging() -> None:
 
     import os
 
-    logger = logging.getLogger(__name__)
+    # Use print for early diagnostics since logger may not be configured yet
+    print("=== OTLP LOGGING DIAGNOSTICS ===")
+    print(f"_logging_initialized: {_logging_initialized}")
+
+    # Check all OTEL-related env vars for debugging
+    otel_env_vars = {k: v for k, v in os.environ.items() if k.startswith("OTEL")}
+    print(f"OTEL environment variables: {otel_env_vars}")
 
     # Check environment variable directly (Windmill may set this)
-    logs_endpoint = os.environ.get(
-        "OTEL_EXPORTER_OTLP_LOGS_ENDPOINT", settings.otel_exporter_otlp_logs_endpoint
-    )
+    logs_endpoint_env = os.environ.get("OTEL_EXPORTER_OTLP_LOGS_ENDPOINT")
+    logs_endpoint_settings = settings.otel_exporter_otlp_logs_endpoint
+    logs_endpoint = logs_endpoint_env or logs_endpoint_settings
+
+    print(f"OTEL_EXPORTER_OTLP_LOGS_ENDPOINT from env: {logs_endpoint_env}")
+    print(f"otel_exporter_otlp_logs_endpoint from settings: {logs_endpoint_settings}")
+    print(f"Resolved logs_endpoint: {logs_endpoint}")
 
     if not logs_endpoint:
-        logger.debug("OTLP logging: No logs endpoint configured, skipping")
+        print("OTLP logging: No logs endpoint configured, skipping")
+        print("=== END OTLP LOGGING DIAGNOSTICS ===")
         return
 
     try:
+        print("Attempting to import OTLP logging components...")
         from opentelemetry._logs import set_logger_provider
         from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
         from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
         from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 
+        print("Imports successful")
+
         resource = Resource(attributes={"service.name": settings.otel_service_name})
+        print(f"Created resource with service.name: {settings.otel_service_name}")
 
         # Create logger provider with OTLP HTTP exporter (Loki uses HTTP)
         logger_provider = LoggerProvider(resource=resource)
+        print("Created LoggerProvider")
 
         # Use HTTP exporter for Loki compatibility
         log_exporter = OTLPLogExporter(endpoint=logs_endpoint)
+        print(f"Created OTLPLogExporter with endpoint: {logs_endpoint}")
+
         logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
+        print("Added BatchLogRecordProcessor")
 
         set_logger_provider(logger_provider)
+        print("Set logger provider")
 
         # Attach OTLP handler to root logger so all Python logs are exported
         handler = LoggingHandler(
             level=logging.DEBUG, logger_provider=logger_provider
         )
         logging.getLogger().addHandler(handler)
+        print("Added LoggingHandler to root logger")
 
         _logging_initialized = True
+        print(f"OTLP logging: Initialized successfully, exporting to {logs_endpoint}")
+        print("=== END OTLP LOGGING DIAGNOSTICS ===")
+
+        # Also log via the logger now that it's set up
+        logger = logging.getLogger(__name__)
         logger.info("OTLP logging: Initialized, exporting to %s", logs_endpoint)
 
     except ImportError as e:
+        print(f"OTLP logging: Import error: {e}")
+        print("=== END OTLP LOGGING DIAGNOSTICS ===")
+        logger = logging.getLogger(__name__)
         logger.warning(
             "OTLP logging: Failed to import logging SDK components: %s. "
             "Logs will not be exported to Loki.",
             e,
         )
     except Exception as e:
+        print(f"OTLP logging: Exception: {e}")
+        import traceback
+        traceback.print_exc()
+        print("=== END OTLP LOGGING DIAGNOSTICS ===")
+        logger = logging.getLogger(__name__)
         logger.warning(
             "OTLP logging: Failed to initialize: %s. Logs will not be exported to Loki.",
             e,
