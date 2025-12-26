@@ -9,8 +9,8 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 
-from src.core.config import settings
-from src.core.telemetry import (
+from paias.core.config import settings
+from paias.core.telemetry import (
     set_span_exporter,
     trace_memory_operation,
     trace_tool_call,

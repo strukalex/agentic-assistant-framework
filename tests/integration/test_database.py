@@ -10,12 +10,12 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from src.core.config import settings
-from src.core.memory import MemoryManager
-from src.core.telemetry import set_span_exporter
-from src.models.document import Document
-from src.models.message import Message, MessageRole
-from src.models.session import Session
+from paias.core.config import settings
+from paias.core.memory import MemoryManager
+from paias.core.telemetry import set_span_exporter
+from paias.models.document import Document
+from paias.models.message import Message, MessageRole
+from paias.models.session import Session
 
 
 @pytest.mark.asyncio

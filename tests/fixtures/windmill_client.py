@@ -19,8 +19,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import httpx
 
-from src.core.config import settings
-from src.models.approval_request import ApprovalRequest, ApprovalStatus
+from paias.core.config import settings
+from paias.models.approval_request import ApprovalRequest, ApprovalStatus
 
 logger = logging.getLogger(__name__)
 

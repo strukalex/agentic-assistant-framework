@@ -19,7 +19,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic_ai import Agent, RunContext
 
-from src.agents.researcher import (
+from paias.agents.researcher import (
     _get_tool_cache,
     _get_tool_log,
     _make_cache_key,
@@ -27,8 +27,8 @@ from src.agents.researcher import (
     _reset_run_context,
     _with_tool_logging_and_cache,
 )
-from src.core.memory import MemoryManager
-from src.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
+from paias.core.memory import MemoryManager
+from paias.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
 
 
 class TestToolCallCache:
@@ -150,7 +150,7 @@ class TestToolCallCache:
         _reset_run_context()
 
         # Import the constant
-        from src.agents.researcher import MAX_TOOL_CALLS_PER_RUN
+        from paias.agents.researcher import MAX_TOOL_CALLS_PER_RUN
 
         # Make MAX_TOOL_CALLS_PER_RUN calls (should succeed)
         for i in range(MAX_TOOL_CALLS_PER_RUN):
@@ -246,8 +246,8 @@ class TestAgentResponsePopulation:
     @pytest.mark.asyncio
     async def test_run_agent_with_tracing_populates_tool_calls(self):
         """Test that run_agent_with_tracing populates tool_calls even if LLM omits it."""
-        from src.agents.researcher import run_agent_with_tracing
-        from src.core.memory import MemoryManager
+        from paias.agents.researcher import run_agent_with_tracing
+        from paias.core.memory import MemoryManager
 
         # Create a mock agent that returns AgentResponse without tool_calls
         mock_agent = MagicMock()
@@ -266,7 +266,7 @@ class TestAgentResponsePopulation:
 
         # Mock tool functions to record calls
         with patch(
-            "src.agents.researcher.search_memory", new_callable=AsyncMock
+            "paias.agents.researcher.search_memory", new_callable=AsyncMock
         ) as mock_search:
             mock_search.return_value = [{"content": "test", "metadata": {}}]
 

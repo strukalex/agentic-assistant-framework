@@ -45,7 +45,7 @@ class TestMCPToolsSetup:
 
     async def test_setup_mcp_tools_returns_client_session(self):
         """Test that setup_mcp_tools() returns a valid ClientSession."""
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         _assert_node_version()
 
@@ -65,7 +65,7 @@ class TestMCPToolsSetup:
         2. read_file (from filesystem server)
         3. get_current_time (from custom time server)
         """
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         _assert_node_version()
 
@@ -95,7 +95,7 @@ class TestMCPToolsSetup:
 
     async def test_web_search_tool_schema_valid(self):
         """Test that web_search tool has valid schema with required fields."""
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         _assert_node_version()
 
@@ -123,7 +123,7 @@ class TestMCPToolsSetup:
 
     async def test_mcp_session_initialization_no_errors(self):
         """Test that MCP session initializes without throwing exceptions."""
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         _assert_node_version()
 
@@ -137,7 +137,7 @@ class TestMCPToolsSetup:
     )
     async def test_filesystem_read_tool_available(self):
         """Test that read_file tool from mcp-server-filesystem is available."""
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         async with setup_mcp_tools() as session:
             tools_result = await session.list_tools()
@@ -151,7 +151,7 @@ class TestMCPToolsSetup:
     )
     async def test_time_context_tool_available(self):
         """Test that get_current_time tool from custom time server is available."""
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         async with setup_mcp_tools() as session:
             tools_result = await session.list_tools()
@@ -165,7 +165,7 @@ class TestMCPToolsSetup:
     )
     async def test_all_three_servers_initialized(self):
         """Test that all 3 MCP servers are initialized (FR-005 to FR-008)."""
-        from src.mcp_integration.setup import setup_mcp_tools
+        from paias.mcp_integration.setup import setup_mcp_tools
 
         async with setup_mcp_tools() as session:
             tools_result = await session.list_tools()

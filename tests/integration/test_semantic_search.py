@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.core.config import settings
-from src.core.memory import MemoryManager
+from paias.core.config import settings
+from paias.core.memory import MemoryManager
 
 
 def _embedding(value: float) -> list[float]:

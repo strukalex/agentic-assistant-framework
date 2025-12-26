@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
-from src.agents.researcher import setup_researcher_agent
-from src.agents.researcher import researcher_agent
+from paias.agents.researcher import setup_researcher_agent
+from paias.agents.researcher import researcher_agent
 
 # NOTE: These tests will fail initially because ResearcherAgent is not yet implemented.
 # This is written FIRST per TDD approach to define the expected behavior.
@@ -33,7 +33,7 @@ class TestResearcherAgentInitialization:
         Verifies FR-001: Uses Pydantic AI
         Verifies FR-002: Connects to DeepSeek 3.2 via Azure AI Foundry
         """
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Verify agent is configured with AzureModel
         # Implementation should use pydantic_ai.models.azure.AzureModel
@@ -51,8 +51,8 @@ class TestResearcherAgentInitialization:
 
         Verifies FR-003: Returns structured AgentResponse with answer, reasoning, tool_calls, confidence
         """
-        from src.agents.researcher import researcher_agent
-        from src.models.agent_response import AgentResponse
+        from paias.agents.researcher import researcher_agent
+        from paias.models.agent_response import AgentResponse
 
         # Verify agent's result_type is set to AgentResponse
         # This ensures type safety for agent.run() return value
@@ -65,7 +65,7 @@ class TestResearcherAgentInitialization:
 
         Verifies FR-034: Retries configuration for robustness
         """
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Verify agent has retries configured
         assert researcher_agent is not None
@@ -81,7 +81,7 @@ class TestResearcherAgentInitialization:
         - Time context capability
         - Memory search/store capabilities
         """
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Verify agent has system prompt defined
         assert researcher_agent is not None
@@ -108,7 +108,7 @@ class TestResearcherAgentInitialization:
 
         # Attempt to import/initialize agent should fail
         with pytest.raises((ValueError, KeyError, Exception)) as exc_info:
-            from src.agents.researcher import researcher_agent
+            from paias.agents.researcher import researcher_agent
 
         # Verify error message mentions the missing variable
         assert expected_error in str(exc_info.value)
@@ -198,7 +198,7 @@ class TestMemoryManagerDependencyInjection:
 
         Validates that memory integration tools are available for agent use.
         """
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Agent should have tools registered
         # In Pydantic AI, tools are registered via @agent.tool decorator
@@ -229,7 +229,7 @@ def test_researcher_agent_env_var_validation(monkeypatch, missing_var):
         else:
             monkeypatch.setenv(var, "placeholder")
 
-    from src.core.llm import get_azure_model
+    from paias.core.llm import get_azure_model
 
     with pytest.raises(ValueError) as exc:
         get_azure_model()

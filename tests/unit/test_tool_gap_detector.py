@@ -15,8 +15,8 @@ Per Spec 002 tasks.md T201, T202 (FR-009 to FR-014, SC-003)
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.core.tool_gap_detector import CapabilityAnalysisResult, ToolGapDetector
-from src.models.tool_gap_report import ToolGapReport
+from paias.core.tool_gap_detector import CapabilityAnalysisResult, ToolGapDetector
+from paias.models.tool_gap_report import ToolGapReport
 
 
 class MockTool:

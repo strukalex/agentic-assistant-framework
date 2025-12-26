@@ -32,7 +32,7 @@ excludes:
   - ".ruff_cache/"
 
   # Exclude local development files
-  - "src/"
+  - "paias/"
   - "tests/"
   - "venv/"
   - ".venv/"

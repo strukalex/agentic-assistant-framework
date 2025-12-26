@@ -19,10 +19,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
-from src.core.config import settings
-from src.models.document import Document  # noqa: F401 - ensure model is registered
-from src.models.message import Message  # noqa: F401 - ensure model is registered
-from src.models.session import Session  # noqa: F401 - ensure model is registered
+from paias.core.config import settings
+from paias.models.document import Document  # noqa: F401 - ensure model is registered
+from paias.models.message import Message  # noqa: F401 - ensure model is registered
+from paias.models.session import Session  # noqa: F401 - ensure model is registered
 
 LOGGER = logging.getLogger("tests.db")
 logging.basicConfig(

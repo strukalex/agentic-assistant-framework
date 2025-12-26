@@ -34,7 +34,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def windmill_client():
     """Create a WindmillClient for testing."""
-    from src.windmill.client import WindmillClient
+    from paias.windmill.client import WindmillClient
 
     client = WindmillClient(
         base_url=os.getenv("WINDMILL_BASE_URL"),

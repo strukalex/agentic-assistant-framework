@@ -6,7 +6,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from src.core.memory import MemoryManager
+from paias.core.memory import MemoryManager
 from tests.fixtures.sample_documents import generate_sample_documents
 
 

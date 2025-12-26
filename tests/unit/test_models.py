@@ -7,10 +7,10 @@ import pytest
 from pydantic import ValidationError
 from sqlalchemy.dialects.postgresql import JSONB
 
-from src.core.config import settings
-from src.models.document import Document
-from src.models.message import Message, MessageRole
-from src.models.session import Session
+from paias.core.config import settings
+from paias.models.document import Document
+from paias.models.message import Message, MessageRole
+from paias.models.session import Session
 
 
 def test_session_generates_ids_and_defaults() -> None:

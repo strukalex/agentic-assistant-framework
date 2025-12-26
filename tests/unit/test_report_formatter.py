@@ -1,8 +1,8 @@
 from uuid import uuid4
 
-from src.models.research_state import ResearchState
-from src.models.source_reference import SourceReference
-from src.workflows.report_formatter import format_research_report, render_markdown
+from paias.models.research_state import ResearchState
+from paias.models.source_reference import SourceReference
+from paias.workflows.report_formatter import format_research_report, render_markdown
 
 
 def test_format_and_render_report() -> None:

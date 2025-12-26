@@ -17,15 +17,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from pydantic_ai import Agent, RunContext
 
-from src.agents.researcher import (
+from paias.agents.researcher import (
     _get_tool_log,
     _reset_run_context,
     _shutdown_session,
     run_agent_with_tracing,
     setup_researcher_agent,
 )
-from src.core.memory import MemoryManager
-from src.models.agent_response import AgentResponse, ToolCallStatus
+from paias.core.memory import MemoryManager
+from paias.models.agent_response import AgentResponse, ToolCallStatus
 
 
 @pytest.mark.skipif(
@@ -40,7 +40,7 @@ async def test_agent_handles_repeated_tool_calls():
     Scenario: LLM repeatedly calls search_memory with same query.
     Expected: Only first call executes, subsequent calls use cache.
     """
-    from src.agents.researcher import MAX_TOOL_CALLS_PER_RUN
+    from paias.agents.researcher import MAX_TOOL_CALLS_PER_RUN
 
     # Create real memory manager
     memory = MemoryManager()
@@ -55,7 +55,7 @@ async def test_agent_handles_repeated_tool_calls():
         # For this test, we'll manually trigger repeated calls
 
         # First, let's test the caching mechanism directly
-        from src.agents.researcher import _with_tool_logging_and_cache
+        from paias.agents.researcher import _with_tool_logging_and_cache
 
         call_count = 0
 
@@ -157,7 +157,7 @@ async def test_agent_respects_tool_call_budget():
 
     This prevents infinite loops from thrashing.
     """
-    from src.agents.researcher import MAX_TOOL_CALLS_PER_RUN
+    from paias.agents.researcher import MAX_TOOL_CALLS_PER_RUN
 
     memory = MemoryManager()
     agent, mcp_session = await setup_researcher_agent(memory)
@@ -167,7 +167,7 @@ async def test_agent_respects_tool_call_budget():
         # Create a scenario that would exceed budget
         # We'll manually trigger many tool calls to test the limit
 
-        from src.agents.researcher import _with_tool_logging_and_cache
+        from paias.agents.researcher import _with_tool_logging_and_cache
 
         async def mock_tool():
             return "result"
@@ -208,7 +208,7 @@ async def test_agent_handles_mixed_tool_calls():
     _reset_run_context()
 
     try:
-        from src.agents.researcher import _with_tool_logging_and_cache
+        from paias.agents.researcher import _with_tool_logging_and_cache
 
         execution_count = {"search_memory": 0, "search": 0}
 
@@ -270,7 +270,7 @@ async def test_tool_call_records_have_correct_status():
     memory = MemoryManager()
     _reset_run_context()
 
-    from src.agents.researcher import _with_tool_logging_and_cache
+    from paias.agents.researcher import _with_tool_logging_and_cache
 
     # Test successful call
     async def successful_tool():

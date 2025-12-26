@@ -1,12 +1,12 @@
 import pytest
 from uuid import uuid4
 
-from src.models.agent_response import AgentResponse
-from src.models.research_state import ResearchState, ResearchStatus
-from src.workflows.research_graph import InMemoryMemoryManager, compile_research_graph
+from paias.models.agent_response import AgentResponse
+from paias.models.research_state import ResearchState, ResearchStatus
+from paias.workflows.research_graph import InMemoryMemoryManager, compile_research_graph
 
 
-async def _fake_runner(task: str, deps) -> AgentResponse:
+async def _fake_runner(task: str, deps, *, max_runtime_seconds: float | None = None) -> AgentResponse:
     return AgentResponse(
         answer=f"result for {task}",
         reasoning="loop test",

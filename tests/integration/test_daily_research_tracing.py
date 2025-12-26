@@ -15,9 +15,20 @@ import pytest
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from src.core.telemetry import set_span_exporter
-from src.models.research_state import ResearchState
-from src.workflows.research_graph import compile_research_graph, InMemoryMemoryManager
+from paias.core.telemetry import set_span_exporter
+from paias.models.agent_response import AgentResponse
+from paias.models.research_state import ResearchState
+from paias.workflows.research_graph import compile_research_graph, InMemoryMemoryManager
+
+
+async def _mock_agent_runner(task: str, deps, *, max_runtime_seconds: float | None = None) -> AgentResponse:
+    """Mock agent runner for tracing tests."""
+    return AgentResponse(
+        answer="Mock research findings",
+        reasoning="Mock reasoning for tracing tests",
+        tool_calls=[],
+        confidence=0.8,
+    )
 
 
 @pytest.fixture
@@ -38,7 +49,7 @@ class TestWorkflowTracingIntegration:
     ) -> None:
         """Verify complete workflow run creates all expected spans."""
         # Compile and run the graph
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager(), agent_runner=_mock_agent_runner)
         initial_state = ResearchState(
             topic="Test tracing integration",
             user_id="00000000-0000-0000-0000-000000000001",
@@ -76,7 +87,7 @@ class TestWorkflowTracingIntegration:
         self, exporter: InMemorySpanExporter
     ) -> None:
         """Verify workflow root span captures iteration count and sources count."""
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager(), agent_runner=_mock_agent_runner)
         initial_state = ResearchState(
             topic="Metrics test topic",
             user_id="00000000-0000-0000-0000-000000000002",
@@ -103,7 +114,7 @@ class TestWorkflowTracingIntegration:
         self, exporter: InMemorySpanExporter
     ) -> None:
         """Verify node spans capture iteration count and status transitions."""
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager(), agent_runner=_mock_agent_runner)
         initial_state = ResearchState(
             topic="State attributes test",
             user_id="00000000-0000-0000-0000-000000000003",
@@ -138,7 +149,7 @@ class TestWorkflowTracingIntegration:
         self, exporter: InMemorySpanExporter
     ) -> None:
         """Verify traceparent parameter is accepted for distributed tracing."""
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager(), agent_runner=_mock_agent_runner)
         initial_state = ResearchState(
             topic="Distributed tracing test",
             user_id="00000000-0000-0000-0000-000000000004",
@@ -162,7 +173,7 @@ class TestWorkflowTracingIntegration:
         self, exporter: InMemorySpanExporter
     ) -> None:
         """Verify all node spans capture execution_duration_ms."""
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager(), agent_runner=_mock_agent_runner)
         initial_state = ResearchState(
             topic="Duration test",
             user_id="00000000-0000-0000-0000-000000000005",
@@ -189,7 +200,7 @@ class TestWorkflowTracingIntegration:
         """Verify spans are created for each iteration in the loop."""
         # Create a state that will require multiple iterations
         # (quality_threshold set high, max_iterations > 1)
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        app = compile_research_graph(memory_manager=InMemoryMemoryManager(), agent_runner=_mock_agent_runner)
         initial_state = ResearchState(
             topic="Multi-iteration test",
             user_id="00000000-0000-0000-0000-000000000006",

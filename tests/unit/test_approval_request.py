@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 import pytest
 
-from src.models.approval_request import ApprovalRequest, ApprovalStatus
+from paias.models.approval_request import ApprovalRequest, ApprovalStatus
 
 
 def test_approval_request_defaults_and_timeout_window() -> None:

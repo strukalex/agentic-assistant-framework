@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from src.models.common import AgentResponse, ApprovalRequest, RiskLevel, ToolGapReport
+from paias.models.common import AgentResponse, ApprovalRequest, RiskLevel, ToolGapReport
 
 
 def test_risk_level_values() -> None:

@@ -5,9 +5,9 @@ import pytest
 
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.core.config import settings
-from src.core.memory import MemoryManager
-from src.models.message import MessageRole
+from paias.core.config import settings
+from paias.core.memory import MemoryManager
+from paias.models.message import MessageRole
 
 
 def test_coerce_role_rejects_invalid_value() -> None:

@@ -17,7 +17,7 @@ from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from pydantic import BaseModel
 
-from src.core.telemetry import (
+from paias.core.telemetry import (
     extract_trace_context,
     inject_trace_context,
     set_span_exporter,
@@ -401,7 +401,7 @@ class TestTraceContextPropagation:
         self, exporter: InMemorySpanExporter
     ) -> None:
         """Verify inject returns dict with traceparent when span active."""
-        from src.core.telemetry import get_tracer
+        from paias.core.telemetry import get_tracer
 
         tracer = get_tracer("test")
         with tracer.start_as_current_span("test_span"):

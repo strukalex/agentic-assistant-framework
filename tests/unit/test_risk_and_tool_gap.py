@@ -1,8 +1,8 @@
 import pytest
 
-from src.core.risk_assessment import categorize_action_risk, requires_approval
-from src.models.risk_level import RiskLevel
-from src.models.tool_gap_report import ToolGapReport
+from paias.core.risk_assessment import categorize_action_risk, requires_approval
+from paias.models.risk_level import RiskLevel
+from paias.models.tool_gap_report import ToolGapReport
 
 
 def test_risk_level_enum_values():

@@ -1,12 +1,12 @@
 import pytest
 from uuid import uuid4
 
-from src.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
-from src.models.research_state import ResearchState, ResearchStatus
-from src.workflows.research_graph import InMemoryMemoryManager, compile_research_graph
+from paias.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
+from paias.models.research_state import ResearchState, ResearchStatus
+from paias.workflows.research_graph import InMemoryMemoryManager, compile_research_graph
 
 
-async def _runner_with_sources(task: str, deps) -> AgentResponse:
+async def _runner_with_sources(task: str, deps, *, max_runtime_seconds: float | None = None) -> AgentResponse:
     tool_call = ToolCallRecord(
         tool_name="web_search",
         parameters={"query": task},

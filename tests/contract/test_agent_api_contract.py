@@ -10,8 +10,8 @@ Per Spec 002 tasks.md T100 (FR-003, SC-002, SC-010)
 import pytest
 from pydantic import ValidationError
 
-from src.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
-from src.models.tool_gap_report import ToolGapReport
+from paias.models.agent_response import AgentResponse, ToolCallRecord, ToolCallStatus
+from paias.models.tool_gap_report import ToolGapReport
 
 
 class TestAgentResponseContract:
@@ -256,8 +256,8 @@ class TestRiskAssessmentContract:
 
     def test_categorize_action_risk_returns_risk_level(self):
         """Test that categorize_action_risk() returns RiskLevel enum."""
-        from src.core.risk_assessment import categorize_action_risk
-        from src.models.risk_level import RiskLevel
+        from paias.core.risk_assessment import categorize_action_risk
+        from paias.models.risk_level import RiskLevel
 
         result = categorize_action_risk("web_search", {"query": "test"})
         assert isinstance(result, RiskLevel)
@@ -269,16 +269,16 @@ class TestRiskAssessmentContract:
 
     def test_requires_approval_returns_boolean(self):
         """Test that requires_approval() returns boolean."""
-        from src.core.risk_assessment import requires_approval
-        from src.models.risk_level import RiskLevel
+        from paias.core.risk_assessment import requires_approval
+        from paias.models.risk_level import RiskLevel
 
         result = requires_approval(RiskLevel.REVERSIBLE, confidence=0.95)
         assert isinstance(result, bool)
 
     def test_categorize_action_risk_with_various_tools(self):
         """Test categorize_action_risk with different tool types."""
-        from src.core.risk_assessment import categorize_action_risk
-        from src.models.risk_level import RiskLevel
+        from paias.core.risk_assessment import categorize_action_risk
+        from paias.models.risk_level import RiskLevel
 
         # Test REVERSIBLE tool
         reversible = categorize_action_risk("web_search", {})
@@ -296,8 +296,8 @@ class TestRiskAssessmentContract:
 
     def test_requires_approval_with_all_risk_levels(self):
         """Test requires_approval with all risk levels."""
-        from src.core.risk_assessment import requires_approval
-        from src.models.risk_level import RiskLevel
+        from paias.core.risk_assessment import requires_approval
+        from paias.models.risk_level import RiskLevel
 
         # REVERSIBLE should not require approval
         assert requires_approval(RiskLevel.REVERSIBLE, confidence=0.5) is False

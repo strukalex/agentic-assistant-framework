@@ -6,12 +6,12 @@ from uuid import uuid4
 import pytest
 from pydantic import AnyUrl, ValidationError
 
-from src.models.approval_request import ApprovalRequest, ApprovalStatus
-from src.models.planned_action import PlannedAction
-from src.models.research_report import QualityIndicators, ResearchReport
-from src.models.research_state import ResearchState, ResearchStatus
-from src.models.risk_level import RiskLevel
-from src.models.source_reference import SourceReference
+from paias.models.approval_request import ApprovalRequest, ApprovalStatus
+from paias.models.planned_action import PlannedAction
+from paias.models.research_report import QualityIndicators, ResearchReport
+from paias.models.research_state import ResearchState, ResearchStatus
+from paias.models.risk_level import RiskLevel
+from paias.models.source_reference import SourceReference
 
 
 def test_source_reference_enforces_snippet_limit() -> None:

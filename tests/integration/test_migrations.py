@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from src.core.config import settings
+from paias.core.config import settings
 
 pytestmark = pytest.mark.asyncio
 

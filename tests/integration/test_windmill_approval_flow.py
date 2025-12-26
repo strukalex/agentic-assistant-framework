@@ -17,8 +17,8 @@ import pytest
 from typing import Any
 from unittest.mock import AsyncMock, patch
 
-from src.models.planned_action import PlannedAction
-from src.models.risk_level import RiskLevel
+from paias.models.planned_action import PlannedAction
+from paias.models.risk_level import RiskLevel
 
 
 # Skip all tests in this module unless Windmill is configured
@@ -76,9 +76,9 @@ class TestWindmillApprovalSuspension:
         sample_delay_action: PlannedAction,
     ) -> None:
         """Workflow suspends when encountering REVERSIBLE_WITH_DELAY action."""
-        from src.windmill.approval_handler import request_approval
+        from paias.windmill.approval_handler import request_approval
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/test-job-123",
                 "cancel": f"{windmill_config['base_url']}/cancel/test-job-123",
@@ -98,9 +98,9 @@ class TestWindmillApprovalSuspension:
         sample_irreversible_action: PlannedAction,
     ) -> None:
         """Workflow suspends when encountering IRREVERSIBLE action."""
-        from src.windmill.approval_handler import request_approval
+        from paias.windmill.approval_handler import request_approval
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/test-job-456",
                 "cancel": f"{windmill_config['base_url']}/cancel/test-job-456",
@@ -124,12 +124,12 @@ class TestWindmillApprovalResume:
         sample_delay_action: PlannedAction,
     ) -> None:
         """Workflow resumes and executes action when approved."""
-        from src.windmill.approval_handler import (
+        from paias.windmill.approval_handler import (
             request_approval,
             handle_approval_result,
         )
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/test-job-789",
                 "cancel": f"{windmill_config['base_url']}/cancel/test-job-789",
@@ -156,12 +156,12 @@ class TestWindmillApprovalResume:
         sample_delay_action: PlannedAction,
     ) -> None:
         """Workflow resumes and skips action when rejected."""
-        from src.windmill.approval_handler import (
+        from paias.windmill.approval_handler import (
             request_approval,
             handle_approval_result,
         )
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/test-job-abc",
                 "cancel": f"{windmill_config['base_url']}/cancel/test-job-abc",
@@ -194,12 +194,12 @@ class TestWindmillApprovalTimeout:
         sample_delay_action: PlannedAction,
     ) -> None:
         """Workflow escalates when approval times out after 5 minutes."""
-        from src.windmill.approval_handler import (
+        from paias.windmill.approval_handler import (
             request_approval,
             handle_approval_result,
         )
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/test-job-timeout",
                 "cancel": f"{windmill_config['base_url']}/cancel/test-job-timeout",
@@ -232,7 +232,7 @@ class TestWindmillApprovalEndToEnd:
         windmill_config: dict[str, str],
     ) -> None:
         """Test complete flow: action → suspend → approve → execute."""
-        from src.windmill.approval_handler import process_planned_actions
+        from paias.windmill.approval_handler import process_planned_actions
 
         actions = [
             PlannedAction(
@@ -257,7 +257,7 @@ class TestWindmillApprovalEndToEnd:
                 "approver": "manager@example.com",
             }
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/e2e-test",
                 "cancel": f"{windmill_config['base_url']}/cancel/e2e-test",
@@ -280,7 +280,7 @@ class TestWindmillApprovalEndToEnd:
         windmill_config: dict[str, str],
     ) -> None:
         """Test flow with mix of auto-execute and approval-required actions."""
-        from src.windmill.approval_handler import process_planned_actions
+        from paias.windmill.approval_handler import process_planned_actions
 
         actions = [
             PlannedAction(
@@ -306,7 +306,7 @@ class TestWindmillApprovalEndToEnd:
         async def mock_suspend(approval_request: Any) -> dict[str, Any]:
             return {"decision": "approve", "approver": "auto-test"}
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": f"{windmill_config['base_url']}/resume/mixed-test",
                 "cancel": f"{windmill_config['base_url']}/cancel/mixed-test",

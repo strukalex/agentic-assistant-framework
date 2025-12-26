@@ -12,8 +12,8 @@ import pytest
 from opentelemetry import trace
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from src.core.config import settings
-from src.core.telemetry import set_span_exporter
+from paias.core.config import settings
+from paias.core.telemetry import set_span_exporter
 
 
 @pytest.mark.asyncio
@@ -40,7 +40,7 @@ class TestOpenTelemetryConfiguration:
         set_span_exporter(exporter)
 
         # Create a test span to verify exporter works
-        from src.core.telemetry import get_tracer
+        from paias.core.telemetry import get_tracer
 
         tracer = get_tracer("test")
         with tracer.start_as_current_span("test_span") as span:
@@ -74,7 +74,7 @@ class TestMCPToolInvocationTracing:
         exporter.clear()
 
         # Import and call a traced tool directly (bypassing RunContext)
-        from src.agents.researcher import search_memory
+        from paias.agents.researcher import search_memory
         from unittest.mock import MagicMock
 
         # Create a minimal mock RunContext-like object
@@ -126,7 +126,7 @@ class TestAgentRunTracing:
         exporter.clear()
 
         # Import and execute agent
-        from src.agents.researcher import researcher_agent, run_agent_with_tracing
+        from paias.agents.researcher import researcher_agent, run_agent_with_tracing
 
         task = "What is the capital of France?"
 

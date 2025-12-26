@@ -30,7 +30,7 @@ class TestMemoryIntegration:
         Verifies FR-024: search_memory tool integration
         Verifies FR-026: MemoryManager dependency injection
         """
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Mock MemoryManager with semantic_search method
         # This will be implemented once researcher_agent exists
@@ -56,7 +56,7 @@ class TestMemoryIntegration:
         Verifies FR-025: store_memory tool integration
         Verifies FR-026: MemoryManager dependency injection
         """
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Mock MemoryManager with store_document method
         assert hasattr(mock_memory_manager, "store_document")
@@ -79,7 +79,7 @@ class TestMemoryIntegration:
         [{"content": str, "metadata": dict}, ...]
         """
         # This test will fail until search_memory tool is implemented
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Will verify tool signature and return type
         # Expected: async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict]
@@ -92,7 +92,7 @@ class TestMemoryIntegration:
         Per research.md RQ-007, store_memory should return str (document ID)
         """
         # This test will fail until store_memory tool is implemented
-        from src.agents.researcher import researcher_agent
+        from paias.agents.researcher import researcher_agent
 
         # Will verify tool signature and return type
         # Expected: async def store_memory(ctx: RunContext[MemoryManager], content: str, metadata: dict) -> str
@@ -120,7 +120,7 @@ class TestMemoryPersistenceIntegration:
         web_search, but without MCP tools available in the test environment,
         the agent correctly reports it cannot perform the task.
         """
-        from src.agents.researcher import run_agent_with_tracing, researcher_agent
+        from paias.agents.researcher import run_agent_with_tracing, researcher_agent
 
         # Setup: Agent performs web search (mocked) and should store findings
         query = "What is the capital of France?"
@@ -154,7 +154,7 @@ class TestMemoryPersistenceIntegration:
         Validates FR-024: Agent should search memory first
         Validates FR-026: Agent should cite memory sources in reasoning
         """
-        from src.agents.researcher import run_agent_with_tracing, researcher_agent
+        from paias.agents.researcher import run_agent_with_tracing, researcher_agent
 
         # Setup: Memory has previous research about Python tech stack
         query = "What tech stack does Project X use?"
@@ -190,7 +190,7 @@ class TestMemoryPersistenceIntegration:
         2. Later search finds stored document via search_memory()
         3. Agent uses stored knowledge in response
         """
-        from src.agents.researcher import run_agent_with_tracing, researcher_agent
+        from paias.agents.researcher import run_agent_with_tracing, researcher_agent
 
         # Phase 1: Store a research finding
         first_query = "Python 3.11 is required for this project"

@@ -3,9 +3,9 @@ import asyncio
 
 import pytest
 
-from src.agents.researcher import _make_mcp_tool, run_agent_with_tracing
-from src.core.llm import get_azure_model
-from src.models.agent_response import AgentResponse
+from paias.agents.researcher import _make_mcp_tool, run_agent_with_tracing
+from paias.core.llm import get_azure_model
+from paias.models.agent_response import AgentResponse
 
 
 class _DummyAgent:

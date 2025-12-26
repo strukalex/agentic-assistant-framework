@@ -14,9 +14,9 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from src.models.planned_action import PlannedAction
-from src.models.risk_level import RiskLevel
-from src.models.approval_request import ApprovalRequest, ApprovalStatus
+from paias.models.planned_action import PlannedAction
+from paias.models.risk_level import RiskLevel
+from paias.models.approval_request import ApprovalRequest, ApprovalStatus
 
 
 class MockResumeUrls:
@@ -72,7 +72,7 @@ class TestRequiresApproval:
 
     def test_reversible_does_not_require_approval(self) -> None:
         """REVERSIBLE actions do not require human approval."""
-        from src.windmill.approval_handler import requires_approval
+        from paias.windmill.approval_handler import requires_approval
 
         action = PlannedAction(
             action_type="web_search",
@@ -84,7 +84,7 @@ class TestRequiresApproval:
 
     def test_reversible_with_delay_requires_approval(self) -> None:
         """REVERSIBLE_WITH_DELAY actions require human approval."""
-        from src.windmill.approval_handler import requires_approval
+        from paias.windmill.approval_handler import requires_approval
 
         action = PlannedAction(
             action_type="send_email",
@@ -96,7 +96,7 @@ class TestRequiresApproval:
 
     def test_irreversible_requires_approval(self) -> None:
         """IRREVERSIBLE actions require human approval."""
-        from src.windmill.approval_handler import requires_approval
+        from paias.windmill.approval_handler import requires_approval
 
         action = PlannedAction(
             action_type="delete_file",
@@ -113,7 +113,7 @@ class TestRequestApproval:
     @pytest.mark.asyncio
     async def test_request_approval_creates_correct_structure(self) -> None:
         """request_approval returns ApprovalRequest with correct fields."""
-        from src.windmill.approval_handler import request_approval
+        from paias.windmill.approval_handler import request_approval
 
         action = PlannedAction(
             action_type="send_email",
@@ -122,7 +122,7 @@ class TestRequestApproval:
             risk_level=RiskLevel.REVERSIBLE_WITH_DELAY,
         )
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": "https://windmill.example.com/resume/abc",
                 "cancel": "https://windmill.example.com/cancel/abc",
@@ -142,7 +142,7 @@ class TestRequestApproval:
     @pytest.mark.asyncio
     async def test_request_approval_uses_default_timeout(self) -> None:
         """request_approval uses 300 second default timeout."""
-        from src.windmill.approval_handler import request_approval
+        from paias.windmill.approval_handler import request_approval
 
         action = PlannedAction(
             action_type="send_email",
@@ -151,7 +151,7 @@ class TestRequestApproval:
             risk_level=RiskLevel.REVERSIBLE_WITH_DELAY,
         )
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": "https://windmill.example.com/resume/abc",
                 "cancel": "https://windmill.example.com/cancel/abc",
@@ -170,7 +170,7 @@ class TestHandleApprovalResult:
     @pytest.mark.asyncio
     async def test_approved_path_executes_action(self) -> None:
         """When approval is granted, action should be marked for execution."""
-        from src.windmill.approval_handler import handle_approval_result
+        from paias.windmill.approval_handler import handle_approval_result
 
         approval_request = ApprovalRequest(
             action_type="send_email",
@@ -191,7 +191,7 @@ class TestHandleApprovalResult:
     @pytest.mark.asyncio
     async def test_rejected_path_skips_action(self) -> None:
         """When approval is rejected, action should be skipped."""
-        from src.windmill.approval_handler import handle_approval_result
+        from paias.windmill.approval_handler import handle_approval_result
 
         approval_request = ApprovalRequest(
             action_type="send_email",
@@ -214,7 +214,7 @@ class TestHandleApprovalResult:
     @pytest.mark.asyncio
     async def test_timeout_path_escalates(self) -> None:
         """When approval times out, action should be escalated and skipped."""
-        from src.windmill.approval_handler import handle_approval_result
+        from paias.windmill.approval_handler import handle_approval_result
 
         approval_request = ApprovalRequest(
             action_type="send_email",
@@ -239,7 +239,7 @@ class TestProcessPlannedActions:
     @pytest.mark.asyncio
     async def test_reversible_actions_auto_execute(self) -> None:
         """REVERSIBLE actions execute automatically without approval."""
-        from src.windmill.approval_handler import process_planned_actions
+        from paias.windmill.approval_handler import process_planned_actions
 
         actions = [
             PlannedAction(
@@ -265,7 +265,7 @@ class TestProcessPlannedActions:
     @pytest.mark.asyncio
     async def test_delay_actions_suspend_for_approval(self) -> None:
         """REVERSIBLE_WITH_DELAY actions suspend for approval."""
-        from src.windmill.approval_handler import process_planned_actions
+        from paias.windmill.approval_handler import process_planned_actions
 
         actions = [
             PlannedAction(
@@ -282,7 +282,7 @@ class TestProcessPlannedActions:
             "approver": "user@example.com",
         })
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": "https://windmill.example.com/resume/abc",
                 "cancel": "https://windmill.example.com/cancel/abc",
@@ -303,7 +303,7 @@ class TestProcessPlannedActions:
     @pytest.mark.asyncio
     async def test_timeout_escalation_skips_action(self) -> None:
         """Timed out approvals escalate and skip the action."""
-        from src.windmill.approval_handler import process_planned_actions
+        from paias.windmill.approval_handler import process_planned_actions
 
         actions = [
             PlannedAction(
@@ -317,7 +317,7 @@ class TestProcessPlannedActions:
         mock_executor = AsyncMock(return_value={"success": True})
         mock_suspend = AsyncMock(return_value={"error": "approval_timeout"})
 
-        with patch("src.windmill.approval_handler.get_resume_urls") as mock_urls:
+        with patch("paias.windmill.approval_handler.get_resume_urls") as mock_urls:
             mock_urls.return_value = {
                 "resume": "https://windmill.example.com/resume/abc",
                 "cancel": "https://windmill.example.com/cancel/abc",

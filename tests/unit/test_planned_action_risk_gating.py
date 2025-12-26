@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.models.planned_action import PlannedAction
-from src.models.risk_level import RiskLevel
+from paias.models.planned_action import PlannedAction
+from paias.models.risk_level import RiskLevel
 
 
 class TestPlannedActionRiskLevel:
@@ -109,7 +109,7 @@ class TestRiskLevelGating:
         self, reversible_actions: list[PlannedAction]
     ) -> None:
         """REVERSIBLE actions should auto-execute without approval."""
-        from src.windmill.approval_handler import requires_approval
+        from paias.windmill.approval_handler import requires_approval
 
         for action in reversible_actions:
             assert requires_approval(action) is False, (
@@ -120,7 +120,7 @@ class TestRiskLevelGating:
         self, approval_required_actions: list[PlannedAction]
     ) -> None:
         """REVERSIBLE_WITH_DELAY and IRREVERSIBLE actions require approval."""
-        from src.windmill.approval_handler import requires_approval
+        from paias.windmill.approval_handler import requires_approval
 
         for action in approval_required_actions:
             assert requires_approval(action) is True, (
@@ -133,7 +133,7 @@ class TestActionClassification:
 
     def test_classify_actions_by_risk(self) -> None:
         """Actions can be classified into approval-required and auto-execute groups."""
-        from src.windmill.approval_handler import classify_actions
+        from paias.windmill.approval_handler import classify_actions
 
         actions = [
             PlannedAction(
@@ -166,7 +166,7 @@ class TestActionClassification:
 
     def test_empty_actions_list(self) -> None:
         """Empty actions list produces empty classifications."""
-        from src.windmill.approval_handler import classify_actions
+        from paias.windmill.approval_handler import classify_actions
 
         auto_execute, needs_approval = classify_actions([])
 
@@ -175,7 +175,7 @@ class TestActionClassification:
 
     def test_all_reversible_actions(self) -> None:
         """List with only REVERSIBLE actions has nothing needing approval."""
-        from src.windmill.approval_handler import classify_actions
+        from paias.windmill.approval_handler import classify_actions
 
         actions = [
             PlannedAction(
@@ -199,7 +199,7 @@ class TestActionClassification:
 
     def test_all_approval_required_actions(self) -> None:
         """List with only risky actions all need approval."""
-        from src.windmill.approval_handler import classify_actions
+        from paias.windmill.approval_handler import classify_actions
 
         actions = [
             PlannedAction(

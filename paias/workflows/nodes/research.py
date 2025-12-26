@@ -15,7 +15,7 @@ from ...models.source_reference import SourceReference
 logger = logging.getLogger(__name__)
 
 
-async def _default_agent_runner(task: str, deps: MemoryManager) -> AgentResponse:
+async def _default_agent_runner(task: str, deps: MemoryManager, *, max_runtime_seconds: float | None = None) -> AgentResponse:
     """
     Placeholder runner that raises an error if no real agent is provided.
 

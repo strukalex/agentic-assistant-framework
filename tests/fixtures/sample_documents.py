@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Optional
 from uuid import UUID, uuid4
 
-from src.core.config import settings
+from paias.core.config import settings
 
 
 @dataclass
