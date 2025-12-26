@@ -60,7 +60,9 @@ done
 
 echo "Configuring Windmill workspace..."
 wmill workspace add default http://localhost:8100 --create
-wmill sync push --yes
+
+echo "Syncing src/ to Windmill workspace..."
+bash "${SCRIPT_DIR}/sync_windmill.sh"
 
 echo "Reset complete. PYTHONPATH is set to: ${PYTHONPATH}"
 
