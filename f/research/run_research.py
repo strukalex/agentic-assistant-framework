@@ -31,7 +31,7 @@ print(f"Python executable: {sys.executable}")
 print(f"sys.path: {sys.path}")
 
 # Check key environment variables (WHITELIST_ENVS must include these)
-_key_env_vars = ["AZURE_AI_FOUNDRY_ENDPOINT", "AZURE_AI_FOUNDRY_API_KEY", "OTEL_EXPORTER_OTLP_ENDPOINT"]
+_key_env_vars = ["AZURE_AI_FOUNDRY_ENDPOINT", "AZURE_AI_FOUNDRY_API_KEY", "AZURE_DEPLOYMENT_NAME", "OTEL_EXPORTER_OTLP_ENDPOINT"]
 print("Key env vars (via WHITELIST_ENVS):")
 for v in _key_env_vars:
     val = os.environ.get(v, "<NOT SET>")
