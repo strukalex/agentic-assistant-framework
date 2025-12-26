@@ -72,6 +72,7 @@ print("=== END DIAGNOSTICS ===")
 import asyncio
 import logging
 from typing import Any
+from uuid import uuid4
 
 # Import from pre-installed paias package
 from paias.workflows.research_graph import (
@@ -169,7 +170,7 @@ _Timeout: {timeout_seconds} seconds_
 
 def main(
     topic: str,
-    user_id: str,
+    user_id: str | None = None,
     client_traceparent: str | None = None,
 ) -> dict[str, Any]:
     """
@@ -181,12 +182,16 @@ def main(
 
     Args:
         topic: Research topic (1-500 chars).
-        user_id: User identifier (UUID string).
+        user_id: Optional user identifier (UUID string). Auto-generated if not provided.
         client_traceparent: Optional W3C traceparent for distributed tracing.
 
     Returns:
         Dict with status, iterations, report, sources, and action_results.
     """
+    # Auto-generate user_id if not provided
+    if user_id is None:
+        user_id = str(uuid4())
+    
     return asyncio.run(
         _async_main(topic, user_id, client_traceparent)
     )
@@ -338,16 +343,11 @@ __windmill__ = {
                 "minLength": 1,
                 "maxLength": 500,
             },
-            "user_id": {
-                "type": "string",
-                "description": "User identifier (UUID format)",
-                "format": "uuid",
-            },
             "client_traceparent": {
                 "type": "string",
                 "description": "Optional W3C traceparent for distributed tracing",
             },
         },
-        "required": ["topic", "user_id"],
+        "required": ["topic"],
     },
 }

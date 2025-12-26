@@ -11,13 +11,8 @@ schema:
       description: Research topic (1-500 characters)
       minLength: 1
       maxLength: 500
-    user_id:
-      type: string
-      description: User identifier (UUID format)
-      format: uuid
     client_traceparent:
       type: string
       description: Optional W3C traceparent for distributed tracing
   required:
     - topic
-    - user_id
