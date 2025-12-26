@@ -210,11 +210,12 @@ async def main(
     # Log start for observability
     wmill = _get_wmill()
     if wmill:
-        # Set progress for Windmill UI (optional but nice for visibility)
+        # Set progress for Windmill UI (percentage only - no message parameter)
         try:
-            wmill.set_progress(0, "Starting research workflow")
-        except Exception:
-            pass  # Progress tracking is optional
+            wmill.set_progress(0)
+            logger.info("Progress: 0%% - Starting research workflow")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     logger.info(
         "Starting DailyTrendingResearch workflow for topic: %s (user: %s)",
@@ -234,9 +235,10 @@ async def main(
 
     if wmill:
         try:
-            wmill.set_progress(10, "Running research graph")
-        except Exception:
-            pass
+            wmill.set_progress(10)
+            logger.info("Progress: 10%% - Running research graph")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     final_state: ResearchState = await app.ainvoke(
         initial_state, traceparent=client_traceparent
@@ -244,9 +246,10 @@ async def main(
 
     if wmill:
         try:
-            wmill.set_progress(70, "Formatting report")
-        except Exception:
-            pass
+            wmill.set_progress(70)
+            logger.info("Progress: 70%% - Formatting report")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     # Format the report
     report = format_research_report(final_state)
@@ -259,9 +262,10 @@ async def main(
     if final_state.planned_actions:
         if wmill:
             try:
-                wmill.set_progress(80, "Processing planned actions")
-            except Exception:
-                pass
+                wmill.set_progress(80)
+                logger.info("Progress: 80%% - Processing planned actions")
+            except Exception as e:
+                logger.debug("Failed to set progress: %s", e)
 
         logger.info(
             "Processing %d planned actions from research",
@@ -287,9 +291,10 @@ async def main(
 
     if wmill:
         try:
-            wmill.set_progress(100, "Workflow completed")
-        except Exception:
-            pass
+            wmill.set_progress(100)
+            logger.info("Progress: 100%% - Workflow completed")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     logger.info(
         "DailyTrendingResearch workflow completed: %d iterations, %d sources",

@@ -29,12 +29,24 @@ def _create_default_exporter() -> SpanExporter:
     Build the default OTLP exporter.
 
     Tests can override via set_span_exporter to avoid network calls.
+    Uses InMemorySpanExporter if endpoint is "memory" or "disabled".
     """
-    if settings.otel_exporter_otlp_endpoint == "memory":
-        return InMemorySpanExporter()
-    return OTLPSpanExporter(
-        endpoint=settings.otel_exporter_otlp_endpoint, insecure=True
+    import os
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Check environment variable directly (Windmill may set this)
+    endpoint = os.environ.get(
+        "OTEL_EXPORTER_OTLP_ENDPOINT", settings.otel_exporter_otlp_endpoint
     )
+
+    if endpoint in ("memory", "disabled", "none", ""):
+        logger.info("Telemetry: Using in-memory exporter (endpoint=%s)", endpoint)
+        return InMemorySpanExporter()
+
+    logger.info("Telemetry: Using OTLP exporter at %s", endpoint)
+    return OTLPSpanExporter(endpoint=endpoint, insecure=True)
 
 
 def _init_tracer_provider(exporter: Optional[SpanExporter] = None) -> None:

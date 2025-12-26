@@ -210,12 +210,13 @@ async def _async_main(
     logger.info(f"Traceparent: {client_traceparent or 'None'}")
     logger.info("=" * 80)
 
-    # Set progress for Windmill UI
+    # Set progress for Windmill UI (percentage only - no message parameter)
     if WMILL_AVAILABLE and wmill is not None:
         try:
-            wmill.set_progress(0, "Starting research workflow")
-        except Exception:
-            pass
+            wmill.set_progress(0)
+            logger.info("Progress: 0%% - Starting research workflow")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     try:
         # Execute the research graph
@@ -230,9 +231,10 @@ async def _async_main(
 
         if WMILL_AVAILABLE and wmill is not None:
             try:
-                wmill.set_progress(10, "Running research graph")
-            except Exception:
-                pass
+                wmill.set_progress(10)
+                logger.info("Progress: 10%% - Running research graph")
+            except Exception as e:
+                logger.debug("Failed to set progress: %s", e)
 
         logger.info("")
         logger.info("PHASE 2: Executing research graph")
@@ -261,9 +263,10 @@ async def _async_main(
 
     if WMILL_AVAILABLE and wmill is not None:
         try:
-            wmill.set_progress(70, "Formatting report")
-        except Exception:
-            pass
+            wmill.set_progress(70)
+            logger.info("Progress: 70%% - Formatting report")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     # Format the report
     logger.info("")
@@ -279,9 +282,10 @@ async def _async_main(
     if final_state.planned_actions:
         if WMILL_AVAILABLE and wmill is not None:
             try:
-                wmill.set_progress(80, "Processing planned actions")
-            except Exception:
-                pass
+                wmill.set_progress(80)
+                logger.info("Progress: 80%% - Processing planned actions")
+            except Exception as e:
+                logger.debug("Failed to set progress: %s", e)
 
         logger.info("")
         logger.info("PHASE 4: Processing planned actions")
@@ -311,9 +315,10 @@ async def _async_main(
 
     if WMILL_AVAILABLE and wmill is not None:
         try:
-            wmill.set_progress(100, "Workflow completed")
-        except Exception:
-            pass
+            wmill.set_progress(100)
+            logger.info("Progress: 100%% - Workflow completed")
+        except Exception as e:
+            logger.debug("Failed to set progress: %s", e)
 
     logger.info("")
     logger.info("=" * 80)

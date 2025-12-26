@@ -6,6 +6,7 @@
   "scripts": {
     "reset": "bash scripts/reset_dev_env.sh",
     "sync:windmill": "bash scripts/sync_windmill.sh",
+    "build:worker": "docker compose build windmill_worker && docker compose up -d windmill_worker",
     "test:py": "bash scripts/run_pytest.sh",
     "test": "npm run test:py",
     "test:agent": "python specs/002-researcher-agent-mcp/scripts/manual_test_agent.py"
