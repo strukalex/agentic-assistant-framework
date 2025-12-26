@@ -25,6 +25,11 @@ mkdir -p "u/admin"
 echo "Copying src/ to ${TARGET_DIR}..."
 cp -r src "${TARGET_DIR}"
 
+# Create __init__.py files to make u/ and u/admin/ proper Python packages
+echo "Creating __init__.py files for package structure..."
+touch "u/__init__.py"
+touch "u/admin/__init__.py"
+
 echo "Pushing to Windmill..."
 wmill sync push --yes
 

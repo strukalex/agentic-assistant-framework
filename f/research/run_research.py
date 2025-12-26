@@ -1,7 +1,7 @@
 """Windmill flow entry point for DailyTrendingResearch workflow.
 
 This script is the Windmill-executable entry point that imports from
-u.admin.research_lib (the symlinked src/ directory) and serves as the
+u.admin.research_lib (the synced copy of src/ directory) and serves as the
 interface between Windmill's execution environment and our Python codebase.
 
 Usage in Windmill:
@@ -16,47 +16,22 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-
-# Windmill-specific imports for the u/admin/research_lib symlinked modules
-# These imports work when the script is executed within Windmill's environment
-# where u/admin/research_lib is symlinked to src/
-try:
-    from u.admin.research_lib.workflows.research_graph import (
-        InMemoryMemoryManager,
-        compile_research_graph,
-    )
-    from u.admin.research_lib.models.research_state import ResearchState
-    from u.admin.research_lib.workflows.report_formatter import (
-        format_research_report,
-        render_markdown,
-    )
-    from u.admin.research_lib.windmill.approval_handler import (
-        ApprovalRequest,
-        process_planned_actions,
-    )
-    from u.admin.research_lib.models.planned_action import PlannedAction
-    from u.admin.research_lib.core.config import settings
-
-    WINDMILL_IMPORTS_AVAILABLE = True
-except ImportError:
-    # Fallback for local development/testing where src/ is used directly
-    from src.workflows.research_graph import (
-        InMemoryMemoryManager,
-        compile_research_graph,
-    )
-    from src.models.research_state import ResearchState
-    from src.workflows.report_formatter import (
-        format_research_report,
-        render_markdown,
-    )
-    from src.windmill.approval_handler import (
-        ApprovalRequest,
-        process_planned_actions,
-    )
-    from src.models.planned_action import PlannedAction
-    from src.core.config import settings
-
-    WINDMILL_IMPORTS_AVAILABLE = False
+# Import from u.admin.research_lib (synced from src/ via scripts/sync_windmill.sh)
+from u.admin.research_lib.workflows.research_graph import (
+    InMemoryMemoryManager,
+    compile_research_graph,
+)
+from u.admin.research_lib.models.research_state import ResearchState
+from u.admin.research_lib.workflows.report_formatter import (
+    format_research_report,
+    render_markdown,
+)
+from u.admin.research_lib.windmill.approval_handler import (
+    ApprovalRequest,
+    process_planned_actions,
+)
+from u.admin.research_lib.models.planned_action import PlannedAction
+from u.admin.research_lib.core.config import settings
 
 
 # Try to import wmill for Windmill-specific functionality
