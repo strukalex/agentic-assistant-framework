@@ -9,6 +9,7 @@ WORKDIR /app
 # Copy only the files needed for package installation
 COPY pyproject.toml /app/
 COPY paias/ /app/paias/
+COPY package.json /app/
 
 # Install the paias package in editable mode
 # Windmill uses uv for Python package management
@@ -17,6 +18,10 @@ COPY paias/ /app/paias/
 RUN /usr/local/bin/uv pip install --system --break-system-packages -e /app \
     || /usr/local/bin/uv pip install --system --break-system-packages -e /app \
     || /usr/local/bin/uv pip install --system --break-system-packages -e /app
+
+# Install Node.js dependencies (open-websearch MCP server)
+# npm is already available in the Windmill base image
+RUN npm install --prefix /app
 
 # Note: paias will be available when Windmill runs Python scripts
 # Environment variables are passed via docker-compose.yml
