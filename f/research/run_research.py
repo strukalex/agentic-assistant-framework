@@ -112,6 +112,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Silence httpx/httpcore verbose logging to prevent interleaving
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 
 # Try to import wmill for Windmill-specific functionality
 try:

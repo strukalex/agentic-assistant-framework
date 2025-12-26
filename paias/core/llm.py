@@ -119,9 +119,10 @@ class _LoggingProviderWrapper:
         # Log the conversation (only if enabled)
         if not settings.enable_agentic_logging:
             return await self._provider.run_chat(*args, **kwargs)
-            
+
         if messages:
-            logger.info("💬 [AGENTIC LOOP] === LLM Request ===")
+            # Build entire request log as a single string for atomic logging
+            log_lines = ["💬 [LLM REQUEST] ==="]
             for i, msg in enumerate(messages, 1):
                 role = msg.get("role", "unknown")
                 content = msg.get("content", "")
@@ -130,36 +131,40 @@ class _LoggingProviderWrapper:
                     content_preview = content[:500] + "..."
                 else:
                     content_preview = content
-                
+
                 # Format based on role
                 if role == "system":
-                    logger.info("   [%d] SYSTEM: %s", i, content_preview[:200] + "..." if len(str(content_preview)) > 200 else content_preview)
+                    preview = content_preview[:200] + "..." if len(str(content_preview)) > 200 else content_preview
+                    log_lines.append(f"   [{i}] SYSTEM: {preview}")
                 elif role == "user":
-                    logger.info("   [%d] USER: %s", i, content_preview)
+                    log_lines.append(f"   [{i}] USER: {content_preview}")
                 elif role == "assistant":
-                    logger.info("   [%d] ASSISTANT: %s", i, content_preview)
+                    log_lines.append(f"   [{i}] ASSISTANT: {content_preview}")
                 elif role == "tool":
-                    tool_call_id = msg.get("tool_call_id", "unknown")
                     tool_name = msg.get("name", "unknown")
-                    logger.info("   [%d] TOOL RESULT (%s): %s", i, tool_name, content_preview[:200] + "..." if len(str(content_preview)) > 200 else content_preview)
+                    preview = content_preview[:200] + "..." if len(str(content_preview)) > 200 else content_preview
+                    log_lines.append(f"   [{i}] TOOL RESULT ({tool_name}): {preview}")
                 else:
-                    logger.info("   [%d] %s: %s", i, role.upper(), content_preview)
-            
+                    log_lines.append(f"   [{i}] {role.upper()}: {content_preview}")
+
             # Check for tool calls in the last assistant message
             if messages and messages[-1].get("role") == "assistant":
                 tool_calls = messages[-1].get("tool_calls", [])
                 if tool_calls:
-                    logger.info("   [TOOL CALLS] Assistant requested %d tool(s):", len(tool_calls))
+                    log_lines.append(f"   [TOOL CALLS] Assistant requested {len(tool_calls)} tool(s):")
                     for tc in tool_calls:
-                        tc_id = tc.get("id", "unknown")
                         tc_func = tc.get("function", {})
                         tc_name = tc_func.get("name", "unknown")
                         tc_args = tc_func.get("arguments", "{}")
                         try:
                             tc_args_parsed = json.loads(tc_args) if isinstance(tc_args, str) else tc_args
-                            logger.info("      → %s(%s)", tc_name, json.dumps(tc_args_parsed, indent=2)[:200])
+                            args_str = json.dumps(tc_args_parsed, indent=2)[:200]
+                            log_lines.append(f"      → {tc_name}({args_str})")
                         except:
-                            logger.info("      → %s(%s)", tc_name, str(tc_args)[:200])
+                            log_lines.append(f"      → {tc_name}({str(tc_args)[:200]})")
+
+            # Single atomic log call
+            logger.info("\n".join(log_lines))
 
         # Call the actual provider
         result = await self._provider.run_chat(*args, **kwargs)
@@ -171,24 +176,28 @@ class _LoggingProviderWrapper:
                 msg = choice.message
                 content = getattr(msg, "content", None) or ""
                 tool_calls = getattr(msg, "tool_calls", None) or []
-                
-                logger.info("💬 [AGENTIC LOOP] === LLM Response ===")
+
+                # Build entire response log as a single string for atomic logging
+                log_lines = ["💬 [LLM RESPONSE] ==="]
                 if content:
-                    logger.info("   ASSISTANT: %s", content[:500] + "..." if len(content) > 500 else content)
+                    content_preview = content[:500] + "..." if len(content) > 500 else content
+                    log_lines.append(f"   ASSISTANT: {content_preview}")
                 if tool_calls:
-                    logger.info("   [TOOL CALLS] Model requested %d tool(s):", len(tool_calls))
+                    log_lines.append(f"   [TOOL CALLS] Model requested {len(tool_calls)} tool(s):")
                     for tc in tool_calls:
-                        tc_id = getattr(tc, "id", "unknown")
                         tc_func = getattr(tc, "function", None)
                         if tc_func:
                             tc_name = getattr(tc_func, "name", "unknown")
                             tc_args = getattr(tc_func, "arguments", "{}")
                             try:
                                 tc_args_parsed = json.loads(tc_args) if isinstance(tc_args, str) else tc_args
-                                logger.info("      → %s(%s)", tc_name, json.dumps(tc_args_parsed, indent=2)[:200])
+                                args_str = json.dumps(tc_args_parsed, indent=2)[:200]
+                                log_lines.append(f"      → {tc_name}({args_str})")
                             except:
-                                logger.info("      → %s(%s)", tc_name, str(tc_args)[:200])
-                logger.info("")
+                                log_lines.append(f"      → {tc_name}({str(tc_args)[:200]})")
+
+                # Single atomic log call
+                logger.info("\n".join(log_lines) + "\n")
 
         return result
 
@@ -203,17 +212,21 @@ async def _log_http_request(request: httpx.Request) -> None:
         if body:
             try:
                 parsed = json.loads(body)
-                body_preview = json.dumps(parsed, indent=2)[:2000]
+                # Keep full JSON for debugging, formatted nicely
+                body_preview = json.dumps(parsed, indent=2)
             except Exception:
-                body_preview = body.decode("utf-8", errors="ignore")[:2000]
+                body_preview = body.decode("utf-8", errors="ignore")
 
-        logger.info(
-            "💬 [HTTP] → %s %s\nHeaders: %s\nBody: %s",
-            request.method,
-            request.url,
-            {k: v for k, v in request.headers.items() if k.lower().startswith("content")},
-            body_preview,
+        # Build entire message as a single string for atomic logging
+        headers_dict = {k: v for k, v in request.headers.items() if k.lower().startswith("content")}
+        log_message = (
+            f"🔵 [HTTP REQUEST] → {request.method} {request.url}\n"
+            f"Headers: {headers_dict}\n"
+            f"Body:\n{body_preview}"
         )
+
+        # Single atomic log call to prevent interleaving
+        logger.info(log_message)
     except Exception as e:
         logger.debug("Failed to log HTTP request: %s", e)
 
@@ -228,17 +241,21 @@ async def _log_http_response(response: httpx.Response) -> None:
         if text:
             try:
                 parsed = json.loads(text)
-                body_preview = json.dumps(parsed, indent=2)[:2000]
+                # Keep full JSON for debugging, formatted nicely
+                body_preview = json.dumps(parsed, indent=2)
             except Exception:
-                body_preview = text.decode("utf-8", errors="ignore")[:2000]
+                body_preview = text.decode("utf-8", errors="ignore")
 
-        logger.info(
-            "💬 [HTTP] ← %s %s %s\nBody: %s",
-            response.request.method if response.request else "",
-            response.request.url if response.request else "",
-            response.status_code,
-            body_preview,
+        # Build entire message as a single string for atomic logging
+        method = response.request.method if response.request else ""
+        url = response.request.url if response.request else ""
+        log_message = (
+            f"🟢 [HTTP RESPONSE] ← {method} {url} {response.status_code}\n"
+            f"Body:\n{body_preview}"
         )
+
+        # Single atomic log call to prevent interleaving
+        logger.info(log_message)
     except Exception as e:
         logger.debug("Failed to log HTTP response: %s", e)
 

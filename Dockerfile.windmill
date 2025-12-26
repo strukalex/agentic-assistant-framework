@@ -1,30 +1,28 @@
 # Custom Windmill worker image with paias package pre-installed
-# This eliminates the need to copy src/ to u/admin/research_lib/
-
 FROM ghcr.io/windmill-labs/windmill:main
 
 # Set working directory
 WORKDIR /app
 
-# Copy only the files needed for package installation
-COPY pyproject.toml /app/
-COPY paias/ /app/paias/
-COPY package.json /app/
-COPY mcp-servers/ /app/mcp-servers/
+# Copy only package files first for npm dependencies
+COPY package.json package-lock.json* /app/
 
-# Install the paias package in editable mode
-# Windmill uses uv for Python package management
-# Use --break-system-packages to allow installation in the global environment
-# Added retries for network resilience
+# Install Node.js dependencies (will be cached unless package files change)
+RUN npm install --prefix /app
+
+# Copy only Python package manifest for Python dependencies
+COPY pyproject.toml /app/
+
+# Install Python package structure (without source code initially)
+# This creates the package entry points
 RUN /usr/local/bin/uv pip install --system --break-system-packages -e /app \
     || /usr/local/bin/uv pip install --system --break-system-packages -e /app \
     || /usr/local/bin/uv pip install --system --break-system-packages -e /app
 
-# Install Node.js dependencies (open-websearch MCP server)
-# npm is already available in the Windmill base image
-RUN npm install --prefix /app
+# Now copy the actual source code
+# Changes to these files won't trigger reinstall of dependencies
+COPY paias/ /app/paias/
+COPY mcp-servers/ /app/mcp-servers/
 
 # Note: paias will be available when Windmill runs Python scripts
 # Environment variables are passed via docker-compose.yml
-
-# The rest of the Windmill configuration is inherited from the base image
