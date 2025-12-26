@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
-# Sync src/ to u/admin/research_lib and push to Windmill
+# Sync Windmill scripts to workspace
 # Usage: bash scripts/sync_windmill.sh
+#
+# Note: With the custom Windmill Docker image, paias is pre-installed,
+# so we no longer need to copy src/ to u/admin/research_lib/
 
 set -euo pipefail
 
@@ -8,34 +11,34 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
 
-TARGET_DIR="u/admin/research_lib"
+echo "Syncing Windmill scripts..."
 
-echo "Syncing src/ to ${TARGET_DIR}..."
-
-# Remove existing directory/symlink
-if [ -e "${TARGET_DIR}" ]; then
-  echo "Removing existing ${TARGET_DIR}..."
-  rm -rf "${TARGET_DIR}"
+# Clean up old u/admin/research_lib if it exists (from previous approach)
+if [ -e "u/admin/research_lib" ]; then
+  echo "Removing old u/admin/research_lib directory (no longer needed)..."
+  rm -rf "u/admin/research_lib"
 fi
 
-# Create parent directory if it doesn't exist
-mkdir -p "u/admin"
+# Clean up old __init__.py files
+if [ -e "u/__init__.py" ]; then
+  rm -f "u/__init__.py" "u/__init__.script.yaml" "u/__init__.script.lock"
+fi
+if [ -e "u/admin/__init__.py" ]; then
+  rm -f "u/admin/__init__.py" "u/admin/__init__.script.yaml" "u/admin/__init__.script.lock"
+fi
 
-# Copy src/ to u/admin/research_lib
-echo "Copying src/ to ${TARGET_DIR}..."
-cp -r src "${TARGET_DIR}"
+# Remove u/admin directory if it's now empty
+if [ -d "u/admin" ] && [ -z "$(ls -A u/admin)" ]; then
+  rmdir "u/admin"
+fi
 
-# Create __init__.py files to make u/ and u/admin/ proper Python packages
-echo "Creating __init__.py files for package structure..."
-touch "u/__init__.py"
-touch "u/admin/__init__.py"
-
-# Remove any auto-generated script metadata for __init__ files
-# These are needed for Python imports but shouldn't be Windmill scripts
-rm -f "u/__init__.script.yaml" "u/__init__.script.lock"
-rm -f "u/admin/__init__.script.yaml" "u/admin/__init__.script.lock"
+# Remove u/ directory if it's now empty
+if [ -d "u" ] && [ -z "$(ls -A u)" ]; then
+  rmdir "u"
+fi
 
 echo "Pushing to Windmill..."
 wmill sync push --yes
 
-echo "Sync complete. u/admin/research_lib now contains a copy of src/"
+echo "Sync complete. Scripts pushed to Windmill."
+echo "Note: paias package is pre-installed in the custom Windmill worker image."

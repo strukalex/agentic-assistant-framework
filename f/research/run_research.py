@@ -1,14 +1,16 @@
 """Windmill flow entry point for DailyTrendingResearch workflow.
 
-This script is the Windmill-executable entry point that imports from
-u.admin.research_lib (the synced copy of src/ directory) and serves as the
-interface between Windmill's execution environment and our Python codebase.
+This script is the Windmill-executable entry point that imports from the
+pre-installed paias package (installed via custom Dockerfile.windmill).
 
 Usage in Windmill:
     - Registered at path: f/research/run_research
     - Arguments: topic (str), user_id (str), client_traceparent (str, optional)
 
-Per plan.md "Deployment Strategy: Windmill Workspace (Approach 2 — Workspace Module)"
+Architecture:
+    - paias package is pre-installed in custom Windmill worker image
+    - No need to copy src/ to u/admin/research_lib/
+    - Clean imports directly from the installed package
 """
 
 from __future__ import annotations
@@ -16,22 +18,22 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-# Import from u.admin.research_lib (synced from src/ via scripts/sync_windmill.sh)
-from u.admin.research_lib.workflows.research_graph import (
+# Import from pre-installed paias package
+from paias.workflows.research_graph import (
     InMemoryMemoryManager,
     compile_research_graph,
 )
-from u.admin.research_lib.models.research_state import ResearchState
-from u.admin.research_lib.workflows.report_formatter import (
+from paias.models.research_state import ResearchState
+from paias.workflows.report_formatter import (
     format_research_report,
     render_markdown,
 )
-from u.admin.research_lib.windmill.approval_handler import (
+from paias.windmill.approval_handler import (
     ApprovalRequest,
     process_planned_actions,
 )
-from u.admin.research_lib.models.planned_action import PlannedAction
-from u.admin.research_lib.core.config import settings
+from paias.models.planned_action import PlannedAction
+from paias.core.config import settings
 
 
 # Try to import wmill for Windmill-specific functionality

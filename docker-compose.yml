@@ -70,13 +70,12 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
-    volumes:
-      # Mount for custom scripts (optional - for deploying flows)
-      - ./src/windmill:/app/scripts:ro
 
   windmill_worker:
-    image: ghcr.io/windmill-labs/windmill:main
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile.windmill
+    image: paias-windmill-worker:latest
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
@@ -84,8 +83,14 @@ services:
       RUST_LOG: info
       MODE: worker
       WORKER_GROUP: default
-      # Resource limits per FR-010: 1 CPU, 2GB memory
-      # These are enforced at container level via deploy settings
+      # Pass through Azure AI Foundry credentials
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      # Database URL for paias application
+      DATABASE_URL_PAIAS: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/paias}
+      # Telemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
     depends_on:
       windmill_server:
         condition: service_healthy
@@ -99,15 +104,15 @@ services:
           cpus: "0.5"
           memory: 1G
     volumes:
-      # Mount project source for script execution
-      - ./src:/app/src:ro
       # Worker cache
       - windmill_worker_cache:/tmp/windmill/cache
 
   # Optional: Additional worker for parallel execution
   windmill_worker_2:
-    image: ghcr.io/windmill-labs/windmill:main
-    pull_policy: always
+    build:
+      context: .
+      dockerfile: Dockerfile.windmill
+    image: paias-windmill-worker:latest
     restart: unless-stopped
     profiles:
       - scale  # Only starts with: docker compose --profile scale up
@@ -117,6 +122,14 @@ services:
       RUST_LOG: info
       MODE: worker
       WORKER_GROUP: default
+      # Pass through Azure AI Foundry credentials
+      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
+      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
+      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      # Database URL for paias application
+      DATABASE_URL_PAIAS: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/paias}
+      # Telemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
     depends_on:
       windmill_server:
         condition: service_healthy
@@ -129,7 +142,6 @@ services:
           cpus: "0.5"
           memory: 1G
     volumes:
-      - ./src:/app/src:ro
       - windmill_worker_cache_2:/tmp/windmill/cache
 
 volumes:

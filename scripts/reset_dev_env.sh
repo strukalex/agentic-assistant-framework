@@ -59,10 +59,38 @@ for i in {1..60}; do
 done
 
 echo "Configuring Windmill workspace..."
-wmill workspace add default http://localhost:8100 --create
+# Wait a bit more for Windmill to fully initialize
+sleep 5
 
-echo "Syncing src/ to Windmill workspace..."
-bash "${SCRIPT_DIR}/sync_windmill.sh"
+# Try to add workspace with --create flag
+# This will prompt for interactive login if needed
+echo "Adding Windmill workspace (you may need to authenticate)..."
+wmill workspace add default http://localhost:8100 --create || {
+  echo "⚠️  Workspace configuration failed. You can configure it manually later."
+  echo "   Run: wmill workspace add default http://localhost:8100 --create"
+}
 
-echo "Reset complete. PYTHONPATH is set to: ${PYTHONPATH}"
+echo ""
+echo "Syncing scripts to Windmill workspace..."
+bash "${SCRIPT_DIR}/sync_windmill.sh" || {
+  echo "⚠️  Sync failed. You can sync manually later with: npm run sync:windmill"
+}
+
+echo ""
+echo "✅ Reset complete. PYTHONPATH is set to: ${PYTHONPATH}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "  Windmill is ready at: http://localhost:8100"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "  Default credentials: admin / changeme"
+echo "  Scripts deployed to: f/research/run_research"
+echo ""
+echo "  To test the workflow:"
+echo "    1. Open http://localhost:8100"
+echo "    2. Go to Scripts → f/research/run_research"
+echo "    3. Run with sample data"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
