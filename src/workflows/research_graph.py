@@ -4,15 +4,7 @@ from functools import partial
 from typing import Any, Awaitable, Callable, Optional
 from uuid import UUID, uuid4
 
-try:
-    from langgraph.graph import END, START, StateGraph
-
-    LANGGRAPH_AVAILABLE = True
-except ImportError:  # pragma: no cover - optional dependency fallback
-    END = None  # type: ignore[assignment]
-    START = None  # type: ignore[assignment]
-    StateGraph = None  # type: ignore[assignment]
-    LANGGRAPH_AVAILABLE = False
+from langgraph.graph import END, START, StateGraph
 
 from ..core.telemetry import trace_langgraph_execution_context
 from ..models.research_state import ResearchState, ResearchStatus
@@ -66,9 +58,6 @@ def build_research_graph(
         memory_manager: Optional memory manager passed to finish/research nodes.
         agent_runner: Optional research runner for dependency injection in tests.
     """
-    if not LANGGRAPH_AVAILABLE:
-        return _FallbackGraph(memory_manager=memory_manager, agent_runner=agent_runner)  # type: ignore[return-value]
-
     graph = StateGraph(ResearchState)
 
     graph.add_node("plan", plan_node)
@@ -103,65 +92,7 @@ def compile_research_graph(
 ):
     """Compile the research graph into an executable app."""
     graph = build_research_graph(memory_manager=memory_manager, agent_runner=agent_runner)
-    if hasattr(graph, "compile"):
-        return _LangGraphRunner(graph.compile())
-    # Fallback graph already returns a runner
-    return graph  # type: ignore[return-value]
-
-
-class _FallbackRunner:
-    """Minimal async runner used when LangGraph is unavailable."""
-
-    def __init__(self, memory_manager: Any | None, agent_runner: Callable[..., Awaitable[Any]] | None):
-        self.memory_manager = memory_manager
-        self.agent_runner = agent_runner
-
-    async def ainvoke(
-        self, state: ResearchState, *, traceparent: Optional[str] = None
-    ) -> ResearchState:
-        with trace_langgraph_execution_context(
-            "daily_research",
-            topic=str(state.topic),
-            traceparent=traceparent,
-        ) as span:
-            current = await plan_node(state)
-            while True:
-                current = await research_node(
-                    current,
-                    memory_manager=self.memory_manager,
-                    agent_runner=self.agent_runner,
-                )
-                current = await critique_node(current)
-                if current.status == ResearchStatus.FINISHED or current.iteration_count >= current.max_iterations:
-                    break
-                current = await refine_node(current)
-                if current.iteration_count >= current.max_iterations:
-                    current = current.model_copy(update={"status": ResearchStatus.FINISHED})
-                    break
-            current = await finish_node(current, memory_manager=self.memory_manager)
-
-            # Set final metrics on the span
-            span.set_attribute("total_iterations", current.iteration_count)
-            span.set_attribute("sources_count", len(current.sources))
-            if current.quality_score is not None:
-                span.set_attribute("quality_score", float(current.quality_score))
-
-            return current
-
-    async def invoke(
-        self, state: ResearchState, *, traceparent: Optional[str] = None
-    ) -> ResearchState:
-        return await self.ainvoke(state, traceparent=traceparent)
-
-
-class _FallbackGraph:
-    """Lightweight graph placeholder when LangGraph is not installed."""
-
-    def __init__(self, memory_manager: Any | None, agent_runner: Callable[..., Awaitable[Any]] | None):
-        self._runner = _FallbackRunner(memory_manager, agent_runner)
-
-    def compile(self) -> "_FallbackRunner":
-        return self._runner
+    return _LangGraphRunner(graph.compile())
 
 
 class _LangGraphRunner:

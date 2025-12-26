@@ -48,7 +48,7 @@
   - [ ] **UI**: Streamlit for Phase 1-2 (proof-of-concept); React/Next.js OR LibreChat for Phase 3+ (decision pending Phase 2 evaluation) *(Article I.F)*
   - [ ] **Primary model**: DeepSeek 3.2 via Microsoft Azure AI Foundry (agent-level model-agnostic via Pydantic AI)
 
-- [ ] **Article II — Architectural Principles (all 9)**: Plan explicitly respects:
+- [ ] **Article II — Architectural Principles (all 10)**: Plan explicitly respects:
   - [ ] Vertical-slice delivery (end-to-end system deliverable)
   - [ ] Pluggable orchestration (framework-agnostic agent code)
   - [ ] Human-in-the-loop by default (risk-based approvals; irreversible actions never auto-execute)
@@ -58,6 +58,7 @@
   - [ ] Tool gap detection & self-extension (maturity-triggered per Article II.G)
   - [ ] Unified telemetry architecture (uses src/core/telemetry.py only per Article II.H)
   - [ ] Shared LLM utilities & code reuse (uses src/core/llm.py for model setup per Article II.I)
+  - [ ] Fail-fast dependency management (no try/except ImportError fallbacks per Article II.J)
 
 - [ ] **Article III — Operational Standards**:
   - [ ] Tests + CI enforce **≥ 80% coverage** (no "tests optional" plans)

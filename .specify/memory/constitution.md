@@ -1,53 +1,55 @@
 <!--
 Sync Impact Report
 ==================
-Version Change: v2.2 → v2.3
-Amendment Date: 2025-12-23
-Amendment Type: MINOR (added LLM utilities code reuse principle)
+Version Change: v2.3 → v2.4
+Amendment Date: 2025-12-25
+Amendment Type: MINOR (added fail-fast dependency management principle)
 
 Modified Sections:
-- Article I.H: Added guidance on shared LLM utility module (src/core/llm.py)
-  - Specified location for Azure AI Foundry configuration
-  - Specified location for Pydantic AI result parsing utilities
-  - Prevents duplicate LLM setup code across components
+- Article I: Added explicit dependency requirement enforcement
+  - All required dependencies MUST be declared in pyproject.toml or requirements.txt
+  - No optional dependencies allowed in production code paths
+  - Import errors MUST fail immediately at module load time
 
 Added Principle:
-- Article II.I: Shared LLM Utilities & Code Reuse
-  - MUST use src/core/llm.py for Azure model factory and result parsing
-  - Prevents duplicate environment variable reading and URL normalization
-  - Ensures consistent model configuration across all agents
-  - Single point of change for LLM provider configuration
+- Article II.J: Fail-Fast Dependency Management
+  - NO try/except ImportError fallback patterns allowed
+  - NO graceful degradation for missing dependencies
+  - System either works as designed or fails immediately
+  - Applies to ALL code including tests (no test-specific fallbacks)
 
 Rationale:
-- Prevents duplicate Azure AI Foundry configuration code (occurred in Spec 002)
-- ResearcherAgent and ToolGapDetector both had identical LLM setup logic
-- Ensures consistency when changing LLM providers
-- Reduces maintenance burden and potential configuration drift
+- Prevents silent degradation and hard-to-diagnose behavior differences
+- Ensures consistent behavior across all environments (dev, test, prod)
+- Makes dependency issues visible immediately rather than at runtime
+- Reduces maintenance burden of maintaining multiple code paths
+- Eliminates "works on my machine" issues caused by optional dependencies
 
-Dependent Files Updated:
-- ✅ src/core/llm.py (new utility module created)
-- ✅ src/agents/researcher.py (refactored to use shared utilities)
-- ✅ src/core/tool_gap_detector.py (refactored to use shared utilities)
+Code Changes Required:
+- ✅ src/workflows/research_graph.py: Removed _FallbackGraph and _FallbackRunner classes
+- ✅ src/workflows/research_graph.py: Removed LANGGRAPH_AVAILABLE flag and conditional logic
+- ✅ src/workflows/research_graph.py: Direct import of langgraph.graph (no try/except)
 
 Templates Requiring Updates:
-- ⚠️ .specify/templates/plan-template.md: Add LLM utilities validation
-- ⚠️ .specify/templates/tasks-template.md: Reference shared LLM utilities pattern
+- ✅ .specify/templates/plan-template.md: Added fail-fast dependency management checklist item
+- ✅ .specify/templates/spec-template.md: Updated principle count from 9 to 10
+- ✅ .specify/templates/tasks-template.md: Added fail-fast dependency management to cross-cutting requirements
 
 Follow-Up TODOs:
-- None (all critical updates complete)
+- None (all updates complete)
 
 Commit Message Suggestion:
-docs: amend constitution to v2.3 (add shared LLM utilities code reuse principle)
+docs: amend constitution to v2.4 (add fail-fast dependency management principle)
 -->
 
-# Personal AI Assistant System: Project Constitution v2.3
+# Personal AI Assistant System: Project Constitution v2.4
 
 ## Executive Summary
 
 This constitution establishes the **immutable architectural rules** and **non-negotiable technology stack** for the Personal AI Assistant System (PAIAS). It serves as the persistent source of truth for all AI agents, developers, and technical decisions across the entire system lifecycle. Changes to this constitution require cross-functional review and documented rationale per Article V.
 
 **Ratification Date:** 2025-12-20
-**Last Amended:** 2025-12-23
+**Last Amended:** 2025-12-25
 **Status:** Active
 
 ---
@@ -456,6 +458,78 @@ memory.temporal_query(date_range="2024-Q4")  # Routes to PostgreSQL
 - All agent.run() result handling MUST use parse_agent_result()
 - Planning documents MUST reference this principle when adding new agents
 
+### II.J Principle: Fail-Fast Dependency Management
+
+**Definition:** All dependencies MUST be explicitly declared and imports MUST fail immediately if dependencies are missing. No fallback behavior allowed.
+
+**Implementation Requirements:**
+
+1. **No Optional Dependencies in Production Code:**
+   - All imports MUST be direct (no try/except ImportError patterns)
+   - Dependencies MUST be declared in pyproject.toml or requirements.txt
+   - Missing dependencies MUST cause immediate import failure
+   - No conditional feature flags based on dependency availability
+
+2. **No Graceful Degradation:**
+   - NO fallback implementations when libraries are not installed
+   - NO stub classes that provide degraded functionality
+   - NO runtime checks for library availability (e.g., `if LIBRARY_AVAILABLE:`)
+   - System either works as designed or fails immediately with clear error message
+
+3. **Applies to ALL Code:**
+   - Production code: No fallbacks allowed
+   - Test code: No test-specific fallbacks allowed
+   - Development utilities: No fallbacks allowed
+   - Documentation examples: Must use real dependencies
+
+4. **Forbidden Patterns:**
+   ```python
+   # FORBIDDEN: try/except ImportError fallback
+   try:
+       from langgraph.graph import StateGraph
+       LANGGRAPH_AVAILABLE = True
+   except ImportError:
+       StateGraph = None
+       LANGGRAPH_AVAILABLE = False
+
+   # FORBIDDEN: Conditional feature flags
+   if LANGGRAPH_AVAILABLE:
+       return build_real_graph()
+   else:
+       return build_fallback_graph()
+
+   # FORBIDDEN: Stub implementations
+   class _FallbackGraph:
+       """Placeholder when library not installed."""
+       pass
+   ```
+
+5. **Required Patterns:**
+   ```python
+   # REQUIRED: Direct imports that fail immediately
+   from langgraph.graph import StateGraph
+
+   # REQUIRED: Explicit dependency documentation
+   # In pyproject.toml:
+   # [project]
+   # dependencies = ["langgraph>=0.1.0"]
+   ```
+
+**Rationale:**
+- Prevents silent degradation and hard-to-diagnose behavior differences between environments
+- Ensures consistent behavior across dev, test, and production
+- Makes dependency issues visible immediately rather than at runtime
+- Reduces maintenance burden of maintaining multiple code paths
+- Eliminates "works on my machine" issues caused by optional dependencies
+- Forces explicit dependency management decisions
+
+**Enforcement:**
+- Code reviews MUST reject PRs with try/except ImportError patterns
+- Code reviews MUST reject PRs with fallback implementations
+- CI linting can detect try/except ImportError patterns via grep/ast analysis
+- All dependencies MUST be explicitly listed in dependency files
+- Planning documents MUST reference this principle when adding new dependencies
+
 ---
 
 ## Article III: Operational Standards
@@ -633,7 +707,7 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
   - [ ] Tools: All via MCP (no hardcoded integrations)?
   - [ ] LLM utilities: Uses src/core/llm.py for model setup (Article I.H)?
 
-- [ ] **Article II: Principles** – Respects all 9 principles?
+- [ ] **Article II: Principles** – Respects all 10 principles?
   - [ ] Vertical slice deliverable?
   - [ ] Pluggable orchestration (framework-agnostic agent code)?
   - [ ] Human-in-the-loop for irreversible actions?
@@ -641,6 +715,7 @@ pytest --cov=src --cov-fail-under=80 --cov-report=html tests/
   - [ ] Memory abstraction (no direct DB driver imports in agents)?
   - [ ] Unified telemetry: Uses src/core/telemetry.py only (Article II.H)?
   - [ ] Shared LLM utilities: Uses src/core/llm.py for model config (Article II.I)?
+  - [ ] Fail-fast dependencies: No try/except ImportError fallbacks (Article II.J)?
 
 - [ ] **Article III: Standards** – Meets testing, observability, async requirements?
   - [ ] Tests: 80% coverage target enforced?
@@ -666,6 +741,7 @@ If ANY gate fails, escalate to tech lead before proceeding.
 | **OpenTelemetry** | Standard for traces, metrics, logs; enables observability across all layers |
 | **Maturity Trigger** | Operational metric threshold that activates advanced features (e.g., cache layer, multi-storage) |
 | **LLM Utilities Module** | Shared module (`src/core/llm.py`) providing model factory and result parsing functions |
+| **Fail-Fast** | Design principle requiring immediate failure when dependencies are missing; no fallback behavior |
 
 ---
 
@@ -673,6 +749,6 @@ If ANY gate fails, escalate to tech lead before proceeding.
 ---
 
 **Ratified:** 2025-12-20
-**Last Amended:** 2025-12-23
-**Version:** v2.3
+**Last Amended:** 2025-12-25
+**Version:** v2.4
 **Next Review:** When Article V.A amendment proposal submitted
