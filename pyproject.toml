@@ -45,7 +45,7 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-addopts = "--cov=src --cov-fail-under=80"
+addopts = "--cov=paias --cov-fail-under=80"
 
 [tool.black]
 line-length = 88

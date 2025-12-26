@@ -18,8 +18,8 @@ else
   exit 1
 fi
 
-# Ensure Python can import from src when running alembic/tests
-export PYTHONPATH="${REPO_ROOT}/src:${PYTHONPATH:-}"
+# Ensure Python can import from paias when running alembic/tests
+export PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}"
 
 echo "Stopping containers..."
 "${COMPOSE_CMD[@]}" down || true

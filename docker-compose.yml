@@ -85,16 +85,30 @@ services:
       WORKER_GROUP: default
       # Tell Windmill to use pre-installed paias package and system site-packages
       ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
-      # Pass through Azure AI Foundry credentials
-      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
-      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
-      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
+      # This is required because Windmill isolates script execution
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_AI_MODEL_ID,AZURE_API_VERSION,DATABASE_URL_PAIAS,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
+      # Pass through Azure AI Foundry credentials (from .env)
+      AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
+      AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
+      AZURE_AI_MODEL_ID: ${AZURE_DEPLOYMENT_NAME:-gpt-4o}
+      AZURE_API_VERSION: ${OPENAI_API_VERSION:-2024-12-01-preview}
       # Database URL for paias application
       DATABASE_URL_PAIAS: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/paias}
-      # Telemetry
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      # Telemetry - use jaeger hostname (not localhost) for Docker networking
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}
+      OTEL_SAMPLING_RATE: ${OTEL_SAMPLING_RATE:-1.0}
+      # Web search configuration
+      WEBSEARCH_ENGINE: ${WEBSEARCH_ENGINE:-duckduckgo}
+      WEBSEARCH_MAX_RESULTS: ${WEBSEARCH_MAX_RESULTS:-10}
+      WEBSEARCH_TIMEOUT_SECONDS: ${WEBSEARCH_TIMEOUT_SECONDS:-30}
+      # Logging
+      ENABLE_AGENTIC_LOGGING: ${ENABLE_AGENTIC_LOGGING:-true}
     depends_on:
       windmill_server:
+        condition: service_healthy
+      jaeger:
         condition: service_healthy
     # Resource limits per FR-010 (Constitution Article II.F)
     deploy:
@@ -126,16 +140,29 @@ services:
       WORKER_GROUP: default
       # Tell Windmill to use pre-installed paias package and system site-packages
       ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
-      # Pass through Azure AI Foundry credentials
-      AZURE_OPENAI_API_KEY: ${AZURE_OPENAI_API_KEY:-}
-      AZURE_OPENAI_ENDPOINT: ${AZURE_OPENAI_ENDPOINT:-}
-      AZURE_OPENAI_DEPLOYMENT: ${AZURE_OPENAI_DEPLOYMENT:-}
+      # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_AI_MODEL_ID,AZURE_API_VERSION,DATABASE_URL_PAIAS,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING"
+      # Pass through Azure AI Foundry credentials (from .env)
+      AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
+      AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
+      AZURE_AI_MODEL_ID: ${AZURE_DEPLOYMENT_NAME:-gpt-4o}
+      AZURE_API_VERSION: ${OPENAI_API_VERSION:-2024-12-01-preview}
       # Database URL for paias application
       DATABASE_URL_PAIAS: ${DATABASE_URL:-postgresql+asyncpg://postgres:postgres@postgres:5432/paias}
-      # Telemetry
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://jaeger:4317}
+      # Telemetry - use jaeger hostname (not localhost) for Docker networking
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}
+      OTEL_SAMPLING_RATE: ${OTEL_SAMPLING_RATE:-1.0}
+      # Web search configuration
+      WEBSEARCH_ENGINE: ${WEBSEARCH_ENGINE:-duckduckgo}
+      WEBSEARCH_MAX_RESULTS: ${WEBSEARCH_MAX_RESULTS:-10}
+      WEBSEARCH_TIMEOUT_SECONDS: ${WEBSEARCH_TIMEOUT_SECONDS:-30}
+      # Logging
+      ENABLE_AGENTIC_LOGGING: ${ENABLE_AGENTIC_LOGGING:-true}
     depends_on:
       windmill_server:
+        condition: service_healthy
+      jaeger:
         condition: service_healthy
     deploy:
       resources:

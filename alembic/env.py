@@ -32,7 +32,7 @@ from alembic import context
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel import SQLModel
 
-from src.core.config import settings
+from paias.core.config import settings
 
 config = context.config
 

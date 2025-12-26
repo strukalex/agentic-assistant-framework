@@ -17,14 +17,28 @@ Architecture:
 
 from __future__ import annotations
 
-# === DIAGNOSTIC LOGGING ===
 import sys
 import os
 import subprocess
 
+# =============================================================================
+# Environment variable diagnostics - WHITELIST_ENVS in docker-compose.yml
+# controls which env vars are passed to Python scripts by Windmill
+# =============================================================================
+
 print("=== WINDMILL ENVIRONMENT DIAGNOSTICS ===")
 print(f"Python executable: {sys.executable}")
 print(f"sys.path: {sys.path}")
+
+# Check key environment variables (WHITELIST_ENVS must include these)
+_key_env_vars = ["AZURE_AI_FOUNDRY_ENDPOINT", "AZURE_AI_FOUNDRY_API_KEY", "OTEL_EXPORTER_OTLP_ENDPOINT"]
+print("Key env vars (via WHITELIST_ENVS):")
+for v in _key_env_vars:
+    val = os.environ.get(v, "<NOT SET>")
+    # Mask sensitive values
+    if "KEY" in v and val != "<NOT SET>":
+        val = val[:8] + "..." if len(val) > 8 else "***"
+    print(f"  {v}: {val}")
 
 # Check where paias is installed FIRST (most important)
 try:
