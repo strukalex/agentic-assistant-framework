@@ -68,6 +68,12 @@ def _generate_simple_embedding(query: str, dimension: int = 1536) -> List[float]
 
 # Limits and per-run state to prevent thrashing and to capture executed tools.
 MAX_TOOL_CALLS_PER_RUN = 50
+
+
+class AgentRuntimeExceeded(RuntimeError):
+    """Raised when the ResearcherAgent exceeds its allotted runtime budget."""
+
+
 _tool_call_log: contextvars.ContextVar[
     Optional[List[ToolCallRecord]]
 ] = contextvars.ContextVar("tool_call_log", default=None)
@@ -82,6 +88,9 @@ _stored_hashes: contextvars.ContextVar[
 ] = contextvars.ContextVar("stored_hashes", default=None)
 _answer_committed: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "answer_committed", default=False
+)
+_agent_deadline: contextvars.ContextVar[float | None] = contextvars.ContextVar(
+    "agent_deadline", default=None
 )
 
 
@@ -126,6 +135,24 @@ def _get_stored_hashes() -> set[str]:
     return hashes
 
 
+def _set_agent_deadline(seconds: float | None) -> contextvars.Token[float | None]:
+    """Set the per-run deadline (monotonic timestamp) and return the context token."""
+    deadline = time.monotonic() + seconds if seconds is not None else None
+    return _agent_deadline.set(deadline)
+
+
+def _check_agent_deadline(label: str = "agent step") -> None:
+    """Raise if the configured runtime budget has been exceeded."""
+    deadline = _agent_deadline.get()
+    if deadline is None:
+        return
+    now = time.monotonic()
+    if now >= deadline:
+        raise AgentRuntimeExceeded(
+            f"Time budget exceeded at {label} (deadline reached after {deadline:.2f}s, now {now:.2f}s)"
+        )
+
+
 def _record_tool_call(
     tool_name: str,
     parameters: dict,
@@ -142,6 +169,22 @@ def _record_tool_call(
             status=status,
         )
     )
+
+
+class _TimedProviderWrapper:
+    """Wrapper that checks the agent runtime budget around LLM calls."""
+
+    def __init__(self, provider: Any):
+        self._provider = provider
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._provider, name)
+
+    async def run_chat(self, *args: Any, **kwargs: Any) -> Any:
+        _check_agent_deadline("before llm")
+        result = await self._provider.run_chat(*args, **kwargs)
+        _check_agent_deadline("after llm")
+        return result
 
 
 def _reset_run_context() -> None:
@@ -175,6 +218,7 @@ async def _with_tool_logging_and_cache(
             a run and halt after `max_repeats` to prevent thrashing.
         max_repeats: Maximum consecutive identical invocations allowed.
     """
+    _check_agent_deadline(f"before tool {tool_name}")
     cache = _get_tool_cache()
     key = _make_cache_key(tool_name, parameters)
     start = time.perf_counter()
@@ -241,10 +285,12 @@ async def _with_tool_logging_and_cache(
             duration_ms=duration_ms,
             status=ToolCallStatus.SUCCESS,
         )
+        _check_agent_deadline(f"after tool {tool_name} (cached)")
         return cached_result
 
     try:
         result = await func()
+        _check_agent_deadline(f"after tool {tool_name}")
         duration_ms = int((time.perf_counter() - start) * 1000)
         if enable_cache:
             cache[key] = result
@@ -273,6 +319,14 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
     # Lazy initialization: create model only when agent is needed
     # This prevents import-time errors if environment variables aren't set yet
     model = get_azure_model()
+    try:
+        provider = getattr(model, "provider", None)
+        if provider is not None:
+            model.provider = _TimedProviderWrapper(provider)  # type: ignore[attr-defined]
+    except Exception:
+        # If the provider cannot be wrapped, proceed without timing guard; downstream
+        # timeout checks will still apply at tool boundaries.
+        pass
     return Agent[MemoryManager, AgentResponse](
         model=model,
         output_type=AgentResponse,
@@ -700,6 +754,7 @@ async def run_agent_with_tracing(
     task: str,
     deps: MemoryManager,
     mcp_session: Optional[ClientSession] = None,
+    max_runtime_seconds: float | None = None,
 ) -> AgentResponse | ToolGapReport:
     """Execute agent.run() with OpenTelemetry tracing and tool gap detection.
 
@@ -727,6 +782,10 @@ async def run_agent_with_tracing(
     with tracer.start_as_current_span("agent_run") as span:
         span.set_attribute("task_description", task)
         span.set_attribute("result_type", "AgentResponse")
+        deadline_token = _set_agent_deadline(max_runtime_seconds)
+        if max_runtime_seconds is not None:
+            span.set_attribute("runtime_budget_seconds", float(max_runtime_seconds))
+            logger.info("⏱️ Runtime budget set to %.1fs", float(max_runtime_seconds))
 
         # Phase 1: Tool Gap Detection (if MCP session available)
         # Per tasks.md T210: Before executing task, check for missing capabilities
@@ -777,6 +836,7 @@ async def run_agent_with_tracing(
                 "   [AGENTIC LOOP] Result type=%s",
                 type(result).__name__,
             )
+            _check_agent_deadline("after agent.run")
 
             # Normalize payload shape across pydantic-ai versions
             logger.info("🔍 [AGENTIC LOOP] Extracting payload from result...")
@@ -826,6 +886,20 @@ async def run_agent_with_tracing(
                 logger.info("📊 Confidence: %.2f", payload.confidence)
 
             logger.info("=" * 80)
+        except AgentRuntimeExceeded as exc:
+            message = (
+                "ResearcherAgent stopped after exceeding the runtime budget."
+            )
+            logger.warning("⏱️ %s Detail: %s", message, exc)
+            span.set_attribute("error_type", type(exc).__name__)
+            span.set_attribute("error_message", str(exc))
+            span.record_exception(exc)
+            return AgentResponse(
+                answer="Timed out before completing research.",
+                reasoning=message,
+                tool_calls=_get_tool_log(),
+                confidence=0.0,
+            )
         except asyncio.TimeoutError as exc:
             # T603: Timeout handling for MCP tool calls
             message = (
@@ -871,6 +945,7 @@ async def run_agent_with_tracing(
             _web_search_seen.reset(web_search_token)
             _stored_hashes.reset(stored_hashes_token)
             _answer_committed.reset(answer_committed_token)
+            _agent_deadline.reset(deadline_token)
 
         # Set result attributes
         confidence_val = getattr(payload, "confidence", None)
@@ -889,12 +964,18 @@ async def run_agent_with_tracing(
 
 
 async def run_researcher_agent(
-    task: str, deps: MemoryManager
+    task: str, deps: MemoryManager, *, max_runtime_seconds: float | None = None
 ) -> AgentResponse | ToolGapReport:
     """Convenience entrypoint: create agent with MCP tools, run it, then clean up."""
     agent, mcp_session = await setup_researcher_agent(deps)
     try:
-        return await run_agent_with_tracing(agent, task, deps, mcp_session)
+        return await run_agent_with_tracing(
+            agent,
+            task,
+            deps,
+            mcp_session,
+            max_runtime_seconds=max_runtime_seconds,
+        )
     finally:
         await _shutdown_session(mcp_session)
 

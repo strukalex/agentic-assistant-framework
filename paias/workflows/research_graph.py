@@ -53,6 +53,7 @@ def build_research_graph(
     *,
     memory_manager: Any | None = None,
     agent_runner: Callable[..., Awaitable[Any]] | None = None,
+    max_researcher_runtime_seconds: float | None = None,
 ) -> StateGraph:
     """
     Build the DailyTrendingResearch LangGraph with real node implementations.
@@ -70,6 +71,7 @@ def build_research_graph(
             research_node,
             memory_manager=memory_manager,
             agent_runner=agent_runner,
+            max_runtime_seconds=max_researcher_runtime_seconds,
         ),
     )
     graph.add_node("critique", critique_node)
@@ -91,10 +93,17 @@ def build_research_graph(
 
 
 def compile_research_graph(
-    *, memory_manager: Any | None = None, agent_runner: Callable[..., Awaitable[Any]] | None = None
+    *,
+    memory_manager: Any | None = None,
+    agent_runner: Callable[..., Awaitable[Any]] | None = None,
+    max_researcher_runtime_seconds: float | None = None,
 ):
     """Compile the research graph into an executable app."""
-    graph = build_research_graph(memory_manager=memory_manager, agent_runner=agent_runner)
+    graph = build_research_graph(
+        memory_manager=memory_manager,
+        agent_runner=agent_runner,
+        max_researcher_runtime_seconds=max_researcher_runtime_seconds,
+    )
     return _LangGraphRunner(graph.compile())
 
 

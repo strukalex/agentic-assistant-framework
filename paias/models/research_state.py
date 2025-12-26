@@ -23,6 +23,10 @@ class ResearchState(BaseModel):
 
     topic: str = Field(..., min_length=1, max_length=500, description="Research topic")
     user_id: UUID = Field(..., description="User identifier (UUID)")
+    timed_out: bool = Field(
+        default=False,
+        description="Whether the run stopped early due to runtime budget exhaustion",
+    )
     plan: Optional[str] = Field(None, description="Current research plan")
     sources: list[SourceReference] = Field(
         default_factory=list, description="Accumulated research sources"

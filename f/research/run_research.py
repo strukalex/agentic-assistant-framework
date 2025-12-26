@@ -185,6 +185,8 @@ def main(
     topic: str,
     user_id: str | None = None,
     client_traceparent: str | None = None,
+    max_researcher_runtime_seconds: int | None = None,
+    max_iterations: int | None = None,
 ) -> dict[str, Any]:
     """
     Windmill entrypoint: execute the research graph with approval gating.
@@ -206,7 +208,13 @@ def main(
         user_id = str(uuid4())
     
     return asyncio.run(
-        _async_main(topic, user_id, client_traceparent)
+        _async_main(
+            topic,
+            user_id,
+            client_traceparent,
+            max_researcher_runtime_seconds=max_researcher_runtime_seconds,
+            max_iterations=max_iterations,
+        )
     )
 
 
@@ -214,6 +222,8 @@ async def _async_main(
     topic: str,
     user_id: str,
     client_traceparent: str | None = None,
+    max_researcher_runtime_seconds: int | None = None,
+    max_iterations: int | None = None,
 ) -> dict[str, Any]:
     """Async implementation of the Windmill workflow."""
     logger.info("=" * 80)
@@ -222,6 +232,36 @@ async def _async_main(
     logger.info(f"User ID: {user_id}")
     logger.info(f"Traceparent: {client_traceparent or 'None'}")
     logger.info("=" * 80)
+
+    # Determine runtime budget (Windmill arg takes precedence, env override optional)
+    env_runtime = os.environ.get("RUN_RESEARCHER_MAX_RUNTIME_SECONDS")
+    runtime_budget = max_researcher_runtime_seconds
+    if env_runtime:
+        try:
+            runtime_budget = int(env_runtime)
+        except ValueError:
+            logger.warning(
+                "Invalid RUN_RESEARCHER_MAX_RUNTIME_SECONDS=%s; falling back to provided/default.",
+                env_runtime,
+            )
+    if runtime_budget is None:
+        runtime_budget = 60
+    logger.info("ResearcherAgent runtime budget: %ss", runtime_budget)
+
+    # Determine outer loop iteration budget (Windmill arg takes precedence, env override optional)
+    env_iterations = os.environ.get("RUN_RESEARCH_MAX_ITERATIONS")
+    iterations_budget = max_iterations
+    if env_iterations:
+        try:
+            iterations_budget = int(env_iterations)
+        except ValueError:
+            logger.warning(
+                "Invalid RUN_RESEARCH_MAX_ITERATIONS=%s; falling back to provided/default.",
+                env_iterations,
+            )
+    if iterations_budget is None:
+        iterations_budget = 5
+    logger.info("Research graph iteration budget: %s (hard-capped at 5 by model validator)", iterations_budget)
 
     # Set progress for Windmill UI (percentage only - no message parameter)
     if WMILL_AVAILABLE and wmill is not None:
@@ -237,7 +277,6 @@ async def _async_main(
         logger.info("- Creating database-backed memory manager")
         # Use real MemoryManager - connects to Postgres from PAIAS_DATABASE_URL env var
         # Note: PAIAS_DATABASE_URL must be set in docker-compose.yml WHITELIST_ENVS
-        import os
         db_url = os.environ.get("PAIAS_DATABASE_URL") or settings.database_url
         logger.info(f"  Database URL: {db_url.split('@')[1] if '@' in db_url else 'default'}")  # Don't log credentials
         memory_mgr = MemoryManager()  # Will use PAIAS_DATABASE_URL from settings
@@ -245,10 +284,15 @@ async def _async_main(
         app = compile_research_graph(
             memory_manager=memory_mgr,
             agent_runner=run_researcher_agent,
+            max_researcher_runtime_seconds=runtime_budget,
         )
 
         logger.info("- Creating initial state")
-        initial_state = ResearchState(topic=topic, user_id=user_id)
+        initial_state = ResearchState(
+            topic=topic,
+            user_id=user_id,
+            max_iterations=iterations_budget,
+        )
         logger.info(f"  Max iterations: {initial_state.max_iterations}")
         logger.info(f"  Quality threshold: {initial_state.quality_threshold}")
 
@@ -356,6 +400,7 @@ async def _async_main(
         "memory_document_id": final_state.memory_document_id,
         "action_results": action_results,
         "approval_status": approval_status,
+        "timed_out": final_state.timed_out,
     }
 
 
@@ -374,6 +419,17 @@ __windmill__ = {
             "client_traceparent": {
                 "type": "string",
                 "description": "Optional W3C traceparent for distributed tracing",
+            },
+            "max_researcher_runtime_seconds": {
+                "type": "integer",
+                "minimum": 10,
+                "description": "Optional cap for researcher agent runtime (seconds). Defaults to 60; env RUN_RESEARCHER_MAX_RUNTIME_SECONDS overrides.",
+            },
+            "max_iterations": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "Optional cap for outer research loop iterations (hard-capped at 5). Defaults to 5; env RUN_RESEARCH_MAX_ITERATIONS overrides.",
             },
         },
         "required": ["topic"],

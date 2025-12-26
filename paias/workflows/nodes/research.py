@@ -5,7 +5,7 @@ from typing import Awaitable, Callable, Iterable
 
 from uuid import uuid4
 
-from ...agents.researcher import run_researcher_agent
+from ...agents.researcher import AgentRuntimeExceeded, run_researcher_agent
 from ...core.memory import MemoryManager
 from ...core.telemetry import trace_langgraph_node
 from ...models.agent_response import AgentResponse, ToolCallRecord
@@ -62,6 +62,7 @@ async def research_node(
     agent_runner: Callable[[str, MemoryManager], Awaitable[AgentResponse]]
     | None = None,
     memory_manager: MemoryManager | None = None,
+    max_runtime_seconds: float | None = None,
 ) -> ResearchState:
     """
     Execute research using the provided agent runner and update state with findings.
@@ -85,7 +86,19 @@ async def research_node(
     runner_name = getattr(runner, "__name__", str(runner))
     logger.info("  → [research_node] Using agent_runner: %s", runner_name)
 
-    result = await runner(f"Research topic: {state.topic}", deps=deps)  # type: ignore[arg-type]
+    try:
+        result = await runner(
+            f"Research topic: {state.topic}", deps=deps, max_runtime_seconds=max_runtime_seconds
+        )  # type: ignore[arg-type]
+    except AgentRuntimeExceeded as exc:
+        logger.warning("  → [research_node] ResearcherAgent timed out: %s", exc)
+        return state.model_copy(
+            update={
+                "status": ResearchStatus.FINISHED,
+                "timed_out": True,
+                "refined_answer": "Timed out before completing research.",
+            }
+        )
     quality_score = state.quality_score
     sources = _extract_sources(getattr(result, "tool_calls", []))
 
