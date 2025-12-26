@@ -17,16 +17,15 @@ logger = logging.getLogger(__name__)
 
 async def _default_agent_runner(task: str, deps: MemoryManager) -> AgentResponse:
     """
-    Lightweight default runner used when a real agent is not provided.
+    Placeholder runner that raises an error if no real agent is provided.
 
-    Returns a deterministic AgentResponse so LangGraph execution can proceed
-    during tests without invoking external services.
+    This ensures that production workflows fail fast rather than silently
+    returning demo data when the agent runner is not wired up correctly.
     """
-    return AgentResponse(
-        answer=f"Preliminary findings for: {task}",
-        reasoning="Default agent runner used (no external calls)",
-        tool_calls=[],
-        confidence=0.5,
+    raise NotImplementedError(
+        "No agent_runner provided to compile_research_graph(). "
+        "You must pass agent_runner=run_researcher_agent for production use. "
+        "This is required to invoke the real Pydantic AI agent with MCP tools."
     )
 
 
@@ -82,29 +81,15 @@ async def research_node(
     runner = agent_runner or _default_agent_runner
     deps = memory_manager if memory_manager is not None else _NoopMemoryManager()
 
+    # Log which agent runner is being used for transparency
+    runner_name = getattr(runner, "__name__", str(runner))
+    logger.info("  → [research_node] Using agent_runner: %s", runner_name)
+
     result = await runner(f"Research topic: {state.topic}", deps=deps)  # type: ignore[arg-type]
     quality_score = state.quality_score
     sources = _extract_sources(getattr(result, "tool_calls", []))
-    if not sources and (agent_runner is None or agent_runner is _default_agent_runner):
-        # Provide demo-friendly placeholder sources so the report has citations.
-        sources = [
-            SourceReference(
-                title="Demo Source 1",
-                url="https://example.com/demo-1",
-                snippet=f"Synthesized insight related to {state.topic}.",
-            ),
-            SourceReference(
-                title="Demo Source 2",
-                url="https://example.com/demo-2",
-                snippet=f"Additional context for {state.topic}.",
-            ),
-            SourceReference(
-                title="Demo Source 3",
-                url="https://example.com/demo-3",
-                snippet=f"Supporting details for {state.topic}.",
-            ),
-        ]
-        quality_score = max(quality_score, 0.9)
+
+    # Calculate quality score from sources and confidence
     if sources:
         quality_score = max(quality_score, min(1.0, 0.3 * len(sources)))
     if hasattr(result, "confidence"):

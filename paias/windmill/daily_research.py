@@ -37,6 +37,7 @@ from .approval_handler import (
 )
 from ..workflows.report_formatter import format_research_report, render_markdown
 from ..workflows.research_graph import InMemoryMemoryManager, compile_research_graph
+from ..agents.researcher import run_researcher_agent
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +231,12 @@ async def main(
         suspend_for_approval = _async_suspend_wrapper
 
     # Execute the research graph with distributed tracing support (T047a)
-    app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+    memory_mgr = InMemoryMemoryManager()
+    logger.info("Configuring ResearcherAgent with MCP tools...")
+    app = compile_research_graph(
+        memory_manager=memory_mgr,
+        agent_runner=run_researcher_agent,
+    )
     initial_state = ResearchState(topic=topic, user_id=user_id)
 
     if wmill:

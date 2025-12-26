@@ -90,6 +90,7 @@ from paias.windmill.approval_handler import (
 )
 from paias.models.planned_action import PlannedAction
 from paias.core.config import settings
+from paias.agents.researcher import run_researcher_agent
 
 # Configure logging
 logging.basicConfig(
@@ -222,7 +223,12 @@ async def _async_main(
         # Execute the research graph
         logger.info("PHASE 1: Initializing research graph")
         logger.info("- Creating in-memory memory manager")
-        app = compile_research_graph(memory_manager=InMemoryMemoryManager())
+        memory_mgr = InMemoryMemoryManager()
+        logger.info("- Configuring ResearcherAgent with MCP tools")
+        app = compile_research_graph(
+            memory_manager=memory_mgr,
+            agent_runner=run_researcher_agent,
+        )
 
         logger.info("- Creating initial state")
         initial_state = ResearchState(topic=topic, user_id=user_id)
