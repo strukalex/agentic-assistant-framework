@@ -210,10 +210,9 @@ def _format_message_clean(msg: dict, index: int) -> str:
 
     lines = []
 
-    # Format content (truncate for readability)
+    # Format content (no truncation)
     if content:
-        display = (content[:100] + "...") if len(str(content)) > 100 else content
-        lines.append(f"  [{index}] {role}: {display}")
+        lines.append(f"  [{index}] {role}: {content}")
 
     # Format tool calls
     if tool_calls:
@@ -224,10 +223,8 @@ def _format_message_clean(msg: dict, index: int) -> str:
             try:
                 args_parsed = json.loads(args) if isinstance(args, str) else args
                 args_str = json.dumps(args_parsed)
-                if len(args_str) > 80:
-                    args_str = args_str[:80] + "..."
             except Exception:
-                args_str = str(args)[:80]
+                args_str = str(args)
             lines.append(f"  [{index}] {role}: 🛠️ {name}({args_str})")
 
     return "\n".join(lines) if lines else f"  [{index}] {role}: (empty)"
@@ -263,7 +260,6 @@ async def _log_http_request(request: httpx.Request) -> None:
             if parsed and "messages" in parsed:
                 messages = parsed["messages"]
                 log_lines = [f"🔵 [HTTP REQUEST] → {request.method} {request.url}"]
-                log_lines.append(f"  Model: {parsed.get('model', 'unknown')}")
                 log_lines.append("  --- Conversation History ---")
                 for i, msg in enumerate(messages, 1):
                     log_lines.append(_format_message_clean(msg, i))
@@ -311,11 +307,6 @@ async def _log_http_response(response: httpx.Response) -> None:
                 msg = choice.get("message", {})
                 log_lines.append("  --- New Response ---")
                 log_lines.append(_format_message_clean(msg, 0).replace("[0]", "[NEW]"))
-
-                # Add usage stats if available
-                usage = parsed.get("usage", {})
-                if usage:
-                    log_lines.append(f"  Tokens: {usage.get('prompt_tokens', 0)} in, {usage.get('completion_tokens', 0)} out")
             log_message = "\n".join(log_lines)
 
         logger.info(log_message)
