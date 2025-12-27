@@ -92,6 +92,10 @@ _answer_committed: contextvars.ContextVar[bool] = contextvars.ContextVar(
 _agent_deadline: contextvars.ContextVar[float | None] = contextvars.ContextVar(
     "agent_deadline", default=None
 )
+# Track if memory has been searched this run (to enforce single-attempt rule)
+_memory_searched: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "memory_searched", default=False
+)
 
 
 def _make_cache_key(tool_name: str, parameters: dict) -> str:
@@ -194,6 +198,7 @@ def _reset_run_context() -> None:
     _web_search_seen.set(set())
     _stored_hashes.set(set())
     _answer_committed.set(False)
+    _memory_searched.set(False)
 
 
 async def _with_tool_logging_and_cache(
@@ -342,76 +347,65 @@ Your capabilities:
 - Query time/date context
 - Store and retrieve from long-term memory
 
-Your responsibilities and workflow (IMPORTANT - follow this order):
+## Workflow
 
-1. Start by checking memory. Call search_memory() ONCE to see if you already
-   have knowledge about this topic. This avoids duplicate work.
+Before calling any tool, review the conversation history:
+- Did you just call search_memory?
+- Did it return "NO RESULTS FOUND"?
+- If YES to both: Your ONLY valid action is web_search. Do not analyze. Just search.
 
-   CRITICAL RULE: NEVER call search_memory() twice for the same query.
-   If the first attempt fails or returns "NO RESULTS FOUND", you MUST
-   call web_search next.
+1. Memory Check Protocol:
+   Call search_memory() ONCE at the start.
+   - IF it returns relevant information: Answer the user immediately using that info.
+     Cite the memory source in your reasoning (e.g., "Based on prior research from [date]...").
+   - IF it returns "NO RESULTS FOUND", empty results, or irrelevant data:
+     STOP thinking about memory. IMMEDIATELY call web_search().
 
-2. Use memory results when available. If search_memory() returns relevant past
-   research, use that knowledge in your answer and cite the memory source in
-   your reasoning (e.g., "Based on prior research stored on [date]...").
+2. Web Search:
+   When memory has no answer, use web_search to find information.
+   Always pass the query parameter: web_search({{"query": "your search terms"}})
 
-   If search_memory() returns:
-   - Relevant facts: STOP and answer immediately using that information.
-   - Empty results, "NO RESULTS FOUND", irrelevant data, or placeholders:
-     Immediately proceed to step 3 (web_search). Do NOT retry search_memory().
+3. Fetch Full Content (optional):
+   If web_search returns relevant URLs but snippets lack detail, use:
+   fetch_url(url="https://...") to get full page content as markdown.
 
-3. Research when needed. If memory yielded no results (see step 2), immediately
-   use web_search to find the answer. To use web_search, always pass the query,
-   e.g. web_search({{"query": "your search terms"}})
+4. Store New Findings:
+   After synthesizing new research from web_search or other sources,
+   call store_memory() to persist knowledge for future queries.
 
-   CRITICAL: Once search_memory() fails, skip directly to web_search. Do NOT
-   call search_memory() again.
-
-3b. Fetch full content when snippets aren't enough. If web_search returns
-    relevant URLs but the snippets lack detail, use fetch_url(url="https://...")
-    to retrieve the full page content as markdown. This gives you the depth
-    needed for comprehensive answers.
-
-4. Store new findings. After synthesizing new research findings from
-   web_search or other sources, always call store_memory() to persist this
-   knowledge for future queries. Include metadata with:
+   Include metadata:
    - topic: Brief topic description
    - timestamp: Current date/time from get_current_time()
    - sources: List of tools used (e.g., ["web_search"])
-   CRITICAL: ONLY store verified facts or synthesized answers. NEVER store
-   queries, status updates, "no results" messages, or intermediate reasoning.
 
-5. Provide accurate answers. Return structured responses with confidence scores
-   based on source reliability.
+   ONLY store verified facts or synthesized answers. NEVER store queries,
+   status updates, "no results" messages, or intermediate reasoning.
 
-6. Be honest about gaps. Never hallucinate capabilities—acknowledge gaps
-   honestly.
+5. Provide Answer:
+   Return a structured AgentResponse with:
+   - answer: The final answer to the user's query
+   - reasoning: How you arrived at the answer (memory sources, tools used, synthesis)
+   - tool_calls: List of all tool invocations
+   - confidence: Self-assessed confidence score (0.0-1.0)
 
-7. Avoid tool thrashing. Do not repeat the exact same tool call with identical
-   parameters. If a tool yields "NO RESULTS FOUND" or similar failure, switch
-   to a different tool immediately.
+## HARD CONSTRAINTS
 
-Output Format: Always return a structured AgentResponse with:
-- answer: The final answer to the user's query
-- reasoning: Explanation of how you arrived at the answer, including:
-  * Memory sources cited (if used): "Based on prior research from [date]..."
-  * Tools used and why
-  * How you synthesized the information
-- tool_calls: List of all tool invocations made during execution
-- confidence: Your self-assessed confidence score (0.0-1.0)
+1. SINGLE MEMORY ATTEMPT: You are allowed exactly ONE call to search_memory per user query.
 
-CRITICAL: Follow the workflow order above. Memory check (ONCE), then research
-if needed, then store findings.
+2. FAILURE HANDLING: If search_memory returns "NO RESULTS FOUND", you are FORBIDDEN
+   from calling it again. You must proceed directly to web_search.
 
-CRITICAL: Only run ONE STEP AT A TIME. Do not issue multiple parallel
-calls for search, memory, etc.
+3. NO LOOPING: If you see yourself making the same tool call twice in a row, STOP
+   and try a different tool.
 
-CRITICAL: You must execute steps SEQUENTIALLY. Do NOT call store_memory
-in the same turn as web_search. You must wait for the search results
-to arrive before deciding what to store.
+4. SEQUENTIAL EXECUTION: Run ONE STEP AT A TIME. Do not issue multiple parallel
+   calls for search, memory, etc.
 
-CRITICAL: STOPPING CONDITION - Once you have stored the memory
-and answered the user, you must STOP. Do not loop.
+5. SEQUENTIAL STORAGE: Do NOT call store_memory in the same turn as web_search.
+   Wait for search results to arrive before deciding what to store.
+
+6. STOPPING CONDITION: Once you have stored the memory and answered the user,
+   you must STOP. Do not loop.
 """,
     )
 
@@ -437,6 +431,18 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
     # Enhanced logging for memory search
     logger.info("🔍 [search_memory] Querying memory for: %s", query[:100])
 
+    # GUARD: Enforce single memory search per run
+    # This prevents the LLM from repeatedly calling search_memory when it should use web_search
+    if _memory_searched.get():
+        logger.warning("🚫 [search_memory] BLOCKED: Memory already searched this run. Use web_search instead.")
+        return [{
+            "content": "ERROR: search_memory can only be called ONCE per query. Memory was already searched. You MUST call web_search now.",
+            "metadata": {"blocked": True, "reason": "single_attempt_rule"}
+        }]
+
+    # Mark memory as searched for this run
+    _memory_searched.set(True)
+
     async def _execute() -> List[dict]:
         try:
             # Preferred path per spec: pass raw query string
@@ -451,7 +457,10 @@ async def search_memory(ctx: RunContext[MemoryManager], query: str) -> List[dict
         # Explicitly tell LLM to stop if no results found
         if not documents:
             logger.info("📭 [search_memory] No results found in memory")
-            return [{"content": "NO RESULTS FOUND. Please try web_search.", "metadata": {}}]
+            return [{
+                "content": "Status: SUCCESS. Memory search complete. Step 1 of 2 finished. Proceed immediately to Step 2: Call web_search.",
+                "metadata": {"memory_exhausted": True, "next_action": "web_search"}
+            }]
 
         # Convert Document objects to dict format
         logger.info("✅ [search_memory] Found %d documents in memory", len(documents))
@@ -951,6 +960,7 @@ async def run_agent_with_tracing(
         web_search_token = _web_search_seen.set(set())
         stored_hashes_token = _stored_hashes.set(set())
         answer_committed_token = _answer_committed.set(False)
+        memory_searched_token = _memory_searched.set(False)
         try:
             result = await agent.run(task, deps=deps)
             logger.info("✅ [AGENTIC LOOP] agent.run() completed")
@@ -1067,6 +1077,7 @@ async def run_agent_with_tracing(
             _web_search_seen.reset(web_search_token)
             _stored_hashes.reset(stored_hashes_token)
             _answer_committed.reset(answer_committed_token)
+            _memory_searched.reset(memory_searched_token)
             _agent_deadline.reset(deadline_token)
 
         # Set result attributes
