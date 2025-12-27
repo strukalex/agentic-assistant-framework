@@ -144,6 +144,28 @@ class Settings(BaseSettings):
     )
 
     # ----------------------
+    # LLM configuration
+    # ----------------------
+    llm_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="LLM temperature (0.0=deterministic, higher=more creative). Set LLM_TEMPERATURE env var.",
+    )
+    llm_max_tokens: int | None = Field(
+        default=None,
+        ge=1,
+        le=128000,
+        description="Maximum tokens for LLM response. None uses model default. Set LLM_MAX_TOKENS env var.",
+    )
+    mcp_result_max_length: int = Field(
+        default=4000,
+        ge=500,
+        le=100000,
+        description="Maximum character length for MCP tool results before truncation. Set MCP_RESULT_MAX_LENGTH env var.",
+    )
+
+    # ----------------------
     # Logging configuration
     # ----------------------
     enable_agentic_logging: bool = Field(

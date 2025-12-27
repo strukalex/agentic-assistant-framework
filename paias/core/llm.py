@@ -13,6 +13,7 @@ import httpx
 from dotenv import load_dotenv
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.settings import ModelSettings
 
 from .config import settings
 
@@ -83,7 +84,19 @@ def get_azure_model() -> OpenAIChatModel:
     if settings.enable_agentic_logging:
         provider = _LoggingProviderWrapper(provider)
 
-    return OpenAIChatModel(model_name, provider=provider)
+    # Build model settings from config
+    model_settings = ModelSettings(
+        temperature=settings.llm_temperature,
+        max_tokens=settings.llm_max_tokens,
+    )
+
+    logger.info(
+        "🔧 Azure model configured: temperature=%.2f, max_tokens=%s",
+        settings.llm_temperature,
+        settings.llm_max_tokens or "default",
+    )
+
+    return OpenAIChatModel(model_name, provider=provider, settings=model_settings)
 
 
 class _LoggingProviderWrapper:

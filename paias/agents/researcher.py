@@ -336,30 +336,41 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
 Current date: {time.strftime("%Y-%m-%d")}. Treat earlier sources as valid historical facts.
 
 Your capabilities:
-- Search external information sources via web search
+- Search external information sources via web_search
+- Fetch full page content from URLs via fetch_url (converts HTML to markdown)
 - Access local filesystem (read-only)
 - Query time/date context
 - Store and retrieve from long-term memory
 
 Your responsibilities and workflow (IMPORTANT - follow this order):
 
-1. Always check memory FIRST. Before using expensive tools like web_search,
-   always call search_memory() to see if you already have knowledge about this
-   topic. This avoids duplicate work.
+1. Start by checking memory. Call search_memory() ONCE to see if you already
+   have knowledge about this topic. This avoids duplicate work.
+
+   CRITICAL RULE: NEVER call search_memory() twice for the same query.
+   If the first attempt fails or returns "NO RESULTS FOUND", you MUST
+   call web_search next.
 
 2. Use memory results when available. If search_memory() returns relevant past
    research, use that knowledge in your answer and cite the memory source in
    your reasoning (e.g., "Based on prior research stored on [date]...").
-   IMPORTANT:
-   - If search_memory() returns relevant facts that answer the question,
-     STOP and answer immediately. Do NOT call search_memory() again with
-     the same query.
-   - If search_memory() returns irrelevant data, query logs, or placeholders
-     (e.g., "NO RESULTS FOUND"), proceed directly to web_search.
 
-3. Research when needed. Only use web_search or other expensive tools when
-   memory does not have the answer (i.e., search_memory() returned empty results
-   or "NO RESULTS FOUND"). To use web_search, always pass the query, e.g. web_search({"query": "NASA life definition seven characteristics living things"})
+   If search_memory() returns:
+   - Relevant facts: STOP and answer immediately using that information.
+   - Empty results, "NO RESULTS FOUND", irrelevant data, or placeholders:
+     Immediately proceed to step 3 (web_search). Do NOT retry search_memory().
+
+3. Research when needed. If memory yielded no results (see step 2), immediately
+   use web_search to find the answer. To use web_search, always pass the query,
+   e.g. web_search({{"query": "your search terms"}})
+
+   CRITICAL: Once search_memory() fails, skip directly to web_search. Do NOT
+   call search_memory() again.
+
+3b. Fetch full content when snippets aren't enough. If web_search returns
+    relevant URLs but the snippets lack detail, use fetch_url(url="https://...")
+    to retrieve the full page content as markdown. This gives you the depth
+    needed for comprehensive answers.
 
 4. Store new findings. After synthesizing new research findings from
    web_search or other sources, always call store_memory() to persist this
@@ -377,7 +388,8 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
    honestly.
 
 7. Avoid tool thrashing. Do not repeat the exact same tool call with identical
-   parameters more than twice. If a tool yields relevant evidence, use it.
+   parameters. If a tool yields "NO RESULTS FOUND" or similar failure, switch
+   to a different tool immediately.
 
 Output Format: Always return a structured AgentResponse with:
 - answer: The final answer to the user's query
@@ -388,17 +400,17 @@ Output Format: Always return a structured AgentResponse with:
 - tool_calls: List of all tool invocations made during execution
 - confidence: Your self-assessed confidence score (0.0-1.0)
 
-CRITICAL: Follow the workflow order above. Memory-first, then research, then
-store findings.
+CRITICAL: Follow the workflow order above. Memory check (ONCE), then research
+if needed, then store findings.
 
-CRITICAL: Only run ONE STEP AT A TIME. Do not issue multiple parallel 
+CRITICAL: Only run ONE STEP AT A TIME. Do not issue multiple parallel
 calls for search, memory, etc.
 
-CRITICAL: You must execute steps SEQUENTIALLY. Do NOT call store_memory 
-in the same turn as web_search. You must wait for the search results 
+CRITICAL: You must execute steps SEQUENTIALLY. Do NOT call store_memory
+in the same turn as web_search. You must wait for the search results
 to arrive before deciding what to store.
 
-CRITICAL: STOPPING CONDITION - Once you have stored the memory 
+CRITICAL: STOPPING CONDITION - Once you have stored the memory
 and answered the user, you must STOP. Do not loop.
 """,
     )
@@ -506,10 +518,106 @@ async def store_memory(
     )
 
 
+@trace_tool_call
+async def fetch_url(ctx: RunContext[MemoryManager], url: str) -> str:
+    """Fetch a URL and return its content as markdown.
+
+    Use this tool to get the full content of a web page when search snippets
+    aren't detailed enough. Converts HTML to clean markdown for easier reading.
+
+    Args:
+        ctx: RunContext with MemoryManager dependency
+        url: The URL to fetch (must be http or https)
+
+    Returns:
+        Page content converted to markdown, or error message
+    """
+    import re
+
+    import httpx
+    from markdownify import markdownify
+
+    logger = logging.getLogger(__name__)
+    params = {"url": url}
+
+    logger.info("🌐 [fetch_url] Fetching: %s", url[:100])
+
+    async def _execute() -> str:
+        # Validate URL
+        if not url.startswith(("http://", "https://")):
+            return f"ERROR: Invalid URL scheme. URL must start with http:// or https://. Got: {url[:50]}"
+
+        try:
+            timeout = httpx.Timeout(30.0, connect=10.0)
+            headers = {
+                "User-Agent": "Mozilla/5.0 (compatible; ResearcherAgent/1.0; +https://github.com/your-repo)",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.5",
+            }
+
+            async with httpx.AsyncClient(
+                timeout=timeout, follow_redirects=True, headers=headers
+            ) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+
+                content_type = response.headers.get("content-type", "")
+
+                # Handle non-HTML content
+                if "text/html" not in content_type and "application/xhtml" not in content_type:
+                    if "application/json" in content_type:
+                        return f"```json\n{response.text[:settings.mcp_result_max_length]}\n```"
+                    elif "text/" in content_type:
+                        return response.text[: settings.mcp_result_max_length]
+                    else:
+                        return f"ERROR: Cannot process content type: {content_type}"
+
+                html = response.text
+
+                # Convert HTML to markdown
+                markdown = markdownify(
+                    html,
+                    heading_style="ATX",
+                    bullets="-",
+                    strip=["script", "style", "nav", "footer", "header", "aside"],
+                )
+
+                # Clean up excessive whitespace
+                markdown = re.sub(r"\n{3,}", "\n\n", markdown)
+                markdown = re.sub(r" {2,}", " ", markdown)
+                markdown = markdown.strip()
+
+                # Truncate if too long
+                max_len = settings.mcp_result_max_length
+                if len(markdown) > max_len:
+                    markdown = markdown[:max_len] + f"\n\n... [truncated, {len(markdown) - max_len} chars omitted]"
+
+                logger.info("✅ [fetch_url] Retrieved %d chars from %s", len(markdown), url[:50])
+                return markdown
+
+        except httpx.TimeoutException:
+            return f"ERROR: Timeout fetching URL after 30s: {url[:100]}"
+        except httpx.HTTPStatusError as e:
+            return f"ERROR: HTTP {e.response.status_code} fetching URL: {url[:100]}"
+        except httpx.RequestError as e:
+            return f"ERROR: Failed to fetch URL: {type(e).__name__}: {str(e)[:100]}"
+        except Exception as e:
+            logger.exception("Unexpected error in fetch_url")
+            return f"ERROR: Unexpected error: {type(e).__name__}: {str(e)[:100]}"
+
+    return await _with_tool_logging_and_cache(
+        "fetch_url",
+        params,
+        _execute,
+        enable_cache=True,  # Cache fetched pages within the same run
+    )
+
+
 def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
-    """Attach built-in memory tools to the given agent."""
+    """Attach built-in memory and utility tools to the given agent."""
     agent.tool(search_memory)
     agent.tool(store_memory)
+    agent.tool(fetch_url)
 
 
 # Export a baseline agent for compatibility; MCP tools are added per session.
@@ -572,13 +680,17 @@ async def setup_researcher_agent(
 def _format_mcp_result(result: Any) -> str:
     """Normalize MCP tool results into a displayable string."""
 
-    def _sanitize(text: str, max_len: int = 4000) -> str:
+    def _sanitize(text: str, max_len: int | None = None) -> str:
         # Drop control characters that can break JSON encoding and cap length
         import re
 
+        # Use configurable limit from settings, default 4000
+        if max_len is None:
+            max_len = settings.mcp_result_max_length
+
         cleaned = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", text)
         if len(cleaned) > max_len:
-            return cleaned[:max_len] + "... [truncated]"
+            return cleaned[:max_len] + f"... [truncated, {len(cleaned) - max_len} chars omitted]"
         return cleaned
 
     content = getattr(result, "content", None)
