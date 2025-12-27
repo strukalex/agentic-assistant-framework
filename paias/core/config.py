@@ -8,7 +8,7 @@ from __future__ import (
     annotations,
 )  # Allow postponed evaluation of annotations (Python typing nicety)
 
-from pydantic import Field  # Used to declare typed fields with metadata and validation
+from pydantic import Field, field_validator  # Used to declare typed fields with metadata and validation
 from pydantic_settings import (
     BaseSettings,
     SettingsConfigDict,  # Pydantic Settings config helper
@@ -170,6 +170,24 @@ class Settings(BaseSettings):
         le=128000,
         description="Maximum tokens for LLM response. None uses model default. Set LLM_MAX_TOKENS env var.",
     )
+
+    @field_validator("llm_max_tokens", mode="before")
+    @classmethod
+    def parse_llm_max_tokens(cls, v: str | int | None) -> int | None:
+        """Convert empty strings and whitespace to None for llm_max_tokens."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            # Strip whitespace and convert empty strings to None
+            v = v.strip()
+            if v == "":
+                return None
+            # Try to parse the string as an integer
+            try:
+                return int(v)
+            except ValueError:
+                return None
+        return v
     mcp_result_max_length: int = Field(
         default=4000,
         ge=500,
