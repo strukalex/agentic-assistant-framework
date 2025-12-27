@@ -405,7 +405,16 @@ Before calling any tool, review the conversation history:
 6. STOPPING CONDITION: Once you have stored the memory and answered the user,
    you must STOP. Do not loop.
 
-7. You MUST call the final_result tool to structure your response.
+7. You MUST return a structured JSON response with "answer" and "confidence" fields.
+   Your response must be valid JSON, not plain text.
+
+8. VALIDATION ERROR HANDLING: If you encounter a validation error or see
+   "Fix the errors and try again", it means your response was not properly
+   structured. You MUST return valid JSON matching this exact format:
+   {{"answer": "Your answer text here", "confidence": 0.85}}
+   
+   DO NOT return plain text, apologies, or explanations. ONLY return the JSON object.
+   Example of correct response: {{"answer": "Evolution is the change in heritable characteristics...", "confidence": 0.9}}
 """,
     )
 
