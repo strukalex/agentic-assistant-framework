@@ -47,13 +47,18 @@ def get_azure_model() -> OpenAIChatModel:
 
     provider_type = settings.llm_provider.lower()
 
+    # Log provider selection prominently
+    logger.info("=" * 80)
+    logger.info("🤖 LLM PROVIDER: %s", provider_type.upper())
+    logger.info("=" * 80)
+
     if provider_type == "local":
         # Configure for local Ollama
         model_name = settings.llm_model_name
         base_url = settings.llm_base_url
 
         logger.info(
-            "🔧 Configuring local LLM: model=%s, base_url=%s",
+            "🔧 Configuring LOCAL OLLAMA: model=%s, base_url=%s",
             model_name,
             base_url,
         )
@@ -86,16 +91,18 @@ def get_azure_model() -> OpenAIChatModel:
         )
 
         logger.info(
-            "🔧 Local Ollama model configured: %s (temperature=%.2f, max_tokens=%s)",
+            "✅ LOCAL OLLAMA MODEL READY: %s (temperature=%.2f, max_tokens=%s)",
             model_name,
             settings.llm_temperature,
             settings.llm_max_tokens or "default",
         )
+        logger.info("=" * 80)
 
         return OpenAIChatModel(model_name, provider=provider, settings=model_settings)
 
     else:
         # Configure for Azure AI Foundry (default)
+        logger.info("🔧 Configuring AZURE AI FOUNDRY")
         def _require_env(var_name: str) -> str:
             value = os.getenv(var_name)
             if not value:
@@ -149,10 +156,12 @@ def get_azure_model() -> OpenAIChatModel:
         )
 
         logger.info(
-            "🔧 Azure model configured: temperature=%.2f, max_tokens=%s",
+            "✅ AZURE AI FOUNDRY MODEL READY: %s (temperature=%.2f, max_tokens=%s)",
+            model_name,
             settings.llm_temperature,
             settings.llm_max_tokens or "default",
         )
+        logger.info("=" * 80)
 
         return OpenAIChatModel(model_name, provider=provider, settings=model_settings)
 
