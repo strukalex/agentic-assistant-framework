@@ -23,80 +23,138 @@ logger = logging.getLogger(__name__)
 
 
 def get_azure_model() -> OpenAIChatModel:
-    """Create a standardized Azure AI Foundry model instance.
+    """Create a standardized LLM model instance (Azure or local Ollama).
 
     Reads configuration from environment variables:
+    - LLM_PROVIDER: 'azure' (default) or 'local' for Ollama
+
+    For Azure (LLM_PROVIDER=azure):
     - AZURE_AI_FOUNDRY_ENDPOINT: The base URL for the model
     - AZURE_AI_FOUNDRY_API_KEY: The API key for authentication
     - AZURE_DEPLOYMENT_NAME: The model name (deployment ID)
 
+    For Local Ollama (LLM_PROVIDER=local):
+    - LLM_MODEL_NAME: Model name (default: qwen2.5:8b)
+    - LLM_BASE_URL: Ollama API endpoint (default: http://localhost:11434/v1)
+
     Returns:
-        OpenAIChatModel configured for Azure AI Foundry
+        OpenAIChatModel configured for the specified provider
 
     Raises:
         ValueError: If required environment variables are missing
     """
     load_dotenv()
 
-    def _require_env(var_name: str) -> str:
-        value = os.getenv(var_name)
-        if not value:
-            raise ValueError(
-                f"{var_name} environment variable is required for "
-                "Azure AI Foundry configuration"
-            )
-        return value
+    provider_type = settings.llm_provider.lower()
 
-    endpoint = _require_env("AZURE_AI_FOUNDRY_ENDPOINT")
-    api_key = _require_env("AZURE_AI_FOUNDRY_API_KEY")
-    model_name = _require_env("AZURE_DEPLOYMENT_NAME")
+    if provider_type == "local":
+        # Configure for local Ollama
+        model_name = settings.llm_model_name
+        base_url = settings.llm_base_url
 
-    if not endpoint:
-        raise ValueError("AZURE_AI_FOUNDRY_ENDPOINT environment variable is required")
-    if not api_key:
-        raise ValueError("AZURE_AI_FOUNDRY_API_KEY environment variable is required")
-
-    # Normalize the base URL for serverless endpoints
-    base_url = endpoint
-    if "/chat/completions" in base_url:
-        base_url = base_url.split("/chat/completions")[0]
-    if "services.ai.azure.com" in base_url and not base_url.endswith("/models"):
-        base_url = f"{base_url.rstrip('/')}/models"
-
-    # Create HTTP client with optional logging hooks
-    if settings.enable_agentic_logging:
-        http_client = httpx.AsyncClient(
-            event_hooks={
-                "request": [_log_http_request],
-                "response": [_log_http_response],
-            }
+        logger.info(
+            "🔧 Configuring local LLM: model=%s, base_url=%s",
+            model_name,
+            base_url,
         )
+
+        # Create HTTP client with optional logging hooks
+        if settings.enable_agentic_logging:
+            http_client = httpx.AsyncClient(
+                event_hooks={
+                    "request": [_log_http_request],
+                    "response": [_log_http_response],
+                }
+            )
+        else:
+            http_client = None
+
+        provider = OpenAIProvider(
+            base_url=base_url,
+            api_key="ollama",  # Required but unused by Ollama
+            http_client=http_client,
+        )
+
+        # Wrap provider to log conversation messages (only if enabled)
+        if settings.enable_agentic_logging:
+            provider = _LoggingProviderWrapper(provider)
+
+        # Build model settings from config
+        model_settings = ModelSettings(
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+        )
+
+        logger.info(
+            "🔧 Local Ollama model configured: %s (temperature=%.2f, max_tokens=%s)",
+            model_name,
+            settings.llm_temperature,
+            settings.llm_max_tokens or "default",
+        )
+
+        return OpenAIChatModel(model_name, provider=provider, settings=model_settings)
+
     else:
-        http_client = None  # Use default client
+        # Configure for Azure AI Foundry (default)
+        def _require_env(var_name: str) -> str:
+            value = os.getenv(var_name)
+            if not value:
+                raise ValueError(
+                    f"{var_name} environment variable is required for "
+                    "Azure AI Foundry configuration"
+                )
+            return value
 
-    provider = OpenAIProvider(
-        base_url=base_url,
-        api_key=api_key,
-        http_client=http_client,
-    )
+        endpoint = _require_env("AZURE_AI_FOUNDRY_ENDPOINT")
+        api_key = _require_env("AZURE_AI_FOUNDRY_API_KEY")
+        model_name = _require_env("AZURE_DEPLOYMENT_NAME")
 
-    # Wrap provider to log conversation messages (only if enabled)
-    if settings.enable_agentic_logging:
-        provider = _LoggingProviderWrapper(provider)
+        if not endpoint:
+            raise ValueError("AZURE_AI_FOUNDRY_ENDPOINT environment variable is required")
+        if not api_key:
+            raise ValueError("AZURE_AI_FOUNDRY_API_KEY environment variable is required")
 
-    # Build model settings from config
-    model_settings = ModelSettings(
-        temperature=settings.llm_temperature,
-        max_tokens=settings.llm_max_tokens,
-    )
+        # Normalize the base URL for serverless endpoints
+        base_url = endpoint
+        if "/chat/completions" in base_url:
+            base_url = base_url.split("/chat/completions")[0]
+        if "services.ai.azure.com" in base_url and not base_url.endswith("/models"):
+            base_url = f"{base_url.rstrip('/')}/models"
 
-    logger.info(
-        "🔧 Azure model configured: temperature=%.2f, max_tokens=%s",
-        settings.llm_temperature,
-        settings.llm_max_tokens or "default",
-    )
+        # Create HTTP client with optional logging hooks
+        if settings.enable_agentic_logging:
+            http_client = httpx.AsyncClient(
+                event_hooks={
+                    "request": [_log_http_request],
+                    "response": [_log_http_response],
+                }
+            )
+        else:
+            http_client = None  # Use default client
 
-    return OpenAIChatModel(model_name, provider=provider, settings=model_settings)
+        provider = OpenAIProvider(
+            base_url=base_url,
+            api_key=api_key,
+            http_client=http_client,
+        )
+
+        # Wrap provider to log conversation messages (only if enabled)
+        if settings.enable_agentic_logging:
+            provider = _LoggingProviderWrapper(provider)
+
+        # Build model settings from config
+        model_settings = ModelSettings(
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+        )
+
+        logger.info(
+            "🔧 Azure model configured: temperature=%.2f, max_tokens=%s",
+            settings.llm_temperature,
+            settings.llm_max_tokens or "default",
+        )
+
+        return OpenAIChatModel(model_name, provider=provider, settings=model_settings)
 
 
 class _LoggingProviderWrapper:

@@ -56,6 +56,16 @@ npm install
 # Copy environment defaults
 cp .env.example .env
 
+# Configure LLM provider (choose one):
+# Option 1: Azure AI Foundry (default)
+# - Edit .env and add your Azure credentials
+# - LLM_PROVIDER=azure
+
+# Option 2: Local Ollama (free, runs on your machine)
+# - Run: ./scripts/setup_local_llm.sh
+# - Edit .env and set: LLM_PROVIDER=local
+# - See docs/local-llm-setup.md for details
+
 # Launch infra (PostgreSQL + Jaeger + Windmill)
 docker-compose up -d
 
@@ -64,6 +74,34 @@ docker-compose up -d
 # Run tests with coverage gate
 pytest
 ```
+
+### Local LLM Setup (Optional)
+
+Instead of Azure AI Foundry, you can run models locally using Ollama:
+
+```bash
+# 1. Install Ollama and pull Qwen2.5-8B model
+./scripts/setup_local_llm.sh
+
+# 2. Update .env to use local provider
+echo "LLM_PROVIDER=local" >> .env
+
+# 3. Test the setup
+python scripts/test_local_llm.py
+```
+
+**Benefits:**
+- ✅ Free (no API costs)
+- ✅ Private (data stays on your machine)
+- ✅ Fast (no network latency)
+- ✅ Offline capable
+
+**Requirements:**
+- 8GB+ RAM (16GB recommended)
+- 10GB+ free disk space
+- Linux, macOS, or WSL2
+
+See [docs/local-llm-setup.md](docs/local-llm-setup.md) for detailed configuration options and troubleshooting.
 
 ### Note
 

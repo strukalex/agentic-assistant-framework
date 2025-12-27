@@ -146,6 +146,18 @@ class Settings(BaseSettings):
     # ----------------------
     # LLM configuration
     # ----------------------
+    llm_provider: str = Field(
+        default="azure",
+        description="LLM provider: 'azure' for Azure AI Foundry, 'local' for Ollama. Set LLM_PROVIDER env var.",
+    )
+    llm_model_name: str = Field(
+        default="qwen2.5:8b",
+        description="Model name for local LLM provider (Ollama). Set LLM_MODEL_NAME env var.",
+    )
+    llm_base_url: str = Field(
+        default="http://localhost:11434/v1",
+        description="Base URL for local LLM API (Ollama OpenAI-compatible endpoint). Set LLM_BASE_URL env var.",
+    )
     llm_temperature: float = Field(
         default=0.4,
         ge=0.0,
