@@ -150,6 +150,10 @@ class Settings(BaseSettings):
         default=False,
         description="Enable detailed agentic loop logging (shows LLM conversation messages and tool calls). Set ENABLE_AGENTIC_LOGGING=true to enable.",
     )
+    agentic_logging_verbose: bool = Field(
+        default=False,
+        description="When true, log full JSON payloads. When false, log clean conversation chain format. Set AGENTIC_LOGGING_VERBOSE=true for full JSON.",
+    )
 
     # ----------------------
     # Windmill integration

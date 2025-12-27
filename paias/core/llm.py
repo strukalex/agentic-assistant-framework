@@ -202,30 +202,76 @@ class _LoggingProviderWrapper:
         return result
 
 
+def _format_message_clean(msg: dict, index: int) -> str:
+    """Format a single message in clean conversation chain format."""
+    role = msg.get("role", "unknown").upper()
+    content = msg.get("content", "")
+    tool_calls = msg.get("tool_calls", [])
+
+    lines = []
+
+    # Format content (truncate for readability)
+    if content:
+        display = (content[:100] + "...") if len(str(content)) > 100 else content
+        lines.append(f"  [{index}] {role}: {display}")
+
+    # Format tool calls
+    if tool_calls:
+        for tc in tool_calls:
+            func = tc.get("function", {})
+            name = func.get("name", "unknown")
+            args = func.get("arguments", "{}")
+            try:
+                args_parsed = json.loads(args) if isinstance(args, str) else args
+                args_str = json.dumps(args_parsed)
+                if len(args_str) > 80:
+                    args_str = args_str[:80] + "..."
+            except Exception:
+                args_str = str(args)[:80]
+            lines.append(f"  [{index}] {role}: 🛠️ {name}({args_str})")
+
+    return "\n".join(lines) if lines else f"  [{index}] {role}: (empty)"
+
+
 async def _log_http_request(request: httpx.Request) -> None:
-    """Log outbound HTTP requests to the LLM, focusing on chat payloads."""
+    """Log outbound HTTP requests to the LLM."""
     if not settings.enable_agentic_logging:
         return
     try:
         body = request.content
-        body_preview = ""
-        if body:
-            try:
-                parsed = json.loads(body)
-                # Keep full JSON for debugging, formatted nicely
-                body_preview = json.dumps(parsed, indent=2)
-            except Exception:
-                body_preview = body.decode("utf-8", errors="ignore")
+        if not body:
+            logger.info(f"🔵 [HTTP REQUEST] → {request.method} {request.url}")
+            return
 
-        # Build entire message as a single string for atomic logging
-        headers_dict = {k: v for k, v in request.headers.items() if k.lower().startswith("content")}
-        log_message = (
-            f"🔵 [HTTP REQUEST] → {request.method} {request.url}\n"
-            f"Headers: {headers_dict}\n"
-            f"Body:\n{body_preview}"
-        )
+        parsed = None
+        try:
+            parsed = json.loads(body)
+        except Exception:
+            pass
 
-        # Single atomic log call to prevent interleaving
+        if settings.agentic_logging_verbose:
+            # Verbose mode: full JSON
+            body_preview = json.dumps(parsed, indent=2) if parsed else body.decode("utf-8", errors="ignore")
+            headers_dict = {k: v for k, v in request.headers.items() if k.lower().startswith("content")}
+            log_message = (
+                f"🔵 [HTTP REQUEST] → {request.method} {request.url}\n"
+                f"Headers: {headers_dict}\n"
+                f"Body:\n{body_preview}"
+            )
+        else:
+            # Clean mode: conversation chain format
+            if parsed and "messages" in parsed:
+                messages = parsed["messages"]
+                log_lines = [f"🔵 [HTTP REQUEST] → {request.method} {request.url}"]
+                log_lines.append(f"  Model: {parsed.get('model', 'unknown')}")
+                log_lines.append("  --- Conversation History ---")
+                for i, msg in enumerate(messages, 1):
+                    log_lines.append(_format_message_clean(msg, i))
+                log_message = "\n".join(log_lines)
+            else:
+                # Fallback for non-chat requests
+                log_message = f"🔵 [HTTP REQUEST] → {request.method} {request.url}"
+
         logger.info(log_message)
     except Exception as e:
         logger.debug("Failed to log HTTP request: %s", e)
@@ -237,24 +283,41 @@ async def _log_http_response(response: httpx.Response) -> None:
         return
     try:
         text = await response.aread()
-        body_preview = ""
-        if text:
-            try:
-                parsed = json.loads(text)
-                # Keep full JSON for debugging, formatted nicely
-                body_preview = json.dumps(parsed, indent=2)
-            except Exception:
-                body_preview = text.decode("utf-8", errors="ignore")
-
-        # Build entire message as a single string for atomic logging
         method = response.request.method if response.request else ""
         url = response.request.url if response.request else ""
-        log_message = (
-            f"🟢 [HTTP RESPONSE] ← {method} {url} {response.status_code}\n"
-            f"Body:\n{body_preview}"
-        )
 
-        # Single atomic log call to prevent interleaving
+        if not text:
+            logger.info(f"🟢 [HTTP RESPONSE] ← {method} {url} {response.status_code}")
+            return
+
+        parsed = None
+        try:
+            parsed = json.loads(text)
+        except Exception:
+            pass
+
+        if settings.agentic_logging_verbose:
+            # Verbose mode: full JSON
+            body_preview = json.dumps(parsed, indent=2) if parsed else text.decode("utf-8", errors="ignore")
+            log_message = (
+                f"🟢 [HTTP RESPONSE] ← {method} {url} {response.status_code}\n"
+                f"Body:\n{body_preview}"
+            )
+        else:
+            # Clean mode: extract the new response only
+            log_lines = [f"🟢 [HTTP RESPONSE] ← {method} {url} {response.status_code}"]
+            if parsed and "choices" in parsed:
+                choice = parsed["choices"][0] if parsed["choices"] else {}
+                msg = choice.get("message", {})
+                log_lines.append("  --- New Response ---")
+                log_lines.append(_format_message_clean(msg, 0).replace("[0]", "[NEW]"))
+
+                # Add usage stats if available
+                usage = parsed.get("usage", {})
+                if usage:
+                    log_lines.append(f"  Tokens: {usage.get('prompt_tokens', 0)} in, {usage.get('completion_tokens', 0)} out")
+            log_message = "\n".join(log_lines)
+
         logger.info(log_message)
     except Exception as e:
         logger.debug("Failed to log HTTP response: %s", e)
