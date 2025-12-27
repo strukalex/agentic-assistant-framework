@@ -142,6 +142,12 @@ def _init_otlp_logging() -> None:
         root_logger = logging.getLogger()
         root_logger.setLevel(logging.DEBUG)
         root_logger.addHandler(handler)
+
+        # Suppress httpx/openai debug logs (they duplicate our custom HTTP logging)
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("httpcore").setLevel(logging.WARNING)
+        logging.getLogger("openai").setLevel(logging.WARNING)
+        logging.getLogger("openai._base_client").setLevel(logging.WARNING)
         print(f"Added LoggingHandler to root logger with level DEBUG")
         print(f"Root logger level: {logging.getLevelName(root_logger.level)}")
 
