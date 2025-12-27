@@ -261,10 +261,29 @@ async def _log_http_request(request: httpx.Request) -> None:
                 messages = parsed["messages"]
                 log_lines = [f"🔵 [HTTP REQUEST] → {request.method} {request.url}"]
                 log_lines.append("  --- Conversation History ---")
-                # If more than 2 messages, only show the last one (skip system + earlier)
+                # If more than 2 messages, show only the recent relevant messages
                 if len(messages) > 2:
-                    log_lines.append(f"  ... [{len(messages) - 1} earlier messages]")
-                    log_lines.append(_format_message_clean(messages[-1], len(messages)))
+                    # Find all trailing tool results and the assistant message that triggered them
+                    # Work backwards to find the batch of new messages to show
+                    recent_msgs = []
+                    for msg in reversed(messages):
+                        role = msg.get("role", "")
+                        recent_msgs.insert(0, msg)
+                        # Stop after we hit a user message or an assistant message with tool_calls
+                        if role == "user":
+                            break
+                        if role == "assistant" and msg.get("tool_calls"):
+                            break
+
+                    # Calculate how many messages we're hiding
+                    hidden_count = len(messages) - len(recent_msgs)
+                    if hidden_count > 0:
+                        log_lines.append(f"  ... [{hidden_count} earlier messages]")
+
+                    # Show the recent messages with correct numbering
+                    start_idx = len(messages) - len(recent_msgs) + 1
+                    for i, msg in enumerate(recent_msgs):
+                        log_lines.append(_format_message_clean(msg, start_idx + i))
                 else:
                     # 2 or fewer messages: show all (typically system + first user message)
                     for i, msg in enumerate(messages, 1):

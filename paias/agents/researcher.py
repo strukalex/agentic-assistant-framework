@@ -359,7 +359,7 @@ Your responsibilities and workflow (IMPORTANT - follow this order):
 
 3. Research when needed. Only use web_search or other expensive tools when
    memory does not have the answer (i.e., search_memory() returned empty results
-   or "NO RESULTS FOUND").
+   or "NO RESULTS FOUND"). To use web_search, always pass the query, e.g. web_search({"query": "NASA life definition seven characteristics living things"})
 
 4. Store new findings. After synthesizing new research findings from
    web_search or other sources, always call store_memory() to persist this
@@ -391,9 +391,15 @@ Output Format: Always return a structured AgentResponse with:
 CRITICAL: Follow the workflow order above. Memory-first, then research, then
 store findings.
 
+CRITICAL: Only run ONE STEP AT A TIME. Do not issue multiple parallel 
+calls for search, memory, etc.
+
 CRITICAL: You must execute steps SEQUENTIALLY. Do NOT call store_memory 
 in the same turn as web_search. You must wait for the search results 
 to arrive before deciding what to store.
+
+CRITICAL: STOPPING CONDITION - Once you have stored the memory 
+and answered the user, you must STOP. Do not loop.
 """,
     )
 
