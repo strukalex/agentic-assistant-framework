@@ -839,6 +839,81 @@ def _make_mcp_tool(
     return mcp_tool_wrapper
 
 
+class ToolInfo:
+    """Represents a tool with name and description for unified tool listing."""
+
+    def __init__(self, name: str, description: str):
+        self.name = name
+        self.description = description
+
+
+async def get_available_tools(
+    mcp_session: ClientSession,
+) -> List[ToolInfo]:
+    """
+    Get the complete list of available tools (core + MCP) in a unified format.
+
+    This function provides a single source of truth for what tools are available
+    to the agent, ensuring consistency between tool registration and tool gap detection.
+
+    Args:
+        mcp_session: MCP client session for tool discovery
+
+    Returns:
+        List of ToolInfo objects representing all available tools (core + MCP)
+
+    The returned tools include:
+    - Core tools: search_memory, store_memory, fetch_url
+    - MCP tools: filtered and renamed (e.g., "search" -> "web_search")
+    """
+    # Get MCP tools
+    tools_result = await mcp_session.list_tools()
+    raw_tools = getattr(tools_result, "tools", [])
+    if not raw_tools:
+        raw_tools = list(tools_result) if tools_result else []
+
+    # Filter to only include the 'search' tool, exclude article fetchers
+    excluded_tools = {
+        "fetchLinuxDoArticle",
+        "fetchCsdnArticle",
+        "fetchGithubReadme",
+        "fetchJuejinArticle",
+    }
+
+    available_tools: List[ToolInfo] = []
+
+    # Add core tools that are always registered on the agent
+    # These match _register_core_tools() in this file
+    available_tools.extend([
+        ToolInfo(
+            "search_memory",
+            "Search semantic memory for relevant past knowledge and prior research"
+        ),
+        ToolInfo(
+            "store_memory",
+            "Store new research findings in long-term memory for future queries"
+        ),
+        ToolInfo(
+            "fetch_url",
+            "Fetch a URL and return its content as markdown. Use this tool to get the full content of a web page when search snippets aren't detailed enough."
+        ),
+    ])
+
+    # Add filtered and renamed MCP tools
+    for tool in raw_tools:
+        tool_name = getattr(tool, "name", None)
+        if tool_name in excluded_tools:
+            continue
+
+        # Rename 'search' to 'web_search' for consistency with system prompt
+        final_name = "web_search" if tool_name == "search" else tool_name
+        tool_desc = getattr(tool, "description", "") or f"MCP tool {final_name}"
+
+        available_tools.append(ToolInfo(name=final_name, description=tool_desc))
+
+    return available_tools
+
+
 async def _register_mcp_tools(
     agent: Agent[MemoryManager, FinalAnswer],
     mcp_session: ClientSession,

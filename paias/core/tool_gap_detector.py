@@ -70,45 +70,12 @@ class ToolGapDetector:
         Per tasks.md T205-T209 (FR-010 to FR-014)
         """
         # Phase 1: Get available tools (with caching)
+        # Use the shared function from researcher.py to ensure consistency
+        # This ensures ToolGapDetector sees the same tools as the agent
+        # Lazy import to avoid circular dependency
         if not self.available_tools:
-            tools_result = await self.mcp_session.list_tools()
-            if hasattr(tools_result, "tools"):
-                raw_tools = list(tools_result.tools)
-            else:
-                raw_tools = list(tools_result)
-
-            # Filter to only include the 'search' tool, exclude article fetchers
-            # This matches the filtering logic in _register_mcp_tools()
-            excluded_tools = {
-                "fetchLinuxDoArticle",
-                "fetchCsdnArticle",
-                "fetchGithubReadme",
-                "fetchJuejinArticle",
-            }
-            mcp_tools = [
-                tool for tool in raw_tools
-                if getattr(tool, "name", None) not in excluded_tools
-            ]
-
-            # Add core memory tools that are always registered on the agent
-            # These are defined in paias/agents/researcher.py _register_core_tools()
-            class CoreTool:
-                def __init__(self, name: str, description: str):
-                    self.name = name
-                    self.description = description
-
-            core_tools = [
-                CoreTool(
-                    "search_memory",
-                    "Search semantic memory for relevant past knowledge and prior research"
-                ),
-                CoreTool(
-                    "store_memory",
-                    "Store new research findings in long-term memory for future queries"
-                ),
-            ]
-
-            self.available_tools = mcp_tools + core_tools
+            from ..agents.researcher import get_available_tools
+            self.available_tools = await get_available_tools(self.mcp_session)
 
         # Phase 2: Analyze task with available tools using LLM
         # The LLM will semantically match required capabilities against available tools
