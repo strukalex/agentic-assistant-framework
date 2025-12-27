@@ -9,7 +9,6 @@ from paias.workflows.research_graph import InMemoryMemoryManager, compile_resear
 async def _fake_runner(task: str, deps, *, max_runtime_seconds: float | None = None) -> AgentResponse:
     return AgentResponse(
         answer=f"result for {task}",
-        reasoning="loop test",
         tool_calls=[],
         confidence=0.8,
     )

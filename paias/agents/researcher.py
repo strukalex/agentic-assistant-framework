@@ -28,6 +28,7 @@ from ..core.tool_gap_detector import ToolGapDetector
 from ..mcp_integration.setup import setup_mcp_tools
 from ..models.agent_response import (
     AgentResponse,
+    FinalAnswer,
     ToolCallRecord,
     ToolCallStatus,
 )
@@ -319,7 +320,7 @@ async def _with_tool_logging_and_cache(
         raise
 
 
-def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
+def _create_researcher_agent() -> Agent[MemoryManager, FinalAnswer]:
     """Create a fresh ResearcherAgent instance with base configuration."""
     # Lazy initialization: create model only when agent is needed
     # This prevents import-time errors if environment variables aren't set yet
@@ -332,9 +333,9 @@ def _create_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
         # If the provider cannot be wrapped, proceed without timing guard; downstream
         # timeout checks will still apply at tool boundaries.
         pass
-    return Agent[MemoryManager, AgentResponse](
+    return Agent[MemoryManager, FinalAnswer](
         model=model,
-        output_type=AgentResponse,
+        output_type=FinalAnswer,
         retries=2,  # Allow LLM to auto-correct JSON/formatting errors
         system_prompt=f"""You are the ResearcherAgent for a Personal AI Assistant System.
 
@@ -357,7 +358,6 @@ Before calling any tool, review the conversation history:
 1. Memory Check Protocol:
    Call search_memory() ONCE at the start.
    - IF it returns relevant information: Answer the user immediately using that info.
-     Cite the memory source in your reasoning (e.g., "Based on prior research from [date]...").
    - IF it returns "NO RESULTS FOUND", empty results, or irrelevant data:
      STOP thinking about memory. IMMEDIATELY call web_search().
 
@@ -382,10 +382,8 @@ Before calling any tool, review the conversation history:
    status updates, "no results" messages, or intermediate reasoning.
 
 5. Provide Answer:
-   Return a structured AgentResponse with:
+   Return a structured response with:
    - answer: The final answer to the user's query
-   - reasoning: How you arrived at the answer (memory sources, tools used, synthesis)
-   - tool_calls: List of all tool invocations
    - confidence: Self-assessed confidence score (0.0-1.0)
 
 ## HARD CONSTRAINTS
@@ -406,6 +404,8 @@ Before calling any tool, review the conversation history:
 
 6. STOPPING CONDITION: Once you have stored the memory and answered the user,
    you must STOP. Do not loop.
+
+7. You MUST call the final_result tool to structure your response.
 """,
     )
 
@@ -622,7 +622,7 @@ async def fetch_url(ctx: RunContext[MemoryManager], url: str) -> str:
     )
 
 
-def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
+def _register_core_tools(agent: Agent[MemoryManager, FinalAnswer]) -> None:
     """Attach built-in memory and utility tools to the given agent."""
     agent.tool(search_memory)
     agent.tool(store_memory)
@@ -631,10 +631,10 @@ def _register_core_tools(agent: Agent[MemoryManager, AgentResponse]) -> None:
 
 # Export a baseline agent for compatibility; MCP tools are added per session.
 # Lazy initialization: only create when accessed to avoid import-time errors
-_researcher_agent_instance: Optional[Agent[MemoryManager, AgentResponse]] = None
+_researcher_agent_instance: Optional[Agent[MemoryManager, FinalAnswer]] = None
 
 
-def _get_researcher_agent() -> Agent[MemoryManager, AgentResponse]:
+def _get_researcher_agent() -> Agent[MemoryManager, FinalAnswer]:
     """Get or create the baseline researcher agent instance."""
     global _researcher_agent_instance
     if _researcher_agent_instance is None:
@@ -655,7 +655,7 @@ def __getattr__(name: str) -> Any:
 
 async def setup_researcher_agent(
     memory_manager: MemoryManager,
-) -> Tuple[Agent[MemoryManager, AgentResponse], ClientSession]:
+) -> Tuple[Agent[MemoryManager, FinalAnswer], ClientSession]:
     """Initialize ResearcherAgent with MCP tools and return (agent, mcp_session).
 
     This matches the contract usage pattern in contracts/researcher-agent-api.yaml.
@@ -747,7 +747,7 @@ def _make_mcp_tool(
         async def _execute() -> str:
             # Global stop: if answer already committed, skip further expensive calls
             if _answer_committed.get() and tool_name in {"web_search", "search_memory", "search"}:
-                return "SKIPPED: Answer already committed; proceed to final_result."
+                return "SKIPPED: Answer already committed; proceed to provide final answer."
 
             # Prevent duplicate web_search queries in the same run
             if tool_name in {"web_search", "search"}:
@@ -840,7 +840,7 @@ def _make_mcp_tool(
 
 
 async def _register_mcp_tools(
-    agent: Agent[MemoryManager, AgentResponse],
+    agent: Agent[MemoryManager, FinalAnswer],
     mcp_session: ClientSession,
     logger: logging.Logger,
 ) -> None:
@@ -881,7 +881,7 @@ async def _register_mcp_tools(
 # Wrapper function for instrumented agent.run() calls
 # Per tasks.md T108 (FR-031), T210 (Tool Gap Detection Integration)
 async def run_agent_with_tracing(
-    agent: Agent[MemoryManager, AgentResponse],
+    agent: Agent[MemoryManager, FinalAnswer],
     task: str,
     deps: MemoryManager,
     mcp_session: Optional[ClientSession] = None,
@@ -972,13 +972,14 @@ async def run_agent_with_tracing(
 
             # Normalize payload shape across pydantic-ai versions
             logger.info("🔍 [AGENTIC LOOP] Extracting payload from result...")
-            payload = parse_agent_result(result)
+            llm_output = parse_agent_result(result)  # type: FinalAnswer
             logger.info("✅ [AGENTIC LOOP] Payload extracted successfully")
 
-            # Override tool_calls with the authoritative log from wrappers
+            # Get authoritative tool calls from infrastructure logging
             wrapped_tool_calls = _get_tool_log()
-            if hasattr(payload, "tool_calls"):
-                payload.tool_calls = wrapped_tool_calls  # type: ignore[attr-defined]
+
+            # Combine LLM output with infrastructure metadata
+            payload = AgentResponse.from_llm_output(llm_output, wrapped_tool_calls)
 
             # Enhanced logging for agent's final output
             logger.info("=" * 80)
@@ -993,14 +994,6 @@ async def run_agent_with_tracing(
                     else payload.answer
                 )
                 logger.info("💬 Answer: %s", answer_preview)
-
-            if hasattr(payload, "reasoning"):
-                reasoning_preview = (
-                    payload.reasoning[:500] + "..."
-                    if len(payload.reasoning) > 500
-                    else payload.reasoning
-                )
-                logger.info("🧠 Reasoning: %s", reasoning_preview)
 
             if wrapped_tool_calls:
                 logger.info("🔧 Total tool calls: %d", len(wrapped_tool_calls))
@@ -1028,7 +1021,6 @@ async def run_agent_with_tracing(
             span.record_exception(exc)
             return AgentResponse(
                 answer="Timed out before completing research.",
-                reasoning=message,
                 tool_calls=_get_tool_log(),
                 confidence=0.0,
             )
@@ -1044,7 +1036,6 @@ async def run_agent_with_tracing(
             span.record_exception(exc)
             return AgentResponse(
                 answer="Tool execution timed out.",
-                reasoning=message,
                 tool_calls=_get_tool_log(),
                 confidence=0.0,
             )
@@ -1066,7 +1057,6 @@ async def run_agent_with_tracing(
             span.record_exception(exc)
             return AgentResponse(
                 answer="Tool response could not be parsed.",
-                reasoning=message,
                 tool_calls=_get_tool_log(),
                 confidence=0.0,
             )

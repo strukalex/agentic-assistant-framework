@@ -26,7 +26,7 @@ async def test_run_agent_with_tracing_handles_timeout():
 
     assert isinstance(response, AgentResponse)
     assert response.confidence == 0.0
-    assert "timed out" in response.reasoning.lower()
+    assert "timed out" in response.answer.lower()
 
 
 @pytest.mark.asyncio
@@ -44,7 +44,7 @@ async def test_run_agent_with_tracing_handles_malformed_data():
 
     assert isinstance(response, AgentResponse)
     assert response.confidence == 0.0
-    assert "malformed" in response.reasoning.lower()
+    assert "malformed" in response.answer.lower() or "could not be parsed" in response.answer.lower()
 
 
 @pytest.mark.asyncio

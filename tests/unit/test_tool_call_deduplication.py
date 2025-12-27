@@ -254,7 +254,6 @@ class TestAgentResponsePopulation:
         mock_result = MagicMock()
         mock_result.data = AgentResponse(
             answer="Test answer",
-            reasoning="Test reasoning",
             tool_calls=[],  # LLM omits tool calls
             confidence=0.9,
         )
@@ -318,7 +317,6 @@ class TestAgentResponsePopulation:
         # Create AgentResponse and verify we can set tool_calls
         response = AgentResponse(
             answer="test",
-            reasoning="test",
             tool_calls=log,  # Use log entries
             confidence=0.9,
         )

@@ -49,7 +49,7 @@ class TestResearcherAgentInitialization:
         """
         Test that ResearcherAgent has result_type=AgentResponse.
 
-        Verifies FR-003: Returns structured AgentResponse with answer, reasoning, tool_calls, confidence
+        Verifies FR-003: Returns structured AgentResponse with answer, tool_calls, confidence
         """
         from paias.agents.researcher import researcher_agent
         from paias.models.agent_response import AgentResponse

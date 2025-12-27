@@ -21,10 +21,6 @@ class TestAgentResponseContract:
         """Test that valid AgentResponse passes validation."""
         response = AgentResponse(
             answer="Paris",
-            reasoning=(
-                "Used web_search to find 'capital of France'. "
-                "Top result from Wikipedia confirmed Paris."
-            ),
             tool_calls=[
                 ToolCallRecord(
                     tool_name="web_search",
@@ -45,7 +41,6 @@ class TestAgentResponseContract:
 
         # Validate all required fields are present
         assert response.answer == "Paris"
-        assert response.reasoning is not None
         assert len(response.tool_calls) == 1
         assert 0.0 <= response.confidence <= 1.0
 
@@ -54,31 +49,17 @@ class TestAgentResponseContract:
         with pytest.raises(ValidationError) as exc_info:
             AgentResponse(
                 answer="",  # Invalid: empty string
-                reasoning="Some reasoning",
                 tool_calls=[],
                 confidence=0.95,
             )
 
         assert "answer" in str(exc_info.value)
 
-    def test_agent_response_empty_reasoning_invalid(self):
-        """Test that empty reasoning fails validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            AgentResponse(
-                answer="Paris",
-                reasoning="",  # Invalid: empty string
-                tool_calls=[],
-                confidence=0.95,
-            )
-
-        assert "reasoning" in str(exc_info.value)
-
     def test_agent_response_confidence_out_of_range(self):
         """Test that confidence > 1.0 fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             AgentResponse(
                 answer="Paris",
-                reasoning="Some reasoning",
                 tool_calls=[],
                 confidence=1.5,  # Invalid: > 1.0
             )
@@ -90,7 +71,6 @@ class TestAgentResponseContract:
         with pytest.raises(ValidationError) as exc_info:
             AgentResponse(
                 answer="Paris",
-                reasoning="Some reasoning",
                 tool_calls=[],
                 confidence=-0.1,  # Invalid: < 0.0
             )
@@ -101,7 +81,6 @@ class TestAgentResponseContract:
         """Test that empty tool_calls list is allowed (answerable without tools)."""
         response = AgentResponse(
             answer="Paris",
-            reasoning="I know Paris is the capital of France.",
             tool_calls=[],  # Valid: empty list allowed
             confidence=0.85,
         )

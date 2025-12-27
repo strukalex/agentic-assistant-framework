@@ -19,7 +19,7 @@ async def main(question: str) -> None:
     """Run a single research question and print the structured response.
 
     The result can be either:
-    - AgentResponse: Normal answer with reasoning and tool calls
+    - AgentResponse: Normal answer with tool calls
     - ToolGapReport: When required tools are missing (prevents hallucination)
 
     Risk Assessment (User Story 3):
@@ -77,12 +77,11 @@ async def main(question: str) -> None:
             )
             print(f"{'='*60}\n")
         else:
-            # Normal AgentResponse - show answer and reasoning
+            # Normal AgentResponse - show answer
             print(f"\n{'='*60}")
             print(f"Question:   {question}")
             print(f"Answer:     {result.answer}")
             print(f"Confidence: {result.confidence:.2f}")
-            print(f"Reasoning:  {result.reasoning}")
             if result.tool_calls:
                 print("\nTool calls:")
                 for i, call in enumerate(result.tool_calls, 1):

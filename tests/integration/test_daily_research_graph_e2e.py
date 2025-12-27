@@ -20,7 +20,6 @@ async def _runner_with_sources(task: str, deps, *, max_runtime_seconds: float | 
     )
     return AgentResponse(
         answer="Consolidated findings.",
-        reasoning="Collected sufficient sources.",
         tool_calls=[tool_call],
         confidence=0.9,
     )

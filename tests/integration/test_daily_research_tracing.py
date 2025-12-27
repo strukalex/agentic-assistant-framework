@@ -25,7 +25,6 @@ async def _mock_agent_runner(task: str, deps, *, max_runtime_seconds: float | No
     """Mock agent runner for tracing tests."""
     return AgentResponse(
         answer="Mock research findings",
-        reasoning="Mock reasoning for tracing tests",
         tool_calls=[],
         confidence=0.8,
     )
