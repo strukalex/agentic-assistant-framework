@@ -76,7 +76,7 @@ class ToolGapDetector:
                 raw_tools = list(tools_result.tools)
             else:
                 raw_tools = list(tools_result)
-            
+
             # Filter to only include the 'search' tool, exclude article fetchers
             # This matches the filtering logic in _register_mcp_tools()
             excluded_tools = {
@@ -85,10 +85,30 @@ class ToolGapDetector:
                 "fetchGithubReadme",
                 "fetchJuejinArticle",
             }
-            self.available_tools = [
+            mcp_tools = [
                 tool for tool in raw_tools
                 if getattr(tool, "name", None) not in excluded_tools
             ]
+
+            # Add core memory tools that are always registered on the agent
+            # These are defined in paias/agents/researcher.py _register_core_tools()
+            class CoreTool:
+                def __init__(self, name: str, description: str):
+                    self.name = name
+                    self.description = description
+
+            core_tools = [
+                CoreTool(
+                    "search_memory",
+                    "Search semantic memory for relevant past knowledge and prior research"
+                ),
+                CoreTool(
+                    "store_memory",
+                    "Store new research findings in long-term memory for future queries"
+                ),
+            ]
+
+            self.available_tools = mcp_tools + core_tools
 
         # Phase 2: Analyze task with available tools using LLM
         # The LLM will semantically match required capabilities against available tools

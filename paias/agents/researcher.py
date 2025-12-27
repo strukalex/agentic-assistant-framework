@@ -390,6 +390,10 @@ Output Format: Always return a structured AgentResponse with:
 
 CRITICAL: Follow the workflow order above. Memory-first, then research, then
 store findings.
+
+CRITICAL: You must execute steps SEQUENTIALLY. Do NOT call store_memory 
+in the same turn as web_search. You must wait for the search results 
+to arrive before deciding what to store.
 """,
     )
 

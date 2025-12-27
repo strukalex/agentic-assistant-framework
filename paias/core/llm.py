@@ -261,8 +261,14 @@ async def _log_http_request(request: httpx.Request) -> None:
                 messages = parsed["messages"]
                 log_lines = [f"🔵 [HTTP REQUEST] → {request.method} {request.url}"]
                 log_lines.append("  --- Conversation History ---")
-                for i, msg in enumerate(messages, 1):
-                    log_lines.append(_format_message_clean(msg, i))
+                # If more than 2 messages, only show the last one (skip system + earlier)
+                if len(messages) > 2:
+                    log_lines.append(f"  ... [{len(messages) - 1} earlier messages]")
+                    log_lines.append(_format_message_clean(messages[-1], len(messages)))
+                else:
+                    # 2 or fewer messages: show all (typically system + first user message)
+                    for i, msg in enumerate(messages, 1):
+                        log_lines.append(_format_message_clean(msg, i))
                 log_message = "\n".join(log_lines)
             else:
                 # Fallback for non-chat requests
