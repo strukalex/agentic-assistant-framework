@@ -1,0 +1,21 @@
+summary: 'Search semantic memory for relevant past knowledge'
+description: 'Query the vector database for documents semantically similar to the provided query. Use to check if information has been previously researched.'
+lock: '!inline f/tools/search_memory.script.lock'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query describing what to look for
+      minLength: 1
+      maxLength: 1000
+    top_k:
+      type: integer
+      description: Maximum number of results to return
+      default: 5
+      minimum: 1
+      maximum: 20
+  required:
+    - query

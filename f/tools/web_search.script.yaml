@@ -1,0 +1,21 @@
+summary: 'Search the web for information on any topic'
+description: 'Performs web search using DuckDuckGo (no API key required). Returns formatted results with titles, snippets, and URLs.'
+lock: '!inline f/tools/web_search.script.lock'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    query:
+      type: string
+      description: Search query string
+      minLength: 1
+      maxLength: 500
+    max_results:
+      type: integer
+      description: Maximum number of results to return
+      default: 10
+      minimum: 1
+      maximum: 50
+  required:
+    - query
