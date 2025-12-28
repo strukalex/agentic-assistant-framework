@@ -31,6 +31,7 @@ Follow the prompts to log in (default user: admin@windmill.dev / changeme)
 
 `wmill sync pull`  # Pulls the default workspace structure to your local disk
 
+`docker restart agentic-assistant-framework-windmill_worker-1` # Restart docker container for the worker
 ### Quickstart
 
 For the ResearcherAgent (Spec 002) quickstart, follow the detailed guide in
