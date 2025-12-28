@@ -80,6 +80,17 @@ pytest
 
 Instead of Azure AI Foundry, you can run models locally using Ollama:
 
+TODO - integreate into instructions and scripts:
+
+```
+Can't be a service:
+sudo systemctl stop ollama
+
+Must run like this:
+OLLAMA_HOST=0.0.0.0:11434 ollama serve
+```
+
+
 ```bash
 # 1. Install Ollama and pull Qwen2.5-8B model
 ./scripts/setup_local_llm.sh
