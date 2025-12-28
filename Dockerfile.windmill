@@ -1,28 +1,28 @@
-# Custom Windmill worker image with paias package pre-installed
+# Basic Windmill worker image
 FROM ghcr.io/windmill-labs/windmill:main
 
-# Set working directory
-WORKDIR /app
+# # Set working directory
+# WORKDIR /app
 
-# Copy only package files first for npm dependencies
-COPY package.json package-lock.json* /app/
+# # Copy only package files first for npm dependencies
+# COPY package.json package-lock.json* /app/
 
-# Install Node.js dependencies (will be cached unless package files change)
-RUN npm install --prefix /app
+# # Install Node.js dependencies (will be cached unless package files change)
+# RUN npm install --prefix /app
 
-# Copy only Python package manifest for Python dependencies
-COPY pyproject.toml /app/
+# # Copy only Python package manifest for Python dependencies
+# COPY pyproject.toml /app/
 
-# Install Python package structure (without source code initially)
-# This creates the package entry points
-RUN /usr/local/bin/uv pip install --system --break-system-packages -e /app \
-    || /usr/local/bin/uv pip install --system --break-system-packages -e /app \
-    || /usr/local/bin/uv pip install --system --break-system-packages -e /app
+# # Install Python package structure (without source code initially)
+# # This creates the package entry points
+# RUN /usr/local/bin/uv pip install --system --break-system-packages -e /app \
+#     || /usr/local/bin/uv pip install --system --break-system-packages -e /app \
+#     || /usr/local/bin/uv pip install --system --break-system-packages -e /app
 
-# Now copy the actual source code
-# Changes to these files won't trigger reinstall of dependencies
-COPY paias/ /app/paias/
-COPY mcp-servers/ /app/mcp-servers/
+# # Now copy the actual source code
+# # Changes to these files won't trigger reinstall of dependencies
+# COPY paias/ /app/paias/
+# COPY mcp-servers/ /app/mcp-servers/
 
-# Note: paias will be available when Windmill runs Python scripts
-# Environment variables are passed via docker-compose.yml
+# # Note: paias will be available when Windmill runs Python scripts
+# # Environment variables are passed via docker-compose.yml
