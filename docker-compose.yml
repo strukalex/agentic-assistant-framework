@@ -191,8 +191,8 @@ services:
           memory: 1G
     volumes:
 
-    # Mount your venv's site-packages directory
-    - ./.venv/lib/python3.11/site-packages:/venv/lib/python3.11/site-packages:ro
+    # Mount local venv's site-packages directory
+    - ./venv/lib/python3.11/site-packages:/venv/lib/python3.11/site-packages:ro
     # Also mount your paias package if it's installed in editable mode
     #   # Note: mounted read-only to prevent accidental modifications
     - ./paias:/app/paias:ro
