@@ -1,0 +1,12 @@
+summary: 'Telegram webhook handler - receives updates and triggers AI agent'
+description: 'Receives incoming Telegram webhook updates and triggers the AI chat agent for processing. This is the entry point that Telegram calls when messages are sent to the bot.'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    update:
+      type: object
+      description: Telegram update object (webhook payload)
+  required:
+    - update

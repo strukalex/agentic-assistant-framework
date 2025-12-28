@@ -1,0 +1,6 @@
+summary: 'Telegram Chat Agent - AI assistant accessible via Telegram'
+display_name: telegram
+extra_perms:
+  u/strukalex: true
+owners:
+  - u/strukalex

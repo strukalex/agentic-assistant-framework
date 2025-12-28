@@ -1,0 +1,7 @@
+# Requirements for Telegram Chat Agent
+# These are installed via paias package (file:///app) in Windmill Docker image
+# Listed here for reference
+
+httpx>=0.25.0
+pydantic>=2.0.0
+pydantic-ai>=0.0.10
