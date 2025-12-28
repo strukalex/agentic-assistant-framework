@@ -15,6 +15,30 @@ Usage in Windmill:
 
 from __future__ import annotations
 
+# === DIAGNOSTIC LOGGING - REMOVE AFTER DEBUGGING ===
+import sys
+import os as _os
+print(f"=== PYTHON DIAGNOSTICS ===")
+print(f"Python version: {sys.version}")
+print(f"Python executable: {sys.executable}")
+print(f"sys.path: {sys.path[:5]}...")  # First 5 paths
+print(f"ADDITIONAL_PYTHON_PATHS env: {_os.environ.get('ADDITIONAL_PYTHON_PATHS', 'NOT SET')}")
+# Check if mounted venv exists
+_venv_path = "/venv/lib/python3.11/site-packages"
+print(f"Mounted venv exists: {_os.path.exists(_venv_path)}")
+if _os.path.exists(_venv_path):
+    import subprocess
+    _files = subprocess.run(["ls", _venv_path], capture_output=True, text=True)
+    print(f"Venv contents (first 10): {_files.stdout.split()[:10]}")
+# Check pydantic_core specifically
+_pydantic_core_path = f"{_venv_path}/pydantic_core"
+print(f"pydantic_core exists: {_os.path.exists(_pydantic_core_path)}")
+if _os.path.exists(_pydantic_core_path):
+    _pc_files = subprocess.run(["ls", _pydantic_core_path], capture_output=True, text=True)
+    print(f"pydantic_core contents: {_pc_files.stdout.split()}")
+print(f"=== END DIAGNOSTICS ===")
+# === END DIAGNOSTIC LOGGING ===
+
 import asyncio
 import logging
 import os

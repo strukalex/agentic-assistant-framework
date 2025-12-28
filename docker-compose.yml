@@ -109,6 +109,8 @@ services:
       RUST_LOG: warn
       MODE: worker
       WORKER_GROUP: default
+      # Force Python 3.11 for all scripts (matches local venv)
+      INSTANCE_PYTHON_VERSION: py311
       # Install paias package at worker startup using INIT_SCRIPT
       # This replaces the custom Dockerfile.windmill approach
       # The script installs the package non-editable to avoid hanging issues
