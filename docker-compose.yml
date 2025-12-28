@@ -100,10 +100,8 @@ services:
       start_period: 30s
 
   windmill_worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.windmill
-    image: paias-windmill-worker:latest
+    image: ghcr.io/windmill-labs/windmill:main
+    pull_policy: always
     restart: unless-stopped
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
@@ -111,8 +109,34 @@ services:
       RUST_LOG: warn
       MODE: worker
       WORKER_GROUP: default
-      # Tell Windmill to use pre-installed paias package and system site-packages
-      ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
+      # Install paias package at worker startup using INIT_SCRIPT
+      # This replaces the custom Dockerfile.windmill approach
+      # The script installs the package non-editable to avoid hanging issues
+      # INIT_SCRIPT: |
+      #   #!/bin/bash
+      #   set -e
+      #   echo "=== INIT_SCRIPT: Installing paias package ==="
+
+      #   # Install paias package (non-editable) to Windmill's Python cache
+      #   # Using --target ensures it's available to Windmill's Python scripts
+      #   uv pip install --system /app --target /tmp/windmill/cache/python_3_11/global-site-packages 2>&1 || {
+      #     echo "Failed to install with --target, trying without..."
+      #     uv pip install --system /app 2>&1
+      #   }
+
+      #   # Install Node.js dependencies if package.json exists
+      #   if [ -f /app/package.json ]; then
+      #     echo "=== Installing Node.js dependencies ==="
+      #     npm install --prefix /app 2>&1 || echo "npm install failed (non-fatal)"
+      #   fi
+
+      #   echo "=== INIT_SCRIPT complete ==="
+      ## Tell Windmill to use pre-installed paias package and system site-packages
+      # ADDITIONAL_PYTHON_PATHS: "/app:/tmp/windmill/cache/python_3_11/global-site-packages:/usr/local/lib/python3.11/dist-packages"
+
+      # Point Windmill to your venv's site-packages
+      ADDITIONAL_PYTHON_PATHS: "/venv/lib/python3.11/site-packages"
+
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
       WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING,LLM_PROVIDER,LLM_MODEL_NAME,LLM_BASE_URL,LLM_TEMPERATURE,LLM_MAX_TOKENS,MCP_RESULT_MAX_LENGTH,AGENTIC_LOGGING_VERBOSE,TELEGRAM_BOT_TOKEN"
@@ -166,78 +190,19 @@ services:
           cpus: "0.5"
           memory: 1G
     volumes:
-      # Worker cache
-      - windmill_worker_cache:/tmp/windmill/cache
 
-  # Optional: Additional worker for parallel execution
-  windmill_worker_2:
-    build:
-      context: .
-      dockerfile: Dockerfile.windmill
-    image: paias-windmill-worker:latest
-    restart: unless-stopped
-    profiles:
-      - scale  # Only starts with: docker compose --profile scale up
-    environment:
-      DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
-      BASE_URL: http://localhost:8100
-      RUST_LOG: warn
-      MODE: worker
-      WORKER_GROUP: default
-      # Tell Windmill to use pre-installed paias package and system site-packages
-      ADDITIONAL_PYTHON_PATHS: "/app:/usr/local/lib/python3.11/dist-packages"
-      # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
-      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING,LLM_PROVIDER,LLM_MODEL_NAME,LLM_BASE_URL,LLM_TEMPERATURE,LLM_MAX_TOKENS,MCP_RESULT_MAX_LENGTH,AGENTIC_LOGGING_VERBOSE,TELEGRAM_BOT_TOKEN"
-      # LLM provider configuration (from .env)
-      LLM_PROVIDER: ${LLM_PROVIDER:-azure}
-      LLM_MODEL_NAME: ${LLM_MODEL_NAME:-qwen2.5:latest}
-      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
-      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.4}
-      LLM_MAX_TOKENS: ${LLM_MAX_TOKENS}
-      MCP_RESULT_MAX_LENGTH: ${MCP_RESULT_MAX_LENGTH:-4000}
-      AGENTIC_LOGGING_VERBOSE: ${AGENTIC_LOGGING_VERBOSE:-false}
-      # Pass through Azure AI Foundry credentials (from .env)
-      AZURE_AI_FOUNDRY_ENDPOINT: ${AZURE_AI_FOUNDRY_ENDPOINT}
-      AZURE_AI_FOUNDRY_API_KEY: ${AZURE_AI_FOUNDRY_API_KEY}
-      AZURE_DEPLOYMENT_NAME: ${AZURE_DEPLOYMENT_NAME:-gpt-4o}
-      AZURE_API_VERSION: ${OPENAI_API_VERSION:-2024-12-01-preview}
-      # Database URL for paias application (use Docker service name, not localhost)
-      # Separate from Windmill's DATABASE_URL to avoid conflicts
-      PAIAS_DATABASE_URL: postgresql+asyncpg://postgres:postgres@postgres:5432/paias
-      # Telemetry - traces go to Jaeger, logs go to Loki
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
-      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://jaeger:4317
-      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://loki:3100/otlp/v1/logs
-      OTEL_SERVICE_NAME: ${OTEL_SERVICE_NAME:-paias}
-      OTEL_SAMPLING_RATE: ${OTEL_SAMPLING_RATE:-1.0}
-      # Web search configuration
-      WEBSEARCH_ENGINE: ${WEBSEARCH_ENGINE:-duckduckgo}
-      WEBSEARCH_MAX_RESULTS: ${WEBSEARCH_MAX_RESULTS:-10}
-      WEBSEARCH_TIMEOUT_SECONDS: ${WEBSEARCH_TIMEOUT_SECONDS:-30}
-      # Logging - enabled to send logs to Loki via OTLP
-      ENABLE_AGENTIC_LOGGING: "true"
-      # Telegram bot configuration
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-    depends_on:
-      windmill_server:
-        condition: service_healthy
-      jaeger:
-        condition: service_healthy
-      loki:
-        condition: service_started
-    # Allow container to access host services (e.g., Ollama on localhost)
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 2G
-        reservations:
-          cpus: "0.5"
-          memory: 1G
-    volumes:
-      - windmill_worker_cache_2:/tmp/windmill/cache
+    # Mount your venv's site-packages directory
+    - ./.venv/lib/python3.11/site-packages:/venv/lib/python3.11/site-packages:ro
+    # Also mount your paias package if it's installed in editable mode
+    #   # Note: mounted read-only to prevent accidental modifications
+    - ./paias:/app/paias:ro
+    #   # Worker cache
+    #   - windmill_worker_cache:/tmp/windmill/cache
+    #   # Mount source code for INIT_SCRIPT to install paias package
+    #   - ./mcp-servers:/app/mcp-servers:ro
+    #   - ./pyproject.toml:/app/pyproject.toml:ro
+    #   - ./package.json:/app/package.json:ro
+    #   - ./package-lock.json:/app/package-lock.json:ro
 
 volumes:
   postgres_data:
