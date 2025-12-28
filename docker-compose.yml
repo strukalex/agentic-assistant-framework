@@ -136,8 +136,9 @@ services:
       ## Tell Windmill to use pre-installed paias package and system site-packages
       # ADDITIONAL_PYTHON_PATHS: "/app:/tmp/windmill/cache/python_3_11/global-site-packages:/usr/local/lib/python3.11/dist-packages"
 
-      # Point Windmill to your venv's site-packages
-      ADDITIONAL_PYTHON_PATHS: "/venv/lib/python3.11/site-packages"
+      # Point Windmill to your venv's site-packages + paias source
+      # /app contains the paias package (mounted from ./paias:/app/paias)
+      ADDITIONAL_PYTHON_PATHS: "/venv/lib/python3.11/site-packages:/app"
 
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
