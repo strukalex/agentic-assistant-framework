@@ -1,14 +1,5 @@
-summary: 'Research Agent (Native or LangGraph mode)'
-description: |
-  Execute deep research on a topic with two execution modes:
-
-  - **native**: Fast, Windmill-native implementation without MCP overhead.
-    Uses DuckDuckGo for web search (no API key required), direct LLM calls,
-    and PostgreSQL memory storage.
-
-  - **langgraph**: Full LangGraph workflow with MCP tools and approval gating.
-    Implements plan-research-critique-refine cycle with quality thresholds.
-
+summary: 'Execute deep research workflow with approval gating'
+description: 'DailyTrendingResearch workflow using LangGraph for iterative research with human-in-the-loop approval gates. Implements plan-research-critique-refine cycle with quality thresholds and telemetry.'
 lock: '!inline f/research/run_research.script.lock'
 kind: script
 schema:
@@ -20,27 +11,17 @@ schema:
       description: Research topic (1-500 characters)
       minLength: 1
       maxLength: 500
-    mode:
-      type: string
-      description: "Execution mode: 'native' (fast, no MCP) or 'langgraph' (full workflow)"
-      enum:
-        - native
-        - langgraph
-      default: native
-    user_id:
-      type: string
-      description: Optional user identifier (UUID string)
     client_traceparent:
       type: string
-      description: Optional W3C traceparent for distributed tracing (langgraph mode only)
+      description: Optional W3C traceparent for distributed tracing
     max_researcher_runtime_seconds:
       type: integer
       minimum: 10
-      description: Max runtime for researcher agent in seconds. Defaults to 60 (langgraph) or 120 (native).
+      description: Optional cap for researcher agent runtime (seconds). Defaults to 60; env RUN_RESEARCHER_MAX_RUNTIME_SECONDS overrides.
     max_iterations:
       type: integer
       minimum: 1
-      maximum: 20
-      description: Max research iterations. Defaults to 5.
+      maximum: 5
+      description: Optional cap for outer research loop iterations (hard-capped at 5). Defaults to 5; env RUN_RESEARCH_MAX_ITERATIONS overrides.
   required:
     - topic
