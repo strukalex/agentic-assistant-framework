@@ -1,19 +1,20 @@
 """Windmill tool: Fetch a URL and return its content as markdown.
 
-Standalone tool for use in Windmill AI agent steps.
-Fetches web pages and converts HTML to clean markdown for easier processing.
+This is a standalone Windmill tool that wraps the fetch_url logic from
+paias/agents/researcher.py for use in Windmill workflows.
 
 Usage in Windmill:
     - Registered at path: f/tools/fetch_url
-    - Can be used as a tool in AI agent steps
     - Arguments: url (str), max_length (int, optional)
 """
 # requirements:
+# file:///app
 # httpx>=0.25.0
 # markdownify>=0.12.0
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from typing import Any
@@ -21,11 +22,8 @@ from typing import Any
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Default max content length
-DEFAULT_MAX_LENGTH = 8000
 
-
-def main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
+def main(url: str, max_length: int = 8000) -> str:
     """Fetch a URL and return its content as markdown.
 
     Use this tool to get the full content of a web page when search
@@ -38,19 +36,14 @@ def main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
 
     Returns:
         Page content converted to markdown, or error message
-
-    Example:
-        >>> content = main("https://example.com/article")
-        >>> print(content[:500])
     """
-    import asyncio
-
     return asyncio.run(_async_main(url, max_length))
 
 
-async def _async_main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
-    """Async implementation of URL fetching."""
+async def _async_main(url: str, max_length: int = 8000) -> str:
+    """Async implementation matching paias/agents/researcher.py fetch_url."""
     import httpx
+    from markdownify import markdownify
 
     logger.info("Fetching URL: %s", url[:100])
 
@@ -61,7 +54,7 @@ async def _async_main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
     try:
         timeout = httpx.Timeout(30.0, connect=10.0)
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (compatible; ResearcherAgent/1.0)",
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
         }
@@ -85,8 +78,13 @@ async def _async_main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
 
             html = response.text
 
-            # Convert HTML to markdown
-            markdown = _html_to_markdown(html)
+            # Convert HTML to markdown (same as researcher.py)
+            markdown = markdownify(
+                html,
+                heading_style="ATX",
+                bullets="-",
+                strip=["script", "style", "nav", "footer", "header", "aside"],
+            )
 
             # Clean up excessive whitespace
             markdown = re.sub(r"\n{3,}", "\n\n", markdown)
@@ -97,7 +95,7 @@ async def _async_main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
             if len(markdown) > max_length:
                 markdown = markdown[:max_length] + f"\n\n... [truncated, {len(markdown) - max_length} chars omitted]"
 
-            logger.info("Fetched %d chars from %s", len(markdown), url[:50])
+            logger.info("Retrieved %d chars from %s", len(markdown), url[:50])
             return markdown
 
     except httpx.TimeoutException:
@@ -109,72 +107,3 @@ async def _async_main(url: str, max_length: int = DEFAULT_MAX_LENGTH) -> str:
     except Exception as e:
         logger.exception("Unexpected error in fetch_url")
         return f"ERROR: Unexpected error: {type(e).__name__}: {str(e)[:100]}"
-
-
-def _html_to_markdown(html: str) -> str:
-    """Convert HTML to markdown."""
-    try:
-        from markdownify import markdownify
-
-        return markdownify(
-            html,
-            heading_style="ATX",
-            bullets="-",
-            strip=["script", "style", "nav", "footer", "header", "aside"],
-        )
-    except ImportError:
-        # Fallback: basic HTML tag stripping
-        logger.warning("markdownify not installed, using basic HTML stripping")
-        return _basic_html_strip(html)
-
-
-def _basic_html_strip(html: str) -> str:
-    """Basic HTML to text conversion (fallback)."""
-    # Remove script and style elements
-    html = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
-
-    # Convert common elements
-    html = re.sub(r"<h1[^>]*>(.*?)</h1>", r"\n# \1\n", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<h2[^>]*>(.*?)</h2>", r"\n## \1\n", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<h3[^>]*>(.*?)</h3>", r"\n### \1\n", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<p[^>]*>(.*?)</p>", r"\n\1\n", html, flags=re.DOTALL | re.IGNORECASE)
-    html = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
-    html = re.sub(r"<li[^>]*>(.*?)</li>", r"- \1\n", html, flags=re.DOTALL | re.IGNORECASE)
-
-    # Remove remaining tags
-    html = re.sub(r"<[^>]+>", "", html)
-
-    # Decode common HTML entities
-    html = html.replace("&nbsp;", " ")
-    html = html.replace("&amp;", "&")
-    html = html.replace("&lt;", "<")
-    html = html.replace("&gt;", ">")
-    html = html.replace("&quot;", '"')
-    html = html.replace("&#39;", "'")
-
-    return html
-
-
-# Windmill script metadata
-__windmill__ = {
-    "description": "Fetch a URL and return its content as markdown",
-    "summary": "URL Fetcher Tool",
-    "schema": {
-        "properties": {
-            "url": {
-                "type": "string",
-                "description": "The URL to fetch (must be http or https)",
-                "format": "uri",
-            },
-            "max_length": {
-                "type": "integer",
-                "description": "Maximum character length for output",
-                "default": 8000,
-                "minimum": 1000,
-                "maximum": 100000,
-            },
-        },
-        "required": ["url"],
-    },
-}

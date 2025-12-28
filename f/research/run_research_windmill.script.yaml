@@ -1,0 +1,24 @@
+summary: 'Execute research workflow using native Windmill tools'
+description: 'Alternative research workflow that uses standalone Windmill tools (web_search, fetch_url, search_memory, store_memory) directly without MCP. Suitable for simpler research tasks without the full LangGraph orchestration.'
+lock: '!inline f/research/run_research_windmill.script.lock'
+kind: script
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  properties:
+    topic:
+      type: string
+      description: Research topic (1-500 characters)
+      minLength: 1
+      maxLength: 500
+    max_iterations:
+      type: integer
+      description: Maximum research iterations
+      default: 3
+      minimum: 1
+      maximum: 10
+    user_id:
+      type: string
+      description: Optional user identifier (UUID string). Auto-generated if not provided.
+  required:
+    - topic
