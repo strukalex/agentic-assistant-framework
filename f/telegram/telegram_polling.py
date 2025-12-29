@@ -5,6 +5,7 @@
 Environment variables:
     TELEGRAM_BOT_TOKEN: Your bot token from @BotFather
     LLM_PROVIDER: 'azure' or 'local' (for Ollama)
+    TELEGRAM_DEFAULT_CHAT_ID: Owner's Telegram user/chat ID - only this user can interact with the bot
 """
 
 import asyncio
@@ -26,15 +27,50 @@ logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 
+def get_owner_id() -> Optional[int]:
+    """Get the owner's Telegram ID from TELEGRAM_DEFAULT_CHAT_ID.
+
+    Returns:
+        Owner's user ID, or None if not configured.
+    """
+    owner_id_str = os.environ.get("TELEGRAM_DEFAULT_CHAT_ID", "")
+    if not owner_id_str.strip():
+        return None
+    try:
+        return int(owner_id_str.strip())
+    except ValueError:
+        logger.warning(f"Invalid TELEGRAM_DEFAULT_CHAT_ID: {owner_id_str}")
+        return None
+
+
+def is_owner(user_id: Optional[int], owner_id: Optional[int]) -> bool:
+    """Check if user is the owner.
+
+    Args:
+        user_id: The Telegram user ID to check
+        owner_id: The owner's user ID (None = allow all)
+
+    Returns:
+        True if user is owner or no owner configured, False otherwise
+    """
+    if owner_id is None:
+        return True
+    if user_id is None:
+        return False
+    return user_id == owner_id
+
+
 class TelegramPollingBot:
     """Telegram bot using long polling."""
 
-    def __init__(self, token: str, polling_timeout: int = 30):
+    def __init__(self, token: str, polling_timeout: int = 30, owner_id: Optional[int] = None):
         self.token = token
         self.base_url = f"https://api.telegram.org/bot{token}"
         self.polling_timeout = min(polling_timeout, 50)
         self.last_update_id: Optional[int] = None
         self.shutdown_event = asyncio.Event()
+        self.owner_id = owner_id
+        self._warned_no_owner = False
 
     async def get_updates(self, offset: Optional[int] = None) -> list[dict]:
         """Fetch updates using long polling."""
@@ -86,13 +122,33 @@ class TelegramPollingBot:
         if not message or "text" not in message:
             return
 
+        # Extract user information
+        from_user = message.get("from", {})
+        user_id = from_user.get("id")
+        username = from_user.get("username", "unknown")
+
+        # Check if user is the owner
+        if not is_owner(user_id, self.owner_id):
+            logger.warning(
+                f"Unauthorized access attempt from user_id={user_id} (@{username}) - ignoring"
+            )
+            return
+
+        # Warn once if no owner is configured
+        if self.owner_id is None and not self._warned_no_owner:
+            logger.warning(
+                "TELEGRAM_DEFAULT_CHAT_ID not configured - bot accepts messages from ALL users. "
+                "Set this variable to restrict access."
+            )
+            self._warned_no_owner = True
+
         result = await process_message(
             message=message["text"],
             chat_id=str(message["chat"]["id"]),
             message_id=message.get("message_id"),
-            user_id=message.get("from", {}).get("id"),
-            username=message.get("from", {}).get("username", "unknown"),
-            first_name=message.get("from", {}).get("first_name", "User")
+            user_id=user_id,
+            username=username,
+            first_name=from_user.get("first_name", "User")
         )
 
         if result.get("status") != "success":
@@ -133,7 +189,18 @@ async def _async_main(
     if not telegram_token:
         return {"status": "error", "reason": "TELEGRAM_BOT_TOKEN not configured"}
 
-    bot = TelegramPollingBot(token=telegram_token, polling_timeout=polling_timeout)
+    # Get owner ID for access control
+    owner_id = get_owner_id()
+    if owner_id:
+        logger.info(f"Access control enabled: owner_id={owner_id}")
+    else:
+        logger.warning("No TELEGRAM_DEFAULT_CHAT_ID configured - bot will accept messages from ALL users")
+
+    bot = TelegramPollingBot(
+        token=telegram_token,
+        polling_timeout=polling_timeout,
+        owner_id=owner_id
+    )
 
     try:
         if max_runtime_seconds:

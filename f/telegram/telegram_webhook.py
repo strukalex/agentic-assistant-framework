@@ -3,6 +3,9 @@
 Receives incoming Telegram webhook updates and triggers the AI chat agent flow.
 This script is the entry point that Telegram calls when messages are sent to the bot.
 
+Environment variables:
+    TELEGRAM_DEFAULT_CHAT_ID: Owner's Telegram user/chat ID - only this user can interact with the bot
+
 Usage in Windmill:
     - Registered at path: f/telegram/telegram_webhook
     - Webhook receives POST requests from Telegram
@@ -12,7 +15,8 @@ Usage in Windmill:
 from __future__ import annotations
 
 import logging
-from typing import Any
+import os
+from typing import Any, Optional
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,6 +29,52 @@ try:
 except ImportError:
     wmill = None  # type: ignore[assignment]
     WMILL_AVAILABLE = False
+
+# Track if we've warned about missing owner config
+_warned_no_owner = False
+
+
+def get_owner_id() -> Optional[int]:
+    """Get the owner's Telegram ID from TELEGRAM_DEFAULT_CHAT_ID.
+
+    Returns:
+        Owner's user ID, or None if not configured.
+    """
+    owner_id_str = os.environ.get("TELEGRAM_DEFAULT_CHAT_ID", "")
+    if not owner_id_str.strip():
+        return None
+    try:
+        return int(owner_id_str.strip())
+    except ValueError:
+        logger.warning(f"Invalid TELEGRAM_DEFAULT_CHAT_ID: {owner_id_str}")
+        return None
+
+
+def is_owner(user_id: Optional[int], owner_id: Optional[int]) -> bool:
+    """Check if user is the owner.
+
+    Args:
+        user_id: The Telegram user ID to check
+        owner_id: The owner's user ID (None = allow all)
+
+    Returns:
+        True if user is owner or no owner configured, False otherwise
+    """
+    global _warned_no_owner
+
+    if owner_id is None:
+        if not _warned_no_owner:
+            logger.warning(
+                "TELEGRAM_DEFAULT_CHAT_ID not configured - bot accepts messages from ALL users. "
+                "Set this variable to restrict access."
+            )
+            _warned_no_owner = True
+        return True
+
+    if user_id is None:
+        return False
+
+    return user_id == owner_id
 
 
 def main(update: dict) -> dict[str, Any]:
@@ -68,6 +118,16 @@ def main(update: dict) -> dict[str, Any]:
     user_id = message["from"].get("id")
     username = message["from"].get("username", "unknown")
     first_name = message["from"].get("first_name", "")
+
+    # Check if user is the owner
+    owner_id = get_owner_id()
+    if not is_owner(user_id, owner_id):
+        logger.warning(
+            "Unauthorized access attempt from user_id=%s (@%s) - ignoring",
+            user_id,
+            username,
+        )
+        return {"status": "rejected", "reason": "unauthorized_user", "user_id": user_id}
 
     logger.info(
         "Processing message from %s (@%s): %s",
