@@ -1,0 +1,6 @@
+summary: Contains workflows made from tools and agents
+display_name: workflows
+extra_perms:
+  u/admin: true
+owners:
+  - u/admin

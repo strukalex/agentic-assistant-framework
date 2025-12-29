@@ -1,0 +1,55 @@
+summary: Email summary to telegram
+description: ''
+value:
+  modules:
+    - id: a
+      value:
+        type: script
+        input_transforms:
+          gmail_resource:
+            type: static
+            value: ''
+        is_trigger: false
+        path: f/gmail/read_test
+    - id: b
+      value:
+        type: script
+        input_transforms:
+          max_length:
+            type: static
+            value: 200
+          style:
+            type: static
+            value: concise
+          text:
+            type: javascript
+            expr: JSON.stringify(results.a)
+        is_trigger: false
+        path: f/tools/summarize_text
+      continue_on_error: false
+    - id: c
+      value:
+        type: script
+        input_transforms:
+          chat_id:
+            type: static
+            value: ''
+          disable_web_page_preview:
+            type: static
+            value: false
+          parse_mode:
+            type: static
+            value: Markdown
+          reply_to_message_id:
+            type: static
+          text:
+            type: javascript
+            expr: results.b
+        is_trigger: false
+        path: f/telegram/send_telegram_message
+schema:
+  $schema: 'https://json-schema.org/draft/2020-12/schema'
+  type: object
+  order: []
+  properties: {}
+  required: []
