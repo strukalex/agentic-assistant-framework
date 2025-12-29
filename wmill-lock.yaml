@@ -10,3 +10,4 @@ locks:
   f/tools/fetch_url: 6da3e616a04d40911e00b1c007e0f5416dd69d75a3f75db10bb8010c4c86794e
   f/tools/search_memory: c4990dc29676bb79bdbeae9005d838c00ef79e5254cbae3fb1691599b47093c8
   f/tools/store_memory: b42e44e69e606261bfa5aebf120b3ff5d3f14a345a223f1bb6a6a6aab99c93f6
+  f/tools/summarize_text: 2c8e8d1b71f43939ce32474265bfec40990c5a74850f8abeac4c66d9020c1001

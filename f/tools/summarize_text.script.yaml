@@ -2,28 +2,29 @@ summary: Summarize text using LLM
 description: >-
   Summarizes text using the configured LLM (Azure AI Foundry or local Ollama).
   Supports different summary styles: concise, detailed, or bullet points.
+lock: '!inline f/tools/summarize_text.script.lock'
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
   properties:
-    text:
-      type: string
-      description: The text to summarize
-      minLength: 1
     max_length:
       type: integer
       description: Target maximum length for the summary in words
       default: 200
-      minimum: 10
       maximum: 1000
+      minimum: 10
     style:
       type: string
       description: Summary style
+      default: concise
       enum:
         - concise
         - detailed
         - bullet_points
-      default: concise
+    text:
+      type: string
+      description: The text to summarize
+      minLength: 1
   required:
     - text
