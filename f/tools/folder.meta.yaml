@@ -1,3 +1,6 @@
+summary: null
 display_name: Tools
-owners: []
-extra_perms: {}
+extra_perms:
+  u/admin: true
+owners:
+  - u/admin

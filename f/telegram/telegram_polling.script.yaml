@@ -3,7 +3,7 @@ description: >-
   Runs a long-polling bot that continuously checks for new messages from
   Telegram. Ideal for local development where you dont have an exposed webhook
   endpoint. Uses getUpdates API instead of webhooks.
-language: python3
+lock: '!inline f/telegram/telegram_polling.script.lock'
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'

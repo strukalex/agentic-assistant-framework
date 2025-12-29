@@ -1,13 +1,14 @@
-summary: 'Configure Telegram webhook for the bot'
-description: 'One-time setup script to register the Windmill webhook URL with Telegram so incoming messages are forwarded to the bot. Can also delete webhook or get current info.'
+summary: Configure Telegram webhook for the bot
+description: >-
+  One-time setup script to register the Windmill webhook URL with Telegram so
+  incoming messages are forwarded to the bot. Can also delete webhook or get
+  current info.
+lock: '!inline f/telegram/setup_telegram_webhook.script.lock'
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
   properties:
-    webhook_url:
-      type: string
-      description: "Full Windmill webhook URL (required for 'set' action)"
     action:
       type: string
       description: 'Action to perform: set, delete, or info'
@@ -20,4 +21,7 @@ schema:
       type: boolean
       description: Whether to drop pending updates when setting webhook
       default: false
+    webhook_url:
+      type: string
+      description: Full Windmill webhook URL (required for 'set' action)
   required: []

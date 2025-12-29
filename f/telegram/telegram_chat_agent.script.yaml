@@ -1,17 +1,23 @@
-summary: 'AI chat agent that processes Telegram messages and responds'
-description: 'Processes messages from Telegram users with an AI model (local Ollama or Azure) and sends responses back. Uses existing LLM infrastructure from paias.core.llm.'
-language: python3
+summary: AI chat agent that processes Telegram messages and responds
+description: >-
+  Processes messages from Telegram users with an AI model (local Ollama or
+  Azure) and sends responses back. Uses existing LLM infrastructure from
+  paias.core.llm.
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
   properties:
-    message:
-      type: string
-      description: User's message text
     chat_id:
       type: string
       description: Telegram chat ID to respond to
+    first_name:
+      type: string
+      description: User's first name
+      default: User
+    message:
+      type: string
+      description: User's message text
     message_id:
       type: integer
       description: Original message ID for reply threading
@@ -22,10 +28,6 @@ schema:
       type: string
       description: Telegram username
       default: unknown
-    first_name:
-      type: string
-      description: User's first name
-      default: User
   required:
     - message
     - chat_id

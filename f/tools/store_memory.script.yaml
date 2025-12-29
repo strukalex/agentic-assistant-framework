@@ -1,6 +1,7 @@
-summary: 'Store new research findings in long-term memory'
-description: 'Persist verified facts and synthesized answers to the vector database for future retrieval. Only store meaningful research findings.'
-lock: '!inline f/tools/store_memory.script.lock'
+summary: Store new research findings in long-term memory
+description: >-
+  Persist verified facts and synthesized answers to the vector database for
+  future retrieval. Only store meaningful research findings.
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
@@ -9,18 +10,18 @@ schema:
     content:
       type: string
       description: Research content to store (verified facts or synthesized answers)
-      minLength: 10
       maxLength: 50000
+      minLength: 10
+    sources:
+      type: array
+      description: Optional list of source identifiers
+      items:
+        type: string
     topic:
       type: string
       description: Brief topic description for categorization
-      minLength: 1
       maxLength: 200
-    sources:
-      type: array
-      items:
-        type: string
-      description: Optional list of source identifiers
+      minLength: 1
   required:
     - content
     - topic

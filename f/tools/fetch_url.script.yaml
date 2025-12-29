@@ -1,20 +1,21 @@
-summary: 'Fetch a URL and return its content as markdown'
-description: 'Fetches web pages and converts HTML to clean markdown for easier processing. Use when search snippets need more detail.'
-lock: '!inline f/tools/fetch_url.script.lock'
+summary: Fetch a URL and return its content as markdown
+description: >-
+  Fetches web pages and converts HTML to clean markdown for easier processing.
+  Use when search snippets need more detail.
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
   properties:
-    url:
-      type: string
-      description: The URL to fetch (must be http or https)
-      format: uri
     max_length:
       type: integer
       description: Maximum character length for output
       default: 8000
-      minimum: 1000
       maximum: 100000
+      minimum: 1000
+    url:
+      type: string
+      description: The URL to fetch (must be http or https)
+      format: uri
   required:
     - url
