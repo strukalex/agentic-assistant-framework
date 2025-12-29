@@ -1,0 +1,8 @@
+summary: Gmail operations
+display_name: gmail
+extra_perms:
+  g/all: true
+  u/admin: true
+owners:
+  - u/admin
+  - g/all

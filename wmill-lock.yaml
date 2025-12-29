@@ -1,5 +1,6 @@
 version: v2
 locks:
+  f/gmail/read_test: c4105557e2096761bd71183dc46a3fa67b10cd184b51f9123777ed644b967ecf
   f/research/run_research_windmill: 403d19dc1f9105f846b6501185bdd663fb61f41c0ba25ca997b9cc4242940251
   f/telegram/send_telegram_message: ad8f2fd4bf6b57da754071e648261cf31db43575d2fdf15d3c2d9daf40668912
   f/telegram/setup_telegram_webhook: 8dbf62403e3a6de4477d3ad0569782187a599fec6a4b39b6c779b3fc61d0ec59
