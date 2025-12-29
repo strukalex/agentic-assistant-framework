@@ -2,19 +2,19 @@ summary: Send a message to a Telegram chat
 description: >-
   Windmill tool for sending messages to Telegram. Can be used by other workflows
   or as a standalone script. Supports Markdown and HTML formatting.
+  If chat_id is not provided, falls back to TELEGRAM_DEFAULT_CHAT_ID env var.
 lock: '!inline f/telegram/send_telegram_message.script.lock'
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
   properties:
+    text:
+      type: string
+      description: Message text to send (supports Markdown or HTML)
     chat_id:
       type: string
-      description: Telegram chat ID to send message to
-    disable_web_page_preview:
-      type: boolean
-      description: Whether to disable link previews
-      default: false
+      description: Telegram chat ID (optional, uses TELEGRAM_DEFAULT_CHAT_ID if not provided)
     parse_mode:
       type: string
       description: 'Message parse mode: Markdown, HTML, or empty for plain text'
@@ -26,9 +26,9 @@ schema:
     reply_to_message_id:
       type: integer
       description: Optional message ID to reply to
-    text:
-      type: string
-      description: Message text to send (supports Markdown or HTML)
+    disable_web_page_preview:
+      type: boolean
+      description: Whether to disable link previews
+      default: false
   required:
-    - chat_id
     - text

@@ -5,7 +5,8 @@ It can be used by other workflows or as a standalone tool.
 
 Usage in Windmill:
     - Registered at path: f/telegram/send_telegram_message
-    - Arguments: chat_id (str), text (str), parse_mode (str, optional)
+    - Arguments: text (str), chat_id (str, optional), parse_mode (str, optional)
+    - If chat_id is not provided, falls back to TELEGRAM_DEFAULT_CHAT_ID env var
 """
 
 from __future__ import annotations
@@ -83,8 +84,8 @@ async def _send_message(
 
 
 async def _async_main(
-    chat_id: str,
     text: str,
+    chat_id: Optional[str] = None,
     parse_mode: str = "Markdown",
     reply_to_message_id: Optional[int] = None,
     disable_web_page_preview: bool = False,
@@ -92,8 +93,8 @@ async def _async_main(
     """Async implementation of sending a Telegram message.
 
     Args:
-        chat_id: Telegram chat ID to send message to
         text: Message text to send
+        chat_id: Telegram chat ID (optional, falls back to TELEGRAM_DEFAULT_CHAT_ID)
         parse_mode: Message parse mode (Markdown, HTML, or empty for plain text)
         reply_to_message_id: Optional message ID to reply to
         disable_web_page_preview: Whether to disable link previews
@@ -101,7 +102,22 @@ async def _async_main(
     Returns:
         Dict with status and message information
     """
-    logger.info("Sending message to chat %s", chat_id)
+    # Resolve chat_id from parameter or environment
+    resolved_chat_id = chat_id
+    if not resolved_chat_id:
+        resolved_chat_id = os.environ.get("TELEGRAM_DEFAULT_CHAT_ID")
+        if not resolved_chat_id and WMILL_AVAILABLE and wmill is not None:
+            try:
+                resolved_chat_id = wmill.get_variable("u/admin/telegram_default_chat_id")
+            except Exception as e:
+                logger.warning("Failed to get chat_id from Windmill variable: %s", e)
+
+    if not resolved_chat_id:
+        error_msg = "No chat_id provided and TELEGRAM_DEFAULT_CHAT_ID not configured"
+        logger.error(error_msg)
+        return {"ok": False, "error": error_msg}
+
+    logger.info("Sending message to chat %s", resolved_chat_id)
 
     # Get Telegram bot token
     telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -117,7 +133,7 @@ async def _async_main(
         return {"ok": False, "error": error_msg}
 
     result = await _send_message(
-        chat_id=chat_id,
+        chat_id=resolved_chat_id,
         text=text,
         telegram_token=telegram_token,
         parse_mode=parse_mode,
@@ -130,7 +146,7 @@ async def _async_main(
         return {
             "ok": True,
             "message_id": result.get("result", {}).get("message_id"),
-            "chat_id": chat_id,
+            "chat_id": resolved_chat_id,
         }
     else:
         error_desc = result.get("description", "Unknown error")
@@ -138,13 +154,13 @@ async def _async_main(
         return {
             "ok": False,
             "error": error_desc,
-            "chat_id": chat_id,
+            "chat_id": resolved_chat_id,
         }
 
 
 def main(
-    chat_id: str,
     text: str,
+    chat_id: Optional[str] = None,
     parse_mode: str = "Markdown",
     reply_to_message_id: Optional[int] = None,
     disable_web_page_preview: bool = False,
@@ -155,8 +171,8 @@ def main(
     It can be used by workflows or as a standalone script.
 
     Args:
-        chat_id: Telegram chat ID to send message to
         text: Message text to send (supports Markdown or HTML based on parse_mode)
+        chat_id: Telegram chat ID (optional, falls back to TELEGRAM_DEFAULT_CHAT_ID)
         parse_mode: Message parse mode - "Markdown", "HTML", or "" for plain text
         reply_to_message_id: Optional message ID to reply to
         disable_web_page_preview: Whether to disable link previews
@@ -166,8 +182,8 @@ def main(
     """
     return asyncio.run(
         _async_main(
-            chat_id=chat_id,
             text=text,
+            chat_id=chat_id,
             parse_mode=parse_mode,
             reply_to_message_id=reply_to_message_id,
             disable_web_page_preview=disable_web_page_preview,
@@ -181,13 +197,13 @@ __windmill__ = {
     "summary": "Send Telegram Message",
     "schema": {
         "properties": {
-            "chat_id": {
-                "type": "string",
-                "description": "Telegram chat ID to send message to",
-            },
             "text": {
                 "type": "string",
                 "description": "Message text to send (supports Markdown or HTML)",
+            },
+            "chat_id": {
+                "type": "string",
+                "description": "Telegram chat ID (optional, uses TELEGRAM_DEFAULT_CHAT_ID if not provided)",
             },
             "parse_mode": {
                 "type": "string",
@@ -205,6 +221,6 @@ __windmill__ = {
                 "default": False,
             },
         },
-        "required": ["chat_id", "text"],
+        "required": ["text"],
     },
 }
