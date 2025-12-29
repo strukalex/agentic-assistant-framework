@@ -27,15 +27,10 @@ if [ -e "u/admin/__init__.py" ]; then
   rm -f "u/admin/__init__.py" "u/admin/__init__.script.yaml" "u/admin/__init__.script.lock"
 fi
 
-# Remove u/admin directory if it's now empty
-if [ -d "u/admin" ] && [ -z "$(ls -A u/admin)" ]; then
-  rmdir "u/admin"
-fi
-
-# Remove u/ directory if it's now empty
-if [ -d "u" ] && [ -z "$(ls -A u)" ]; then
-  rmdir "u"
-fi
+# NOTE: Do NOT delete u/admin or u/ directories even if empty.
+# Windmill stores system-level maintenance scripts in u/admin (e.g., "Sync Hub").
+# Deleting these directories causes wmill sync push to remove them from the server.
+# Instead, periodically run 'wmill sync pull' to fetch updated maintenance scripts.
 
 echo "Pushing to Windmill..."
 wmill sync push --yes
