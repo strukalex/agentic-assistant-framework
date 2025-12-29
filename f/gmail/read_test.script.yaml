@@ -1,22 +1,14 @@
-summary: ''
-description: Reads last 5 gmail messages
+summary: Read Gmail Messages
+description: >-
+  Reads last 5 Gmail messages. If gmail_resource is not provided,
+  falls back to GMAIL_RESOURCE env var.
 lock: '!inline f/gmail/read_test.script.lock'
 kind: script
 schema:
   $schema: 'https://json-schema.org/draft/2020-12/schema'
   type: object
-  order:
-    - no_default
-    - name
-    - age
-    - obj
-    - l
-    - file_
   properties:
     gmail_resource:
       type: string
-      description: ''
-      default: null
-      originalType: string
-  required:
-    - gmail_resource
+      description: Windmill resource path for Gmail OAuth (optional, uses GMAIL_RESOURCE env var if not provided)
+  required: []
