@@ -1,3 +1,5 @@
+#py: >=3.11,<3.12
+
 """Windmill tool: Summarize text using LLM.
 
 Standalone tool for use in Windmill AI agent steps.
@@ -8,8 +10,6 @@ Usage in Windmill:
     - Can be used as a tool in AI agent steps
     - Arguments: text (str), max_length (int, optional), style (str, optional)
 """
-# requirements:
-# file:///app
 
 from __future__ import annotations
 
