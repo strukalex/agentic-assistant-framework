@@ -178,6 +178,14 @@ curl -X POST "http://localhost:8100/api/w/default/jobs/run_script_by_path" \
   -d '{"path": "f/research/daily_research", "args": {"topic": "AI trends 2025", "user_id": "550e8400-e29b-41d4-a716-446655440000"}}'
 ```
 
+### To interact with the MCP server
+
+Enable MCP server in windmill, then:
+
+`npx @modelcontextprotocol/inspector`
+
+Select streamable HTTP/via proxy in the interface
+
 ### Approval Gates
 
 When a workflow requires human approval (for `REVERSIBLE_WITH_DELAY` actions):

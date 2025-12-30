@@ -1,0 +1,98 @@
+{
+	"info": {
+		"_postman_id": "937cadbb-3c1d-43ac-b05d-39e824430e26",
+		"name": "MCP",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "42343130"
+	},
+	"item": [
+		{
+			"name": "Initialize",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": 1,\r\n  \"method\": \"initialize\",\r\n  \"params\": {\r\n    \"protocolVersion\": \"2024-11-05\",\r\n    \"capabilities\": {},\r\n    \"clientInfo\": {\r\n      \"name\": \"Postman\",\r\n      \"version\": \"1.0\"\r\n    }\r\n  }\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8100/api/mcp/w/default/sse?token=mcG7QeRyuQVh6aHKsJM5dFWInQhMAqHx",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8100",
+					"path": [
+						"api",
+						"mcp",
+						"w",
+						"default",
+						"sse"
+					],
+					"query": [
+						{
+							"key": "token",
+							"value": "mcG7QeRyuQVh6aHKsJM5dFWInQhMAqHx"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "List Tools",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json, text/event-stream",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"jsonrpc\": \"2.0\",\r\n  \"id\": 2,\r\n  \"method\": \"tools/list\",\r\n  \"params\": {}\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8100/api/mcp/w/default/sse?token=mcG7QeRyuQVh6aHKsJM5dFWInQhMAqHx",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8100",
+					"path": [
+						"api",
+						"mcp",
+						"w",
+						"default",
+						"sse"
+					],
+					"query": [
+						{
+							"key": "token",
+							"value": "mcG7QeRyuQVh6aHKsJM5dFWInQhMAqHx"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

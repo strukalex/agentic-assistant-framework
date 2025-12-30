@@ -17,12 +17,12 @@ schema:
       description: Telegram chat ID (optional, uses TELEGRAM_DEFAULT_CHAT_ID if not provided)
     parse_mode:
       type: string
-      description: 'Message parse mode: Markdown, HTML, or empty for plain text'
+      description: 'Message parse mode: Markdown, HTML, or None for plain text'
       default: Markdown
       enum:
         - Markdown
         - HTML
-        - ''
+        - None
     reply_to_message_id:
       type: integer
       description: Optional message ID to reply to

@@ -43,7 +43,7 @@ async def _send_message(
         chat_id: Telegram chat ID to send message to
         text: Message text to send
         telegram_token: Bot token for authentication
-        parse_mode: Message parse mode (Markdown, HTML, or empty string for plain text)
+        parse_mode: Message parse mode (Markdown, HTML, or None for plain text)
         reply_to_message_id: Optional message ID to reply to
         disable_web_page_preview: Whether to disable link previews
 
@@ -59,7 +59,8 @@ async def _send_message(
         "text": text,
     }
 
-    if parse_mode:
+    # Only add parse_mode if it's not "None" (plain text)
+    if parse_mode and parse_mode != "None":
         payload["parse_mode"] = parse_mode
 
     if reply_to_message_id:
@@ -95,7 +96,7 @@ async def _async_main(
     Args:
         text: Message text to send
         chat_id: Telegram chat ID (optional, falls back to TELEGRAM_DEFAULT_CHAT_ID)
-        parse_mode: Message parse mode (Markdown, HTML, or empty for plain text)
+        parse_mode: Message parse mode (Markdown, HTML, or None for plain text)
         reply_to_message_id: Optional message ID to reply to
         disable_web_page_preview: Whether to disable link previews
 
@@ -173,7 +174,7 @@ def main(
     Args:
         text: Message text to send (supports Markdown or HTML based on parse_mode)
         chat_id: Telegram chat ID (optional, falls back to TELEGRAM_DEFAULT_CHAT_ID)
-        parse_mode: Message parse mode - "Markdown", "HTML", or "" for plain text
+        parse_mode: Message parse mode - "Markdown", "HTML", or "None" for plain text
         reply_to_message_id: Optional message ID to reply to
         disable_web_page_preview: Whether to disable link previews
 
@@ -207,9 +208,9 @@ __windmill__ = {
             },
             "parse_mode": {
                 "type": "string",
-                "description": "Message parse mode: Markdown, HTML, or empty for plain text",
+                "description": "Message parse mode: Markdown, HTML, or None for plain text",
                 "default": "Markdown",
-                "enum": ["Markdown", "HTML", ""],
+                "enum": ["Markdown", "HTML", "None"],
             },
             "reply_to_message_id": {
                 "type": "integer",
