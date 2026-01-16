@@ -23,13 +23,11 @@ from typing import Any
 
 # Import from pre-installed paias package
 from paias.core.mem0 import get_memory_client
-from paias.core.telemetry import trace_tool_call
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-@trace_tool_call
 def main(
     memory_id: str,
     user_id: str,

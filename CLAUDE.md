@@ -82,8 +82,14 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 - Unless specified, deploy scripts to `f/[project]/[script_name]`.
 - Always output the final deployed path (e.g., `https://app.windmill.dev/scripts/...`) after success.
 
-Never use file:///app in requirements unless the full project (with pyproject.toml) is mounted at that path
-For scripts that import from paias.*, rely on ADDITIONAL_PYTHON_PATHS instead
+- Never use file:///app in requirements unless the full project (with pyproject.toml) is mounted at that path
+- For scripts that import from paias.*, rely on ADDITIONAL_PYTHON_PATHS instead
 List only PyPI dependencies in # requirements: that aren't already in the mounted venv
 
+- The main() function MUST NOT have any decorators
+- Windmill parses the function signature directly for argument extraction
+- Type hints are required on all parameters (e.g., content: str, not just content)
+- Optional parameters must have default values (e.g., metadata: dict[str, Any] | None = None)
+- Include __windmill__ metadata dict with schema for better UI generation
+- If you need tracing/decorators, wrap the logic in an internal function and call it from main()
 <!-- MANUAL ADDITIONS END -->
