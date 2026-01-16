@@ -30,33 +30,29 @@ logger = logging.getLogger(__name__)
 
 def main(
     query: str,
-    user_id: str,
     top_k: int = 10,
 ) -> list[dict[str, Any]]:
-    """Retrieve past memories about the user.
+    """Retrieve past memories.
 
-    Searches for semantically similar memories stored for this user.
-    Use this to recall user preferences, facts, or past interactions.
+    Searches for semantically similar memories.
+    Use this to recall preferences, facts, or past interactions.
 
     Args:
         query: Search query (e.g., "food preferences", "allergies", "work")
-        user_id: The unique ID of the user (UUID string)
         top_k: Maximum number of memories to return (default: 10)
 
     Returns:
         List of memory objects with 'id', 'memory', 'score', and 'metadata'
 
     Example:
-        >>> results = main(
-        ...     query="dietary restrictions",
-        ...     user_id="550e8400-e29b-41d4-a716-446655440000"
-        ... )
+        >>> results = main(query="dietary restrictions")
         >>> for mem in results:
         ...     print(mem["memory"])
     """
+    user_id = "local_user"
+
     logger.info(
-        "Searching memories for user %s: %s (top_k=%d)",
-        user_id,
+        "Searching memories: %s (top_k=%d)",
         query[:50] + "..." if len(query) > 50 else query,
         top_k,
     )
@@ -70,7 +66,7 @@ def main(
             limit=top_k,
         )
 
-        logger.info("Found %d memories for user %s", len(memories), user_id)
+        logger.info("Found %d memories", len(memories))
 
         # Return simplified format
         return [
@@ -85,14 +81,14 @@ def main(
         ]
 
     except Exception as e:
-        logger.error("Memory search failed for user %s: %s", user_id, str(e))
+        logger.error("Memory search failed: %s", str(e))
         raise
 
 
 # Windmill script metadata
 __windmill__ = {
-    "description": "Retrieve past memories about the user (Mem0)",
-    "summary": "Search User Memory",
+    "description": "Retrieve past memories (Mem0)",
+    "summary": "Search Memory",
     "schema": {
         "properties": {
             "query": {
@@ -100,12 +96,6 @@ __windmill__ = {
                 "description": "Search query for memories (e.g., 'food preferences')",
                 "minLength": 1,
                 "maxLength": 1000,
-            },
-            "user_id": {
-                "type": "string",
-                "description": "User identifier (UUID format)",
-                "minLength": 1,
-                "maxLength": 100,
             },
             "top_k": {
                 "type": "integer",
@@ -115,6 +105,6 @@ __windmill__ = {
                 "maximum": 100,
             },
         },
-        "required": ["query", "user_id"],
+        "required": ["query"],
     },
 }

@@ -30,28 +30,23 @@ logger = logging.getLogger(__name__)
 
 def main(
     memory_id: str,
-    user_id: str,
 ) -> dict[str, Any]:
     """Delete a specific memory by ID.
 
-    Permanently removes a memory from the user's memory store.
-    Use this when a user wants to forget something or correct outdated info.
+    Permanently removes a memory from the memory store.
+    Use this when you want to forget something or correct outdated info.
 
     Args:
         memory_id: The ID of the memory to delete (from search results)
-        user_id: The unique ID of the user (for verification/logging)
 
     Returns:
-        Dict confirming deletion with 'deleted', 'memory_id', and 'user_id'
+        Dict confirming deletion with 'deleted' and 'memory_id'
 
     Example:
-        >>> result = main(
-        ...     memory_id="mem_abc123",
-        ...     user_id="550e8400-e29b-41d4-a716-446655440000"
-        ... )
+        >>> result = main(memory_id="mem_abc123")
         >>> print(result["deleted"])  # True
     """
-    logger.info("Deleting memory %s for user %s", memory_id, user_id)
+    logger.info("Deleting memory %s", memory_id)
 
     try:
         client = get_memory_client()
@@ -59,29 +54,23 @@ def main(
         # Delete the memory
         result = client.delete(memory_id)
 
-        logger.info("Memory %s deleted for user %s", memory_id, user_id)
+        logger.info("Memory %s deleted", memory_id)
 
         return {
             "deleted": True,
             "memory_id": memory_id,
-            "user_id": user_id,
             "result": result,
         }
 
     except Exception as e:
-        logger.error(
-            "Memory delete failed for %s (user %s): %s",
-            memory_id,
-            user_id,
-            str(e),
-        )
+        logger.error("Memory delete failed for %s: %s", memory_id, str(e))
         raise
 
 
 # Windmill script metadata
 __windmill__ = {
-    "description": "Delete a specific user memory by ID (Mem0)",
-    "summary": "Delete User Memory",
+    "description": "Delete a specific memory by ID (Mem0)",
+    "summary": "Delete Memory",
     "schema": {
         "properties": {
             "memory_id": {
@@ -89,13 +78,7 @@ __windmill__ = {
                 "description": "ID of the memory to delete (from search results)",
                 "minLength": 1,
             },
-            "user_id": {
-                "type": "string",
-                "description": "User identifier (for verification)",
-                "minLength": 1,
-                "maxLength": 100,
-            },
         },
-        "required": ["memory_id", "user_id"],
+        "required": ["memory_id"],
     },
 }

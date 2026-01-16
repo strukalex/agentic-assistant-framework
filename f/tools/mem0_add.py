@@ -30,17 +30,15 @@ logger = logging.getLogger(__name__)
 
 def main(
     content: str,
-    user_id: str,
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Save important facts about the user to long-term memory.
+    """Save important facts to long-term memory.
 
     Mem0 automatically extracts and stores relevant facts from the content.
-    Use this to remember user preferences, allergies, interests, etc.
+    Use this to remember preferences, allergies, interests, etc.
 
     Args:
         content: The text containing facts to remember (e.g., "I'm allergic to peanuts")
-        user_id: The unique ID of the user (UUID string recommended)
         metadata: Optional metadata to attach (e.g., {"source": "conversation"})
 
     Returns:
@@ -48,14 +46,14 @@ def main(
 
     Example:
         >>> result = main(
-        ...     content="I prefer dark mode and I'm vegetarian",
-        ...     user_id="550e8400-e29b-41d4-a716-446655440000"
+        ...     content="I prefer dark mode and I'm vegetarian"
         ... )
         >>> print(result)
     """
+    user_id = "local_user"
+
     logger.info(
-        "Adding memory for user %s: %s",
-        user_id,
+        "Adding memory: %s",
         content[:50] + "..." if len(content) > 50 else content,
     )
 
@@ -69,42 +67,35 @@ def main(
             metadata=metadata or {},
         )
 
-        logger.info("Memory added successfully for user %s", user_id)
+        logger.info("Memory added successfully")
 
         return {
             "success": True,
-            "user_id": user_id,
             "result": result,
         }
 
     except Exception as e:
-        logger.error("Memory add failed for user %s: %s", user_id, str(e))
+        logger.error("Memory add failed: %s", str(e))
         raise
 
 
 # Windmill script metadata
 __windmill__ = {
-    "description": "Save important facts about the user to long-term memory (Mem0)",
-    "summary": "Add User Memory",
+    "description": "Save important facts to long-term memory (Mem0)",
+    "summary": "Add Memory",
     "schema": {
         "properties": {
             "content": {
                 "type": "string",
-                "description": "Text containing facts to remember about the user",
+                "description": "Text containing facts to remember (e.g., preferences, allergies)",
                 "minLength": 1,
                 "maxLength": 5000,
-            },
-            "user_id": {
-                "type": "string",
-                "description": "User identifier (UUID format recommended)",
-                "minLength": 1,
-                "maxLength": 100,
             },
             "metadata": {
                 "type": "object",
                 "description": "Optional metadata to attach to the memory",
             },
         },
-        "required": ["content", "user_id"],
+        "required": ["content"],
     },
 }
