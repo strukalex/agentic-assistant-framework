@@ -160,9 +160,9 @@ services:
       ## Tell Windmill to use pre-installed paias package and system site-packages
       # ADDITIONAL_PYTHON_PATHS: "/app:/tmp/windmill/cache/python_3_11/global-site-packages:/usr/local/lib/python3.11/dist-packages"
 
-      # Point Windmill to your venv's site-packages + paias source
-      # /app contains the paias package (mounted from ./paias:/app/paias)
-      ADDITIONAL_PYTHON_PATHS: "/venv/lib/python3.11/site-packages:/app"
+      # Point Windmill to paias source package (mounted from ./paias:/app/paias)
+      # Dependencies are pre-installed in the container via Dockerfile
+      ADDITIONAL_PYTHON_PATHS: "/app"
 
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
@@ -226,12 +226,9 @@ services:
           cpus: "0.5"
           memory: 1G
     volumes:
-
-    # Mount local venv's site-packages directory
-    - ./venv/lib/python3.11/site-packages:/venv/lib/python3.11/site-packages:ro
-    # Also mount your paias package if it's installed in editable mode
-    #   # Note: mounted read-only to prevent accidental modifications
-    - ./paias:/app/paias:ro
+      # Mount paias package source (read-only to prevent accidental modifications)
+      # Dependencies (mem0ai, qdrant-client, pydantic-settings) are pre-installed in container
+      - ./paias:/app/paias:ro
     #   # Worker cache
     #   - windmill_worker_cache:/tmp/windmill/cache
     #   # Mount source code for INIT_SCRIPT to install paias package

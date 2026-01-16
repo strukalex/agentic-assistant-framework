@@ -1,3 +1,10 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "mem0ai>=1.0.0",
+#     "qdrant-client>=1.16.0",
+# ]
+# ///
 """Windmill tool: Search user memories in Mem0.
 
 Standalone tool for use in Windmill AI agent steps.
@@ -12,9 +19,6 @@ MCP Exposure:
     - Enable MCP in Windmill to expose as tool to LibreChat/other MCP clients
     - Tool name: mem0_search
 """
-# requirements:
-# mem0ai>=1.0.0
-# qdrant-client>=1.16.0
 
 from __future__ import annotations
 

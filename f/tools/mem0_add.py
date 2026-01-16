@@ -1,3 +1,10 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = [
+#     "mem0ai>=1.0.0",
+#     "qdrant-client>=1.16.0",
+# ]
+# ///
 """Windmill tool: Add user memory to Mem0.
 
 Standalone tool for use in Windmill AI agent steps.
@@ -12,16 +19,12 @@ MCP Exposure:
     - Enable MCP in Windmill to expose as tool to LibreChat/other MCP clients
     - Tool name: mem0_add
 """
-# requirements:
-# mem0ai>=1.0.0
-# qdrant-client>=1.16.0
-
 from __future__ import annotations
 
 import logging
 from typing import Any
 
-# Import from pre-installed paias package
+# Import from pre-installed paias package (via ADDITIONAL_PYTHON_PATHS)
 from paias.core.mem0 import get_memory_client
 
 logging.basicConfig(level=logging.INFO)

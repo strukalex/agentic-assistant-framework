@@ -24,7 +24,10 @@ tests/
 ```
 
 ## Commands
-- `wmill`: Windmill CLI for deploying scripts (use `wmill push` and `wmill run`)
+- `wmill sync push --skip-variables --skip-secrets --skip-resources`: Push scripts to Windmill (use `echo "Y" | wmill sync push ...` to auto-confirm)
+- `wmill script generate-metadata`: Regenerate script metadata before pushing if stale
+- `docker compose -f docker-compose.yml -f .private/docker-compose.override.yml build --no-cache windmill_worker`: Rebuild worker with new dependencies
+- `docker compose -f docker-compose.yml -f .private/docker-compose.override.yml up -d windmill_worker`: Restart worker after rebuild
 
 ## Code Style
 
@@ -70,26 +73,45 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 
 ### Script Generation & Deployment
 - **Automation Protocol**: When asked to generate scripts for Windmill, you MUST:
-  1. Write the code to a local file (e.g., `scripts/filename.py`).
-  2. IMMEDIATELY run `wmill push` to deploy it.
+  1. Write the code to a local file (e.g., `f/tools/filename.py`).
+  2. IMMEDIATELY run `echo "Y" | wmill sync push --skip-variables --skip-secrets --skip-resources` to deploy.
   3. **Do not ask for permission** to execute the push command.
-  
+
 ### Tooling
-- **CLI**: Use the `wmill` CLI for all Windmill interactions.
-- **Error Handling**: If `wmill push` fails, analyze the error, fix the script or path, and retry automatically.
+- **CLI**: Use `wmill sync push` (NOT `wmill push` which doesn't exist).
+- **Error Handling**: If push fails, analyze the error, fix the script, and retry automatically.
 
 ### Path Conventions
-- Unless specified, deploy scripts to `f/[project]/[script_name]`.
-- Always output the final deployed path (e.g., `https://app.windmill.dev/scripts/...`) after success.
+- Deploy scripts to `f/[project]/[script_name].py` (e.g., `f/tools/mem0_add.py`).
+- Always output the final deployed path after success.
 
-- Never use file:///app in requirements unless the full project (with pyproject.toml) is mounted at that path
-- For scripts that import from paias.*, rely on ADDITIONAL_PYTHON_PATHS instead
-List only PyPI dependencies in # requirements: that aren't already in the mounted venv
+### Dependency Management (IMPORTANT)
+- **DO NOT mount local venv into container** - compiled packages are architecture-specific
+- **Pre-install dependencies in Dockerfile**: Edit `.private/docker/Dockerfile.windmill-playwright` to add new PyPI packages
+- **Use PEP-723 inline script metadata** for dependency declarations:
+  ```python
+  # /// script
+  # requires-python = ">=3.11"
+  # dependencies = [
+  #     "mem0ai>=1.0.0",
+  #     "qdrant-client>=1.16.0",
+  # ]
+  # ///
+  ```
+- For `paias.*` imports, rely on `ADDITIONAL_PYTHON_PATHS: "/app"` (set in docker-compose.yml)
+- After adding dependencies to Dockerfile, rebuild worker: `docker compose -f docker-compose.yml -f .private/docker-compose.override.yml build --no-cache windmill_worker`
 
-- The main() function MUST NOT have any decorators
+### Script Conventions
+- The `main()` function MUST NOT have any decorators
 - Windmill parses the function signature directly for argument extraction
-- Type hints are required on all parameters (e.g., content: str, not just content)
-- Optional parameters must have default values (e.g., metadata: dict[str, Any] | None = None)
-- Include __windmill__ metadata dict with schema for better UI generation
-- If you need tracing/decorators, wrap the logic in an internal function and call it from main()
+- Type hints are required on all parameters (e.g., `content: str`, not just `content`)
+- Optional parameters must have default values (e.g., `metadata: dict[str, Any] | None = None`)
+- Include `__windmill__` metadata dict with schema for better UI generation
+- If you need tracing/decorators, wrap the logic in an internal function and call it from `main()`
+
+### Docker Architecture
+- `docker-compose.yml`: Base config with windmill_worker using standard image
+- `.private/docker-compose.override.yml`: Overrides worker with custom Dockerfile.windmill-playwright
+- `paias` package is mounted at `/app/paias` (read-only)
+- Dependencies (mem0ai, qdrant-client, pydantic-settings, etc.) are pre-installed in container
 <!-- MANUAL ADDITIONS END -->
