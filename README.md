@@ -102,6 +102,10 @@ echo "LLM_PROVIDER=local" >> .env
 python scripts/test_local_llm.py
 ```
 
+Install embeddings:
+
+`ollama pull nomic-embed-text`
+
 **Benefits:**
 - ✅ Free (no API costs)
 - ✅ Private (data stays on your machine)

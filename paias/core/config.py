@@ -208,6 +208,26 @@ class Settings(BaseSettings):
     )
 
     # ----------------------
+    # Qdrant / Mem0 Configuration
+    # ----------------------
+    qdrant_host: str = Field(
+        default="localhost",
+        description="Qdrant vector database host. Set QDRANT_HOST env var.",
+    )
+    qdrant_port: int = Field(
+        default=6333,
+        description="Qdrant HTTP API port. Set QDRANT_PORT env var.",
+    )
+    qdrant_collection_name: str = Field(
+        default="mem0_memories",
+        description="Qdrant collection for Mem0 user memories. Set QDRANT_COLLECTION_NAME env var.",
+    )
+    mem0_embedding_model: str = Field(
+        default="nomic-embed-text",
+        description="Embedding model for Mem0 when using local Ollama. Set MEM0_EMBEDDING_MODEL env var.",
+    )
+
+    # ----------------------
     # Windmill integration
     # ----------------------
     windmill_base_url: str = Field(

@@ -60,6 +60,30 @@ services:
       - loki
 
   # ============================================================================
+  # Qdrant Vector Database (Mem0 backend)
+  # ============================================================================
+  # Qdrant stores user memory embeddings for Mem0 semantic search.
+  # HTTP API at http://localhost:6333, gRPC at localhost:6334
+  # Data persisted in qdrant_storage volume.
+  # ============================================================================
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ============================================================================
   # Windmill Orchestration (Spec 003)
   # ============================================================================
   # Windmill provides workflow orchestration with:
@@ -142,7 +166,7 @@ services:
 
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
-      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING,LLM_PROVIDER,LLM_MODEL_NAME,LLM_BASE_URL,LLM_TEMPERATURE,LLM_MAX_TOKENS,MCP_RESULT_MAX_LENGTH,AGENTIC_LOGGING_VERBOSE,TELEGRAM_BOT_TOKEN,TELEGRAM_DEFAULT_CHAT_ID,GMAIL_RESOURCE"
+      WHITELIST_ENVS: "AZURE_AI_FOUNDRY_ENDPOINT,AZURE_AI_FOUNDRY_API_KEY,AZURE_DEPLOYMENT_NAME,AZURE_API_VERSION,OPENAI_API_VERSION,PAIAS_DATABASE_URL,OTEL_EXPORTER_OTLP_ENDPOINT,OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,OTEL_SERVICE_NAME,OTEL_SAMPLING_RATE,WEBSEARCH_ENGINE,WEBSEARCH_MAX_RESULTS,WEBSEARCH_TIMEOUT_SECONDS,ENABLE_AGENTIC_LOGGING,LLM_PROVIDER,LLM_MODEL_NAME,LLM_BASE_URL,LLM_TEMPERATURE,LLM_MAX_TOKENS,MCP_RESULT_MAX_LENGTH,AGENTIC_LOGGING_VERBOSE,TELEGRAM_BOT_TOKEN,TELEGRAM_DEFAULT_CHAT_ID,GMAIL_RESOURCE,QDRANT_HOST,QDRANT_PORT,QDRANT_COLLECTION_NAME,MEM0_EMBEDDING_MODEL"
       # LLM provider configuration (from .env)
       LLM_PROVIDER: ${LLM_PROVIDER:-azure}
       LLM_MODEL_NAME: ${LLM_MODEL_NAME:-qwen2.5:latest}
@@ -176,6 +200,12 @@ services:
       TELEGRAM_DEFAULT_CHAT_ID: ${TELEGRAM_DEFAULT_CHAT_ID}
       # Gmail configuration
       GMAIL_RESOURCE: ${GMAIL_RESOURCE}
+      # Qdrant / Mem0 configuration (use Docker service name for host)
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: ${QDRANT_PORT:-6333}
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-mem0_memories}
+      MEM0_EMBEDDING_MODEL: ${MEM0_EMBEDDING_MODEL:-nomic-embed-text}
+      OPENAI_API_VERSION: ${OPENAI_API_VERSION:-2024-10-21}
     depends_on:
       windmill_server:
         condition: service_healthy
@@ -216,4 +246,5 @@ volumes:
   windmill_worker_cache_2:
   loki_data:
   grafana_data:
+  qdrant_storage:
 

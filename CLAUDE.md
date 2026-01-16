@@ -24,8 +24,7 @@ tests/
 ```
 
 ## Commands
-
-cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] pytest [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLOGIES] ruff check .
+- `wmill`: Windmill CLI for deploying scripts (use `wmill push` and `wmill run`)
 
 ## Code Style
 
@@ -83,5 +82,8 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 - Unless specified, deploy scripts to `f/[project]/[script_name]`.
 - Always output the final deployed path (e.g., `https://app.windmill.dev/scripts/...`) after success.
 
+Never use file:///app in requirements unless the full project (with pyproject.toml) is mounted at that path
+For scripts that import from paias.*, rely on ADDITIONAL_PYTHON_PATHS instead
+List only PyPI dependencies in # requirements: that aren't already in the mounted venv
 
 <!-- MANUAL ADDITIONS END -->
