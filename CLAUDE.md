@@ -66,4 +66,22 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 - 002-researcher-agent-mcp: Added Python 3.11+ *(non-negotiable; see Constitution Article I.A)* + Pydantic AI *(Article I.C)*; pydantic-ai[azure] for Azure AI Foundry; mcp Python client for MCP server integration; FastAPI + Pydantic *(Article I.H)*
 
 <!-- MANUAL ADDITIONS START -->
+
+## Windmill Workflow Integration
+
+### Script Generation & Deployment
+- **Automation Protocol**: When asked to generate scripts for Windmill, you MUST:
+  1. Write the code to a local file (e.g., `scripts/filename.py`).
+  2. IMMEDIATELY run `wmill push` to deploy it.
+  3. **Do not ask for permission** to execute the push command.
+  
+### Tooling
+- **CLI**: Use the `wmill` CLI for all Windmill interactions.
+- **Error Handling**: If `wmill push` fails, analyze the error, fix the script or path, and retry automatically.
+
+### Path Conventions
+- Unless specified, deploy scripts to `f/[project]/[script_name]`.
+- Always output the final deployed path (e.g., `https://app.windmill.dev/scripts/...`) after success.
+
+
 <!-- MANUAL ADDITIONS END -->

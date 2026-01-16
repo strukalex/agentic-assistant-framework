@@ -39,3 +39,9 @@ Thumbs.db
 
 # Other
 /u/
+
+wmill-lock.yaml
+
+# Private local work (not committed)
+.private/
+f/private

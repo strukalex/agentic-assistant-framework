@@ -68,7 +68,7 @@ cp .env.example .env
 # - See docs/local-llm-setup.md for details
 
 # Launch infra (PostgreSQL + Jaeger + Windmill)
-docker-compose up -d
+docker compose up -d
 
 # TESTING
 
