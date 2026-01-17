@@ -1,6 +1,7 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
+#     "paias @ file:///libs/paias",
 #     "mem0ai>=1.0.0",
 #     "qdrant-client>=1.16.0",
 # ]

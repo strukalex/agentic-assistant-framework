@@ -228,7 +228,8 @@ services:
     volumes:
       # Mount paias package source (read-only to prevent accidental modifications)
       # Dependencies (mem0ai, qdrant-client, pydantic-settings) are pre-installed in container
-      - ./paias:/app/paias:ro
+      # - ./paias:/app/paias:ro
+      - /home/lex/GitHub/agentic-assistant-framework:/libs/paias
     #   # Worker cache
     #   - windmill_worker_cache:/tmp/windmill/cache
     #   # Mount source code for INIT_SCRIPT to install paias package

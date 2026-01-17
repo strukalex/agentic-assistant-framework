@@ -98,8 +98,7 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
   # ]
   # ///
   ```
-- For `paias.*` imports, rely on `ADDITIONAL_PYTHON_PATHS: "/app"` (set in docker-compose.yml)
-- After adding dependencies to Dockerfile, rebuild worker: `docker compose -f docker-compose.yml -f .private/docker-compose.override.yml build --no-cache windmill_worker`
+- For `paias.*` imports, rely on `"paias @ file:///libs/paias"` import (set in docker-compose.yml)
 
 ### Script Conventions
 - The `main()` function MUST NOT have any decorators
@@ -112,6 +111,6 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 ### Docker Architecture
 - `docker-compose.yml`: Base config with windmill_worker using standard image
 - `.private/docker-compose.override.yml`: Overrides worker with custom Dockerfile.windmill-playwright
-- `paias` package is mounted at `/app/paias` (read-only)
-- Dependencies (mem0ai, qdrant-client, pydantic-settings, etc.) are pre-installed in container
+- `paias` package is mounted like this in docker-compose: `- /home/lex/GitHub/agentic-assistant-framework:/libs/paias`
+
 <!-- MANUAL ADDITIONS END -->
