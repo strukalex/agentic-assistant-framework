@@ -135,34 +135,10 @@ services:
       WORKER_GROUP: default
       # Force Python 3.11 for all scripts (matches local venv)
       INSTANCE_PYTHON_VERSION: py311
-      # Install paias package at worker startup using INIT_SCRIPT
-      # This replaces the custom Dockerfile.windmill approach
-      # The script installs the package non-editable to avoid hanging issues
-      # INIT_SCRIPT: |
-      #   #!/bin/bash
-      #   set -e
-      #   echo "=== INIT_SCRIPT: Installing paias package ==="
-
-      #   # Install paias package (non-editable) to Windmill's Python cache
-      #   # Using --target ensures it's available to Windmill's Python scripts
-      #   uv pip install --system /app --target /tmp/windmill/cache/python_3_11/global-site-packages 2>&1 || {
-      #     echo "Failed to install with --target, trying without..."
-      #     uv pip install --system /app 2>&1
-      #   }
-
-      #   # Install Node.js dependencies if package.json exists
-      #   if [ -f /app/package.json ]; then
-      #     echo "=== Installing Node.js dependencies ==="
-      #     npm install --prefix /app 2>&1 || echo "npm install failed (non-fatal)"
-      #   fi
-
-      #   echo "=== INIT_SCRIPT complete ==="
-      ## Tell Windmill to use pre-installed paias package and system site-packages
-      # ADDITIONAL_PYTHON_PATHS: "/app:/tmp/windmill/cache/python_3_11/global-site-packages:/usr/local/lib/python3.11/dist-packages"
-
-      # Point Windmill to paias source package (mounted from ./paias:/app/paias)
-      # Dependencies are pre-installed in the container via Dockerfile
-      ADDITIONAL_PYTHON_PATHS: "/app"
+      # ADDITIONAL_PYTHON_PATHS tells Windmill where to find the paias package
+      # When using .private/docker-compose.override.yml, this is set to /opt/paias_project
+      # For standalone use, relies on /libs/paias mount (see volumes below)
+      ADDITIONAL_PYTHON_PATHS: "/libs/paias"
 
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution
@@ -226,17 +202,11 @@ services:
           cpus: "0.5"
           memory: 1G
     volumes:
-      # Mount paias package source (read-only to prevent accidental modifications)
-      # Dependencies (mem0ai, qdrant-client, pydantic-settings) are pre-installed in container
-      # - ./paias:/app/paias:ro
+      # Mount full project for paias package access
+      # For full editable install with dependencies, use the override file:
+      #   docker compose -f docker-compose.yml -f .private/docker-compose.override.yml up -d
+      # The override installs paias in editable mode with all pyproject.toml dependencies
       - /home/lex/GitHub/agentic-assistant-framework:/libs/paias
-    #   # Worker cache
-    #   - windmill_worker_cache:/tmp/windmill/cache
-    #   # Mount source code for INIT_SCRIPT to install paias package
-    #   - ./mcp-servers:/app/mcp-servers:ro
-    #   - ./pyproject.toml:/app/pyproject.toml:ro
-    #   - ./package.json:/app/package.json:ro
-    #   - ./package-lock.json:/app/package-lock.json:ro
 
 volumes:
   postgres_data:

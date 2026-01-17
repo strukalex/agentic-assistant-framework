@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "reset": "bash scripts/reset_dev_env.sh",
+    "reset:qdrant": "curl -X DELETE http://localhost:6333/collections/mem0_memories && curl -X DELETE http://localhost:6333/collections/mem0migrations && echo '\n✅ Qdrant collections reset'",
     "sync:pull": "wmill sync pull",
     "sync:windmill": "bash scripts/sync_windmill.sh",
     "build:worker": "docker compose build windmill_worker && docker compose up -d windmill_worker",

@@ -47,6 +47,10 @@ def get_mem0_config() -> dict[str, Any]:
     logger.info("🧠 MEM0 PROVIDER: %s", provider_type.upper())
     logger.info("=" * 60)
 
+    # Determine embedding dimensions based on provider
+    # nomic-embed-text (Ollama) = 768, text-embedding-3-small (Azure) = 1536
+    embedding_dims = 768 if provider_type == "local" else 1536
+
     # Common: Qdrant vector store configuration
     config: dict[str, Any] = {
         "vector_store": {
@@ -55,15 +59,17 @@ def get_mem0_config() -> dict[str, Any]:
                 "host": settings.qdrant_host,
                 "port": settings.qdrant_port,
                 "collection_name": settings.qdrant_collection_name,
+                "embedding_model_dims": embedding_dims,
             },
         }
     }
 
     logger.info(
-        "🔧 Qdrant: host=%s, port=%d, collection=%s",
+        "🔧 Qdrant: host=%s, port=%d, collection=%s, dims=%d",
         settings.qdrant_host,
         settings.qdrant_port,
         settings.qdrant_collection_name,
+        embedding_dims,
     )
 
     if provider_type == "local":

@@ -1,11 +1,8 @@
-# /// script
-# requires-python = ">=3.11"
-# dependencies = [
-#     "paias @ file:///libs/paias",
-#     "mem0ai>=1.0.0",
-#     "qdrant-client>=1.16.0",
-# ]
-# ///
+# requirements:
+# ollama
+# ^ Empty requirements directive disables Windmill's import inference.
+# The paias package and all dependencies are pre-installed at container startup
+# via `pip install -e /opt/paias_project` in docker-compose.override.yml.
 """Windmill tool: Add user memory to Mem0.
 
 Standalone tool for use in Windmill AI agent steps.
