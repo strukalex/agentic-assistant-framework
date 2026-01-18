@@ -127,6 +127,14 @@ services:
     image: ghcr.io/windmill-labs/windmill:main
     pull_policy: always
     restart: unless-stopped
+    # Install paias package with all dependencies to Windmill's cache at startup
+    command: >
+      /bin/bash -c "
+      echo '=== Installing paias dependencies to Windmill cache ===' &&
+      mkdir -p /tmp/windmill/cache/pip &&
+      uv pip install --target /tmp/windmill/cache/pip -e /libs/paias &&
+      echo '=== paias installation complete ===' &&
+      exec windmill"
     environment:
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/windmill?sslmode=disable
       BASE_URL: http://localhost:8100
@@ -135,10 +143,10 @@ services:
       WORKER_GROUP: default
       # Force Python 3.11 for all scripts (matches local venv)
       INSTANCE_PYTHON_VERSION: py311
-      # ADDITIONAL_PYTHON_PATHS tells Windmill where to find the paias package
-      # When using .private/docker-compose.override.yml, this is set to /opt/paias_project
-      # For standalone use, relies on /libs/paias mount (see volumes below)
-      ADDITIONAL_PYTHON_PATHS: "/libs/paias"
+      # ADDITIONAL_PYTHON_PATHS tells Windmill where to find packages:
+      # - /libs/paias: mounted paias source code
+      # - /tmp/windmill/cache/pip: dependencies installed at startup via command
+      ADDITIONAL_PYTHON_PATHS: "/libs/paias:/tmp/windmill/cache/pip"
 
       # WHITELIST_ENVS: Comma-separated list of env vars to pass to Python scripts
       # This is required because Windmill isolates script execution

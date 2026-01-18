@@ -44,7 +44,7 @@ git clone <repository-url>
 cd agentic-assistant-framework
 
 # Set up virtual environment
-pyenv install 3.11.14
+pyenv install 3.14
 python -m venv venv
 source venv/bin/activate  # Windows: venv\\Scripts\\activate
 

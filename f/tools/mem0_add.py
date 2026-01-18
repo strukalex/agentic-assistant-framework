@@ -1,5 +1,4 @@
 # requirements:
-# ollama
 # ^ Empty requirements directive disables Windmill's import inference.
 # The paias package and all dependencies are pre-installed at container startup
 # via `pip install -e /opt/paias_project` in docker-compose.override.yml.

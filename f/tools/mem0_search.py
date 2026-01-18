@@ -1,5 +1,4 @@
 # requirements:
-# ollama
 # ^ Empty requirements directive disables Windmill's import inference.
 # The paias package and all dependencies are pre-installed at container startup
 # via `pip install -e /opt/paias_project` in docker-compose.override.yml.
@@ -67,20 +66,18 @@ def main(
             user_id=user_id,
             limit=top_k,
         )
-
-        # Mem0 search returns {"results": [...]} dict
-        memories = response.get("results", []) if isinstance(response, dict) else response
+        memories = response.get("results", [])
 
         logger.info("Found %d memories", len(memories))
 
         # Return simplified format
         return [
             {
-                "id": m.get("id") if isinstance(m, dict) else None,
-                "memory": m.get("memory") if isinstance(m, dict) else str(m),
-                "score": m.get("score") if isinstance(m, dict) else None,
-                "metadata": m.get("metadata", {}) if isinstance(m, dict) else {},
-                "created_at": m.get("created_at") if isinstance(m, dict) else None,
+                "id": m.get("id"),
+                "memory": m.get("memory"),
+                "score": m.get("score"),
+                "metadata": m.get("metadata", {}),
+                "created_at": m.get("created_at"),
             }
             for m in memories
         ]

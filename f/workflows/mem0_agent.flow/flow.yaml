@@ -24,8 +24,8 @@ value:
             type: static
             value:
               kind: customai
-              model: gpt-4o
-              resource: '$res:u/admin/DO_NOT_COMMIT_AI_API_KEY'
+              model: qwen2.5:latest
+              resource: '$res:u/admin/ollama'
           streaming:
             type: static
             value: true
@@ -69,7 +69,7 @@ value:
               them remember something new
           temperature:
             type: static
-            value: 0.7
+            value: 0.0001
           user_message:
             type: javascript
             expr: flow_input.user_message
@@ -79,13 +79,6 @@ value:
             description: "Save information to memory. REQUIRED parameter: content (string) - the information to remember. OPTIONAL parameter: metadata (object) - additional context."
             value:
               type: script
-              input_transforms:
-                content:
-                  type: javascript
-                  expr: "typeof content !== 'undefined' ? content : (() => { throw new Error('content is required') })()"
-                metadata:
-                  type: javascript
-                  expr: "typeof metadata !== 'undefined' ? metadata : {}"
               path: f/tools/mem0_add
               tool_type: flowmodule
           - id: mem0_search
@@ -93,13 +86,6 @@ value:
             description: "Search for memories by semantic similarity. REQUIRED parameter: query (string) - the search query like 'food preferences' or 'work projects'. OPTIONAL parameter: top_k (integer, default 10) - max results to return."
             value:
               type: script
-              input_transforms:
-                query:
-                  type: javascript
-                  expr: "typeof query !== 'undefined' ? query : (() => { throw new Error('query is required') })()"
-                top_k:
-                  type: javascript
-                  expr: "typeof top_k !== 'undefined' ? top_k : 10"
               path: f/tools/mem0_search
               tool_type: flowmodule
           - id: mem0_delete
@@ -107,10 +93,6 @@ value:
             description: "Delete a specific memory by its ID. REQUIRED parameter: memory_id (string) - the ID of the memory to delete (obtained from search results)."
             value:
               type: script
-              input_transforms:
-                memory_id:
-                  type: javascript
-                  expr: "typeof memory_id !== 'undefined' ? memory_id : (() => { throw new Error('memory_id is required') })()"
               path: f/tools/mem0_delete
               tool_type: flowmodule
 schema:
