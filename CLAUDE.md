@@ -87,18 +87,27 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 
 ### Dependency Management (IMPORTANT)
 - **DO NOT mount local venv into container** - compiled packages are architecture-specific
-- **Pre-install dependencies in Dockerfile**: Edit `.private/docker/Dockerfile.windmill-playwright` to add new PyPI packages
-- **Use PEP-723 inline script metadata** for dependency declarations:
+- **All `paias` dependencies are pre-installed** at worker startup via editable install to Windmill's cache
+- **Use `# requirements:` directive** to skip Windmill's dependency resolution for scripts using `paias`:
+  ```python
+  # requirements:
+  # ^ Empty requirements directive disables Windmill's import inference.
+  # The paias package and all dependencies are pre-installed at container startup
+  # via `pip install -e /opt/paias_project` in docker-compose.override.yml.
+  ```
+- **For scripts NOT using paias**, use PEP-723 inline script metadata:
   ```python
   # /// script
   # requires-python = ">=3.11"
   # dependencies = [
-  #     "mem0ai>=1.0.0",
-  #     "qdrant-client>=1.16.0",
+  #     "some-package>=1.0.0",
   # ]
   # ///
   ```
-- For `paias.*` imports, rely on `"paias @ file:///libs/paias"` import (set in docker-compose.yml)
+- **Adding new dependencies**: Add to `pyproject.toml`, then restart worker:
+  ```bash
+  docker compose -f docker-compose.yml -f .private/docker-compose.override.yml restart windmill_worker
+  ```
 
 ### Script Conventions
 - The `main()` function MUST NOT have any decorators
@@ -110,7 +119,12 @@ Python 3.11+ *(non-negotiable; see Constitution Article I.A)*: Follow standard c
 
 ### Docker Architecture
 - `docker-compose.yml`: Base config with windmill_worker using standard image
-- `.private/docker-compose.override.yml`: Overrides worker with custom Dockerfile.windmill-playwright
-- `paias` package is mounted like this in docker-compose: `- /home/lex/GitHub/agentic-assistant-framework:/libs/paias`
+- `.private/docker-compose.override.yml`: Overrides worker with:
+  - Custom `Dockerfile.windmill-playwright` (Playwright + system deps)
+  - Volume mount: `./:/opt/paias_project` (full project for editable install)
+  - Startup command: `uv pip install --target /tmp/windmill/cache/python_3_12/global-site-packages -e /opt/paias_project`
+  - This installs paias + all pyproject.toml dependencies to Windmill's cache
+- **Editable install benefits**: Local changes to `paias/` are immediately reflected in worker (no rebuild needed)
+- **When to restart worker**: Only when adding new dependencies to `pyproject.toml`
 
 <!-- MANUAL ADDITIONS END -->
